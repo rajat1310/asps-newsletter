@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Department Newsletter Manager — Amity School of Physical Sciences</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital@0;1&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- docx (Word generation) -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<!-- ExcelJS (Excel generation) -->
+<script src="https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<!-- FileSaver (download helper) -->
+<script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+<style>
+  :root{
+    --navy:#132340;
+    --navy-deep:#0B182E;
+    --navy-light:#1F3A63;
+    --gold:#C6A34A;
+    --gold-soft:#E4D19C;
+    --paper:#FBF7EE;
+    --paper-dim:#F3EDDE;
+    --ink:#1B1B18;
+    --muted:#736C5E;
+    --line:#E4DAC3;
+    --white:#FFFFFF;
+
+    --c-academic:#2C5F8A;
+    --c-research:#6B4C9A;
+    --c-cultural:#C1722C;
+    --c-social:#3A8C64;
+    --c-other:#736C5E;
+
+    --radius:10px;
+    --shadow: 0 8px 24px rgba(19,35,64,0.10);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+
+  /* ---------- Decorative orbital motif (signature element) ---------- */
+  .orbit-mark{
+    position:relative;
+    width:1em;height:1em;
+    display:inline-block;
+  }
+  .orbit-mark svg{width:100%;height:100%;display:block;}
+
+  /* ---------- Top bar ---------- */
+  header.topbar{
+    background:var(--navy);
+    color:var(--paper);
+    padding:22px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  header.topbar::after{
+    content:"";
+    position:absolute; right:-40px; top:-60px;
+    width:220px;height:220px;border-radius:50%;
+    border:1px solid rgba(198,163,74,0.25);
+  }
+  header.topbar::before{
+    content:"";
+    position:absolute; right:10px; top:-30px;
+    width:140px;height:140px;border-radius:50%;
+    border:1px solid rgba(198,163,74,0.18);
+  }
+  .brand{display:flex;flex-direction:column;gap:2px;z-index:1;}
+  .brand .eyebrow{
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--gold); font-weight:600;
+  }
+  .brand h1{
+    font-family:'Playfair Display',serif;
+    font-size:22px; margin:0; font-weight:600; letter-spacing:.01em;
+  }
+  .brand .sub{font-size:12.5px;color:#C9D2E3;margin-top:2px;}
+
+  nav.tabs{display:flex; gap:8px; z-index:1;}
+  nav.tabs button{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.25);
+    color:var(--paper);
+    padding:9px 18px;
+    border-radius:999px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+  }
+  nav.tabs button.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--navy-deep);
+  }
+  nav.tabs button:hover:not(.active){border-color:var(--gold);}
+
+  main{max-width:980px; margin:0 auto; padding:40px 24px 80px;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- Cards / sections ---------- */
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:28px 30px;
+    box-shadow:var(--shadow);
+    margin-bottom:22px;
+  }
+  .section-title{
+    font-family:'Playfair Display',serif;
+    font-size:24px;
+    margin:0 0 6px;
+    color:var(--navy);
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-title .orbit-mark svg circle{stroke:var(--gold);}
+  .section-desc{color:var(--muted); font-size:14px; margin:0 0 24px; line-height:1.5;}
+
+  label{
+    display:block; font-size:12.5px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.05em;
+    color:var(--navy); margin:18px 0 6px;
+  }
+  label.first{margin-top:0;}
+  input[type=text], input[type=date], textarea, select{
+    width:100%; padding:11px 13px; border:1px solid var(--line);
+    border-radius:8px; font-family:'Inter',sans-serif; font-size:14.5px;
+    color:var(--ink); background:var(--paper-dim);
+    transition:.15s;
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:none; border-color:var(--gold); background:var(--white);
+    box-shadow:0 0 0 3px rgba(198,163,74,0.18);
+  }
+  textarea{resize:vertical; min-height:100px; line-height:1.5;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media(max-width:640px){.row2{grid-template-columns:1fr;}}
+
+  .subtabs{ display:flex; gap:8px; flex-wrap:wrap; }
+  .subtab{
+    background:var(--paper-dim); border:1px solid var(--line); color:var(--navy);
+    padding:8px 15px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .subtab.active{ background:var(--navy); border-color:var(--navy); color:var(--paper); }
+  .subtab:hover:not(.active){ border-color:var(--gold); }
+  .subview{ display:none; }
+  .subview.active{ display:block; }
+
+  .photo-drop{
+    border:1.5px dashed var(--line); border-radius:10px;
+    padding:22px; text-align:center; cursor:pointer;
+    background:var(--paper-dim); transition:.15s;
+  }
+  .photo-drop:hover{border-color:var(--gold); background:#FDF9EE;}
+  .photo-drop input{display:none;}
+  .photo-drop .hint{font-size:12.5px; color:var(--muted); margin-top:4px;}
+  .thumbs{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .thumb{position:relative; width:78px; height:78px; border-radius:8px; overflow:hidden; border:1px solid var(--line);}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .thumb .rm{
+    position:absolute; top:2px; right:2px; width:19px; height:19px;
+    background:rgba(20,20,20,0.65); color:#fff; border:none; border-radius:50%;
+    font-size:12px; cursor:pointer; line-height:1;
+  }
+
+  button.primary{
+    background:var(--navy); color:var(--paper); border:none;
+    padding:13px 26px; border-radius:8px; font-weight:600; font-size:14.5px;
+    cursor:pointer; margin-top:24px; transition:.15s;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  button.primary:hover{background:var(--navy-light);}
+  button.primary:disabled{opacity:.55; cursor:not-allowed;}
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--navy);
+    padding:9px 16px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  button.ghost:hover{border-color:var(--gold);}
+  button.gold{
+    background:var(--gold); color:var(--navy-deep); border:none;
+    padding:11px 20px; border-radius:8px; font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+  button.gold:hover{background:var(--gold-soft);}
+  button.danger{
+    background:transparent; border:1px solid #D9534F; color:#D9534F;
+    padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+
+  .msg{
+    margin-top:16px; padding:12px 16px; border-radius:8px; font-size:13.5px; display:none;
+  }
+  .msg.ok{background:#E9F5EE; color:#256B45; border:1px solid #BFE3CC; display:block;}
+  .msg.err{background:#FBEAEA; color:#A5342C; border:1px solid #F0C7C3; display:block;}
+
+  /* ---------- Category badges ---------- */
+  .badge{
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase;
+    color:#fff;
+  }
+  .badge.academic{background:var(--c-academic);}
+  .badge.research{background:var(--c-research);}
+  .badge.cultural{background:var(--c-cultural);}
+  .badge.social{background:var(--c-social);}
+  .badge.other{background:var(--c-other);}
+
+  /* ---------- Admin login ---------- */
+  .admin-login{max-width:380px; margin:60px auto;}
+  .admin-login .card{padding:34px;}
+
+  /* ---------- Admin dashboard ---------- */
+  .toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:14px; margin-bottom:20px;
+  }
+  .month-picker{display:flex; align-items:center; gap:10px;}
+  .month-picker select{width:auto; min-width:170px;}
+  .stat-pills{display:flex; gap:10px; flex-wrap:wrap;}
+  .pill{
+    background:var(--paper-dim); border:1px solid var(--line); border-radius:999px;
+    padding:6px 14px; font-size:12.5px; font-weight:600; color:var(--navy);
+  }
+  .pill b{color:var(--gold-soft); background:var(--navy); padding:1px 7px; border-radius:999px; margin-right:6px; font-size:11.5px;}
+
+  .export-bar{display:flex; gap:10px; flex-wrap:wrap;}
+
+  .event-card{
+    border:1px solid var(--line); border-radius:10px; padding:18px 20px;
+    margin-bottom:14px; background:var(--white);
+  }
+  .event-card .top{display:flex; justify-content:space-between; align-items:flex-start; gap:14px;}
+  .event-card h3{font-family:'Playfair Display',serif; margin:6px 0 4px; font-size:18px; color:var(--navy);}
+  .event-meta{font-size:12.5px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap; margin-bottom:8px;}
+  .event-desc{font-size:13.5px; line-height:1.55; color:#3A3830; margin:8px 0;}
+  .event-photos{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .event-photos img{width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line);}
+  .event-actions{display:flex; gap:8px; flex-shrink:0;}
+
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--muted);
+  }
+  .empty-state .orbit-mark{width:38px; height:38px; margin-bottom:14px;}
+
+  footer.foot{
+    text-align:center; font-size:12px; color:var(--muted); padding:30px; opacity:.75;
+  }
+
+  .setup-banner{
+    background:#FFF7E0; border:1px solid #E9D48C; color:#6B551A;
+    padding:12px 16px; border-radius:8px; font-size:12.5px; margin-bottom:20px; line-height:1.5;
+  }
+  .setup-banner code{background:#00000010; padding:1px 5px; border-radius:4px;}
+
+  .spinner{
+    display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4);
+    border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" style="flex-direction:row; align-items:center; gap:14px;">
+    <img src="" id="topbarLogo" alt="Amity University Punjab" style="width:44px; height:44px; border-radius:50%; flex-shrink:0;" />
+    <div>
+    <span class="eyebrow">Amity University Punjab · Mohali</span>
+    <h1>School of Physical Sciences</h1>
+    <span class="sub">Department Newsletter — Event Collection Portal</span>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button id="tabSubmitBtn" class="active" onclick="switchTab('submit')">Submit Event</button>
+    <button id="tabAdminBtn" onclick="switchTab('admin')">Admin</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ FIREBASE SETUP NOTICE (only shows if not configured) ============ -->
+  <div id="setupBanner" class="setup-banner" style="display:none;">
+    <b>One-time setup needed:</b> open this file in a text editor and fill in your Firebase project config
+    inside <code>const firebaseConfig = { ... }</code> near the bottom of the file (search for "FIREBASE CONFIG").
+    Create a free project at <code>console.firebase.google.com</code>, enable <b>Realtime Database</b> (start in test mode
+    for setup, then lock it down with rules), and paste the config values shown under Project Settings.
+  </div>
+
+  <!-- ============ SUBMIT VIEW ============ -->
+  <section id="view-submit" class="view active">
+    <div class="card" style="padding-bottom:14px;">
+      <h2 class="section-title" style="margin-bottom:14px;"><span class="orbit-mark">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.3" fill="var(--gold)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="var(--navy)" stroke-width="1.1" transform="rotate(20 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="var(--navy)" stroke-width="1.1" transform="rotate(-20 12 12)"/></svg>
+      </span> Contribute to the Newsletter</h2>
+      <p class="section-desc" style="margin-bottom:16px;">Choose what you'd like to submit. Everything here becomes raw material for this month's newsletter.</p>
+      <div class="subtabs">
+        <button class="subtab active" onclick="switchSubtab('event')">Event Report</button>
+        <button class="subtab" onclick="switchSubtab('publication')">Publication</button>
+        <button class="subtab" onclick="switchSubtab('conference')">Conference Presentation</button>
+        <button class="subtab" onclick="switchSubtab('blog')">Research Blog</button>
+        <button class="subtab" onclick="switchSubtab('upcoming')">Upcoming Event</button>
+        <button class="subtab" onclick="switchSubtab('upcomingconf')">Upcoming Conference/Workshop</button>
+      </div>
+    </div>
+
+    <!-- ---- Event Report form ---- -->
+    <div class="card subview active" id="subview-event">
+      <form id="eventForm" onsubmit="return false;">
+        <label class="first">Event Title *</label>
+        <input type="text" id="f_title" placeholder="e.g. Guest Lecture on Quantum Sensing" required />
+
+        <div class="row2">
+          <div>
+            <label>Category *</label>
+            <select id="f_category">
+              <option value="Academic">Academic</option>
+              <option value="Research">Research</option>
+              <option value="Cultural">Cultural</option>
+              <option value="Social">Social</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Your Name *</label>
+            <input type="text" id="f_organizer" placeholder="Your name" required />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>Your Role *</label>
+            <select id="f_role">
+              <option value="Organized">Organized / Coordinated the event</option>
+              <option value="Attended">Attended / Participated in the event</option>
+            </select>
+          </div>
+          <div>
+            <label>Event Date *</label>
+            <input type="date" id="f_date" required />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>End Date (if multi-day)</label>
+            <input type="date" id="f_dateEnd" />
+          </div>
+          <div></div>
+        </div>
+
+        <label>Description *</label>
+        <textarea id="f_desc" placeholder="What happened, who was involved, key highlights, outcomes..." required></textarea>
+
+        <label>Photos</label>
+        <div class="photo-drop" onclick="document.getElementById('f_photos').click()">
+          <input type="file" id="f_photos" accept="image/*" multiple onchange="handlePhotoSelect('event', event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">JPG/PNG, up to 6 photos. Images are compressed automatically before upload.</div>
+        </div>
+        <div class="thumbs" id="thumbs-event"></div>
+
+        <button class="primary" id="submitBtn-event" onclick="submitEvent()">Submit Event</button>
+        <div class="msg" id="submitMsg-event"></div>
+      </form>
+    </div>
+
+    <!-- ---- Publication form ---- -->
+    <div class="card subview" id="subview-publication">
+      <form id="pubForm" onsubmit="return false;">
+        <label class="first">Paper Title *</label>
+        <input type="text" id="p_title" placeholder="Title of the published paper" required />
+
+        <div class="row2">
+          <div>
+            <label>Journal / Publisher *</label>
+            <input type="text" id="p_journal" placeholder="e.g. Journal of Applied Physics" required />
+          </div>
+          <div>
+            <label>Indexing</label>
+            <select id="p_indexing">
+              <option value="SCI">SCI</option>
+              <option value="Scopus">Scopus</option>
+              <option value="WoS">Web of Science</option>
+              <option value="UGC-CARE">UGC-CARE</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>Volume</label>
+            <input type="text" id="p_volume" placeholder="e.g. 45" />
+          </div>
+          <div>
+            <label>Issue</label>
+            <input type="text" id="p_issue" placeholder="e.g. 3" />
+          </div>
+        </div>
+
+        <label>Authors *</label>
+        <input type="text" id="p_authors" placeholder="e.g. R. Sharma, A. Kaur, S. Singh" required />
+
+        <div class="row2">
+          <div>
+            <label>Date of Publication *</label>
+            <input type="date" id="p_date" required />
+          </div>
+          <div></div>
+        </div>
+
+        <label>Abstract *</label>
+        <textarea id="p_abstract" placeholder="Paste or summarize the abstract..." required></textarea>
+
+        <label>Figures / Images</label>
+        <div class="photo-drop" onclick="document.getElementById('p_photos').click()">
+          <input type="file" id="p_photos" accept="image/*" multiple onchange="handlePhotoSelect('publication', event)" />
+          <div><strong>Click to add figures</strong></div>
+          <div class="hint">JPG/PNG, up to 6 images.</div>
+        </div>
+        <div class="thumbs" id="thumbs-publication"></div>
+
+        <button class="primary" id="submitBtn-publication" onclick="submitPublication()">Submit Publication</button>
+        <div class="msg" id="submitMsg-publication"></div>
+      </form>
+    </div>
+
+    <!-- ---- Conference Presentation form ---- -->
+    <div class="card subview" id="subview-conference">
+      <form id="confForm" onsubmit="return false;">
+        <label class="first">Conference Name *</label>
+        <input type="text" id="c_confName" placeholder="e.g. International Conference on Materials Science" required />
+
+        <label>Conference Details</label>
+        <textarea id="c_confDetails" placeholder="Venue, dates, organizing body, etc."></textarea>
+
+        <label>Paper / Talk Title *</label>
+        <input type="text" id="c_paperTitle" placeholder="Title of the paper presented" required />
+
+        <div class="row2">
+          <div>
+            <label>Presented By *</label>
+            <input type="text" id="c_presenter" placeholder="Your name" required />
+          </div>
+          <div>
+            <label>Date of Presentation *</label>
+            <input type="date" id="c_date" required />
+          </div>
+        </div>
+
+        <label>Abstract *</label>
+        <textarea id="c_abstract" placeholder="Summary of the paper presented..." required></textarea>
+
+        <label>Photos</label>
+        <div class="photo-drop" onclick="document.getElementById('c_photos').click()">
+          <input type="file" id="c_photos" accept="image/*" multiple onchange="handlePhotoSelect('conference', event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">JPG/PNG, up to 6 photos.</div>
+        </div>
+        <div class="thumbs" id="thumbs-conference"></div>
+
+        <button class="primary" id="submitBtn-conference" onclick="submitConference()">Submit Conference Presentation</button>
+        <div class="msg" id="submitMsg-conference"></div>
+      </form>
+    </div>
+
+    <!-- ---- Research Blog form ---- -->
+    <div class="card subview" id="subview-blog">
+      <form id="blogForm" onsubmit="return false;">
+        <label class="first">Blog Title *</label>
+        <input type="text" id="b_title" placeholder="e.g. Why Topological Insulators Matter" required />
+
+        <div class="row2">
+          <div>
+            <label>Author *</label>
+            <input type="text" id="b_author" placeholder="Your name" required />
+          </div>
+          <div>
+            <label>Date *</label>
+            <input type="date" id="b_date" required />
+          </div>
+        </div>
+
+        <label>Blog Content *</label>
+        <textarea id="b_content" style="min-height:220px;" placeholder="Write your research blog here..." required></textarea>
+
+        <button class="primary" id="submitBtn-blog" onclick="submitBlog()">Submit Blog</button>
+        <div class="msg" id="submitMsg-blog"></div>
+      </form>
+    </div>
+
+    <!-- ---- Upcoming Event form ---- -->
+    <div class="card subview" id="subview-upcoming">
+      <p class="section-desc" style="margin-top:0;">Know about something happening soon? Add it here and it'll appear in the "Upcoming Events" block on the cover of the newsletter — even before the event itself takes place.</p>
+      <form id="upcomingForm" onsubmit="return false;">
+        <label class="first">Event Title *</label>
+        <input type="text" id="u2_title" placeholder="e.g. National Science Day Celebration" required />
+
+        <div class="row2">
+          <div>
+            <label>Date *</label>
+            <input type="date" id="u2_date" required />
+          </div>
+          <div>
+            <label>Note (optional)</label>
+            <input type="text" id="u2_note" placeholder="Venue, time, or a short teaser line" />
+          </div>
+        </div>
+
+        <button class="primary" id="submitBtn-upcoming" onclick="submitUpcomingEvent()">Add to Upcoming Events</button>
+        <div class="msg" id="submitMsg-upcoming"></div>
+      </form>
+    </div>
+
+    <!-- ---- Upcoming Conference/Workshop form ---- -->
+    <div class="card subview" id="subview-upcomingconf">
+      <p class="section-desc" style="margin-top:0;">Know of a conference, workshop, or call for papers coming up? Add it here with a link and/or brochure. It'll appear in a dedicated section of every month's newsletter automatically, and drop off on its own once the date has passed.</p>
+      <form id="upcomingConfForm" onsubmit="return false;">
+        <label class="first">Title *</label>
+        <input type="text" id="uc_title" placeholder="e.g. International Conference on Materials Science 2026" required />
+
+        <div class="row2">
+          <div>
+            <label>Date *</label>
+            <input type="date" id="uc_date" required />
+          </div>
+          <div>
+            <label>Link (optional)</label>
+            <input type="text" id="uc_link" placeholder="Registration page, website, or call for papers" />
+          </div>
+        </div>
+
+        <label>Brochure (optional)</label>
+        <div class="photo-drop" onclick="document.getElementById('uc_brochure').click()">
+          <input type="file" id="uc_brochure" accept="image/*" onchange="handleUpcomingConfBrochure(event)" />
+          <div><strong>Click to upload a brochure image</strong></div>
+          <div class="hint">A poster or flyer image (JPG/PNG). PDFs aren't supported — a photo or screenshot of the brochure works fine.</div>
+        </div>
+        <div class="thumbs" id="thumb-uc-brochure"></div>
+
+        <button class="primary" id="submitBtn-upcomingconf" onclick="submitUpcomingConference()">Add to Upcoming Conferences & Workshops</button>
+        <div class="msg" id="submitMsg-upcomingconf"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN LOGIN VIEW ============ -->
+  <section id="view-adminlogin" class="view">
+    <div class="admin-login">
+      <div class="card">
+        <h2 class="section-title" style="font-size:20px;">Admin Login</h2>
+        <p class="section-desc">Enter the admin password to review submissions and generate the newsletter.</p>
+        <label class="first">Password</label>
+        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"/>
+        <button class="primary" onclick="adminLogin()">Log In</button>
+        <div class="msg" id="adminMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN DASHBOARD VIEW ============ -->
+  <section id="view-dashboard" class="view">
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px;">Newsletter Content Settings</h2>
+      <p class="section-desc">These appear on the cover page of every newsletter you generate. Mission, Vision, and contact details usually stay the same all year — update the quote whenever you like. Save once, and every future newsletter uses them automatically.</p>
+
+      <label class="first">Mission Statement</label>
+      <textarea id="s_mission" placeholder="Our mission is..."></textarea>
+
+      <label>Vision Statement</label>
+      <textarea id="s_vision" placeholder="Our vision is..."></textarea>
+
+      <div class="row2">
+        <div>
+          <label>Quote of the Month</label>
+          <input type="text" id="s_quoteText" placeholder="e.g. Science knows no country..." />
+        </div>
+        <div>
+          <label>Quote Attribution</label>
+          <input type="text" id="s_quoteAttr" placeholder="e.g. Louis Pasteur" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Website</label>
+          <input type="text" id="s_website" placeholder="www.amitypunjab.edu.in" />
+        </div>
+        <div>
+          <label>Contact Email</label>
+          <input type="text" id="s_email" placeholder="physicalsciences@...edu.in" />
+        </div>
+      </div>
+
+      <label>Social Media Handle</label>
+      <input type="text" id="s_social" placeholder="@handle" />
+
+      <div class="row2">
+        <div>
+          <label>Department / University Logo</label>
+          <div class="photo-drop" onclick="document.getElementById('s_logo').click()">
+            <input type="file" id="s_logo" accept="image/*" onchange="handleSettingsImage('logo', event)" />
+            <div><strong>Click to upload logo</strong></div>
+            <div class="hint">Appears on the cover and in the header of every page. Leave empty to keep the default logo.</div>
+          </div>
+          <div class="thumbs" id="thumb-logo"></div>
+        </div>
+        <div>
+          <label>Cover Photo</label>
+          <div class="photo-drop" onclick="document.getElementById('s_coverPhoto').click()">
+            <input type="file" id="s_coverPhoto" accept="image/*" onchange="handleSettingsImage('coverPhoto', event)" />
+            <div><strong>Click to upload cover photo</strong></div>
+            <div class="hint">Used as the cover's hero image. Leave empty to auto-use the month's first event photo.</div>
+          </div>
+          <div class="thumbs" id="thumb-coverPhoto"></div>
+        </div>
+      </div>
+
+      <button class="primary" onclick="saveNewsletterSettings()">Save Settings</button>
+      <div class="msg" id="settingsMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px;">Change Admin Password</h2>
+      <p class="section-desc">Update the password used to log into this Admin dashboard. Remember it — there's no recovery option other than editing the file directly.</p>
+
+      <label class="first">Current Password</label>
+      <input type="password" id="pw_current" placeholder="••••••••" autocomplete="off" />
+
+      <div class="row2">
+        <div>
+          <label>New Password</label>
+          <input type="password" id="pw_new" placeholder="••••••••" autocomplete="off" />
+        </div>
+        <div>
+          <label>Confirm New Password</label>
+          <input type="password" id="pw_confirm" placeholder="••••••••" autocomplete="off" />
+        </div>
+      </div>
+
+      <button class="primary" onclick="changeAdminPassword()">Update Password</button>
+      <div class="msg" id="pwMsg"></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="month-picker">
+        <label style="margin:0;">Month</label>
+        <select id="monthSelect" onchange="onMonthChange()"></select>
+      </div>
+      <div class="stat-pills" id="statPills"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar" style="margin-bottom:10px;">
+        <h2 class="section-title" style="font-size:19px; margin:0;">Events This Month</h2>
+        <div class="export-bar">
+          <button class="gold" id="genWordBtn" onclick="generateNewsletter()">📄 Generate Newsletter (Word)</button>
+          <button class="gold" id="genExcelBtn" onclick="generateExcel()">📊 Generate Excel Report</button>
+        </div>
+      </div>
+      <div id="eventList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Publications This Month</h2>
+      <div id="pubList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Conference Presentations This Month</h2>
+      <div id="confList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Research Blogs This Month</h2>
+      <p class="section-desc" style="margin-top:-8px;">If no blog is written in a given month, the newsletter automatically carries forward the most recent month that has one.</p>
+      <div id="blogList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px;">Upcoming Events</h2>
+      <p class="section-desc">Submitted from the public "Upcoming Event" tab. These appear in a dedicated block on the cover page of every newsletter. Remove anything outdated or added by mistake below.</p>
+      <div id="upcomingList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px;">Upcoming Conferences & Workshops</h2>
+      <p class="section-desc">Submitted from the public "Upcoming Conference/Workshop" tab. Each appears in its own section of every month's newsletter automatically and drops off on its own once the date passes.</p>
+      <div id="upcomingConfList"></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar" style="margin-bottom:0;">
+        <div>
+          <h2 class="section-title" style="font-size:19px; margin:0;">Full-Year Edition</h2>
+          <p class="section-desc" style="margin:4px 0 0;">Combine every month's events for a year into one annual newsletter or one consolidated Excel workbook.</p>
+        </div>
+        <div class="month-picker">
+          <select id="yearSelect"></select>
+          <button class="ghost" id="genAnnualWordBtn" onclick="generateAnnualNewsletter()">📚 Annual Newsletter (Word)</button>
+          <button class="ghost" id="genAnnualExcelBtn" onclick="generateAnnualExcel()">📚 Annual Report (Excel)</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">Department Newsletter Manager · School of Physical Sciences, Amity University Punjab, Mohali</footer>
+
+<script>
+/* =========================================================================
+   FIREBASE CONFIG — REPLACE WITH YOUR OWN PROJECT CONFIG
+   Get this from: Firebase Console → Project Settings → General → Your apps → SDK setup
+   ========================================================================= */
+/* Amity University Punjab logo — embedded so the app stays a single file */
+const AMITY_LOGO_BASE64 = "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";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDcUSUGFi2Hr1rKHBycVQ0Cw2a9KWmEI8s",
+  authDomain: "asps-newsletter.firebaseapp.com",
+  databaseURL: "https://asps-newsletter-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "asps-newsletter",
+  storageBucket: "asps-newsletter.firebasestorage.app",
+  messagingSenderId: "164610020830",
+  appId: "1:164610020830:web:d22769351548e871c5f94f"
+};
+
+/* Change this before deploying. This is a simple client-side gate, not real
+   authentication — good enough to keep casual visitors out of the admin
+   panel, but do not use it to protect sensitive data. It can also be
+   changed later from inside the Admin dashboard. */
+const ADMIN_PASSWORD = "physicalsciences2026";
+let ADMIN_PASSWORD_OVERRIDE = null; // loaded from Firebase if the admin has changed it
+
+let db = null;
+let firebaseReady = false;
+try{
+  if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    firebaseReady = true;
+  }
+}catch(e){ console.error("Firebase init failed:", e); }
+
+if(!firebaseReady){
+  document.getElementById('setupBanner').style.display = 'block';
+} else {
+  // Loaded up front (not just after login) so the login screen itself can
+  // check against a changed password before the admin is let in.
+  db.ref('settings/security/adminPassword').on('value', snap => {
+    ADMIN_PASSWORD_OVERRIDE = snap.val() || null;
+  });
+}
+
+/* ---------------- Tab switching ---------------- */
+function switchTab(tab){
+  document.getElementById('tabSubmitBtn').classList.toggle('active', tab==='submit');
+  document.getElementById('tabAdminBtn').classList.toggle('active', tab==='admin');
+  document.getElementById('view-submit').classList.toggle('active', tab==='submit');
+  if(tab==='admin'){
+    const loggedIn = sessionStorage.getItem('nl_admin') === 'yes';
+    document.getElementById('view-adminlogin').classList.toggle('active', !loggedIn);
+    document.getElementById('view-dashboard').classList.toggle('active', loggedIn);
+    if(loggedIn) initDashboard();
+  } else {
+    document.getElementById('view-adminlogin').classList.remove('active');
+    document.getElementById('view-dashboard').classList.remove('active');
+  }
+}
+
+function switchSubtab(name){
+  ['event','publication','conference','blog','upcoming','upcomingconf'].forEach(n => {
+    document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
+    document.getElementById('subview-' + n).classList.toggle('active', n===name);
+  });
+}
+
+function adminLogin(){
+  const val = document.getElementById('adminPass').value;
+  const msg = document.getElementById('adminMsg');
+  const currentPassword = ADMIN_PASSWORD_OVERRIDE || ADMIN_PASSWORD;
+  if(val === currentPassword){
+    sessionStorage.setItem('nl_admin','yes');
+    document.getElementById('view-adminlogin').classList.remove('active');
+    document.getElementById('view-dashboard').classList.add('active');
+    initDashboard();
+  } else {
+    msg.className = 'msg err';
+    msg.textContent = 'Incorrect password.';
+  }
+}
+
+/* ---------------- Photo handling (client-side compression) ----------------
+   One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
+let photoState = { event: [], publication: [], conference: [] };
+
+function handlePhotoSelect(type, evt){
+  const arr = photoState[type];
+  const files = Array.from(evt.target.files).slice(0, 6 - arr.length);
+  files.forEach(file => compressImage(file, 900, 0.68).then(result => {
+    arr.push({ name: file.name, dataUrl: result.dataUrl });
+    renderThumbs(type);
+  }));
+  evt.target.value = '';
+}
+
+function compressImage(file, maxWidth, quality, format){
+  format = format || 'image/jpeg';
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve({ dataUrl: canvas.toDataURL(format, quality), width: canvas.width, height: canvas.height });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderThumbs(type){
+  const box = document.getElementById('thumbs-' + type);
+  if(!box) return;
+  box.innerHTML = '';
+  photoState[type].forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `<img src="${p.dataUrl}"/><button type="button" class="rm" onclick="removePhoto('${type}', ${idx})">×</button>`;
+    box.appendChild(div);
+  });
+}
+function removePhoto(type, idx){ photoState[type].splice(idx,1); renderThumbs(type); }
+
+function showSubmitMsg(type, ok, text){
+  const msg = document.getElementById('submitMsg-' + type);
+  msg.className = 'msg ' + (ok ? 'ok' : 'err');
+  msg.textContent = text;
+  if(ok) setTimeout(()=>{ msg.style.display='none'; }, 4000);
+}
+
+/* ---------------- Submit: Event Report ---------------- */
+function submitEvent(){
+  if(!firebaseReady){ showSubmitMsg('event', false, 'Firebase is not configured yet — see the yellow notice above.'); return; }
+
+  const title = document.getElementById('f_title').value.trim();
+  const category = document.getElementById('f_category').value;
+  const organizer = document.getElementById('f_organizer').value.trim();
+  const role = document.getElementById('f_role').value;
+  const date = document.getElementById('f_date').value;
+  const dateEnd = document.getElementById('f_dateEnd').value;
+  const desc = document.getElementById('f_desc').value.trim();
+
+  if(!title || !organizer || !date || !desc){
+    showSubmitMsg('event', false, 'Please fill in all required fields.');
+    return;
+  }
+
+  const monthKey = date.slice(0,7);
+  const btn = document.getElementById('submitBtn-event');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const eventData = {
+    title, category, organizer, role, date, dateEnd: dateEnd || null, desc,
+    photos: photoState.event.map(p => p.dataUrl),
+    submittedAt: Date.now()
+  };
+
+  db.ref('events/' + monthKey).push(eventData)
+    .then(() => {
+      showSubmitMsg('event', true, 'Event submitted successfully. Thank you!');
+      document.getElementById('eventForm').reset();
+      photoState.event = [];
+      renderThumbs('event');
+    })
+    .catch(err => showSubmitMsg('event', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Event'; });
+}
+
+/* ---------------- Submit: Publication ---------------- */
+function submitPublication(){
+  if(!firebaseReady){ showSubmitMsg('publication', false, 'Firebase is not configured yet.'); return; }
+
+  const title = document.getElementById('p_title').value.trim();
+  const journal = document.getElementById('p_journal').value.trim();
+  const indexing = document.getElementById('p_indexing').value;
+  const volume = document.getElementById('p_volume').value.trim();
+  const issue = document.getElementById('p_issue').value.trim();
+  const authors = document.getElementById('p_authors').value.trim();
+  const date = document.getElementById('p_date').value;
+  const abstract = document.getElementById('p_abstract').value.trim();
+
+  if(!title || !journal || !authors || !date || !abstract){
+    showSubmitMsg('publication', false, 'Please fill in all required fields.');
+    return;
+  }
+
+  const monthKey = date.slice(0,7);
+  const btn = document.getElementById('submitBtn-publication');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const pubData = {
+    title, journal, indexing, volume, issue, authors, date, abstract,
+    photos: photoState.publication.map(p => p.dataUrl),
+    submittedAt: Date.now()
+  };
+
+  db.ref('publications/' + monthKey).push(pubData)
+    .then(() => {
+      showSubmitMsg('publication', true, 'Publication submitted successfully. Thank you!');
+      document.getElementById('pubForm').reset();
+      photoState.publication = [];
+      renderThumbs('publication');
+    })
+    .catch(err => showSubmitMsg('publication', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Publication'; });
+}
+
+/* ---------------- Submit: Conference Presentation ---------------- */
+function submitConference(){
+  if(!firebaseReady){ showSubmitMsg('conference', false, 'Firebase is not configured yet.'); return; }
+
+  const confName = document.getElementById('c_confName').value.trim();
+  const confDetails = document.getElementById('c_confDetails').value.trim();
+  const paperTitle = document.getElementById('c_paperTitle').value.trim();
+  const presenter = document.getElementById('c_presenter').value.trim();
+  const date = document.getElementById('c_date').value;
+  const abstract = document.getElementById('c_abstract').value.trim();
+
+  if(!confName || !paperTitle || !presenter || !date || !abstract){
+    showSubmitMsg('conference', false, 'Please fill in all required fields.');
+    return;
+  }
+
+  const monthKey = date.slice(0,7);
+  const btn = document.getElementById('submitBtn-conference');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const confData = {
+    confName, confDetails, paperTitle, presenter, date, abstract,
+    photos: photoState.conference.map(p => p.dataUrl),
+    submittedAt: Date.now()
+  };
+
+  db.ref('conferences/' + monthKey).push(confData)
+    .then(() => {
+      showSubmitMsg('conference', true, 'Conference presentation submitted successfully. Thank you!');
+      document.getElementById('confForm').reset();
+      photoState.conference = [];
+      renderThumbs('conference');
+    })
+    .catch(err => showSubmitMsg('conference', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Conference Presentation'; });
+}
+
+/* ---------------- Submit: Research Blog ---------------- */
+function submitBlog(){
+  if(!firebaseReady){ showSubmitMsg('blog', false, 'Firebase is not configured yet.'); return; }
+
+  const title = document.getElementById('b_title').value.trim();
+  const author = document.getElementById('b_author').value.trim();
+  const date = document.getElementById('b_date').value;
+  const content = document.getElementById('b_content').value.trim();
+
+  if(!title || !author || !date || !content){
+    showSubmitMsg('blog', false, 'Please fill in all required fields.');
+    return;
+  }
+
+  const monthKey = date.slice(0,7);
+  const btn = document.getElementById('submitBtn-blog');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const blogData = { title, author, date, content, submittedAt: Date.now() };
+
+  db.ref('blogs/' + monthKey).push(blogData)
+    .then(() => {
+      showSubmitMsg('blog', true, 'Blog submitted successfully. Thank you!');
+      document.getElementById('blogForm').reset();
+    })
+    .catch(err => showSubmitMsg('blog', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Blog'; });
+}
+
+/* ---------------- Submit: Upcoming Event (open to anyone) ---------------- */
+function submitUpcomingEvent(){
+  if(!firebaseReady){ showSubmitMsg('upcoming', false, 'Firebase is not configured yet.'); return; }
+
+  const title = document.getElementById('u2_title').value.trim();
+  const date = document.getElementById('u2_date').value;
+  const note = document.getElementById('u2_note').value.trim();
+
+  if(!title || !date){
+    showSubmitMsg('upcoming', false, 'Please add both a title and a date.');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn-upcoming');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  db.ref('upcomingEvents').push({ title, date, note: note || null, submittedAt: Date.now() })
+    .then(() => {
+      showSubmitMsg('upcoming', true, 'Added to Upcoming Events. Thank you!');
+      document.getElementById('upcomingForm').reset();
+    })
+    .catch(err => showSubmitMsg('upcoming', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Add to Upcoming Events'; });
+}
+
+/* ---------------- Submit: Upcoming Conference/Workshop (open to anyone) ---------------- */
+let upcomingConfBrochure = null; // pending brochure dataUrl for the form below
+
+function handleUpcomingConfBrochure(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  compressImage(file, 900, 0.72).then(result => {
+    upcomingConfBrochure = { dataUrl: result.dataUrl, width: result.width, height: result.height };
+    document.getElementById('thumb-uc-brochure').innerHTML = `<div class="thumb"><img src="${result.dataUrl}"/></div>`;
+  });
+  evt.target.value = '';
+}
+
+function submitUpcomingConference(){
+  if(!firebaseReady){ showSubmitMsg('upcomingconf', false, 'Firebase is not configured yet.'); return; }
+
+  const title = document.getElementById('uc_title').value.trim();
+  const date = document.getElementById('uc_date').value;
+  const link = document.getElementById('uc_link').value.trim();
+
+  if(!title || !date){
+    showSubmitMsg('upcomingconf', false, 'Please add both a title and a date.');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn-upcomingconf');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  db.ref('upcomingConferences').push({
+    title, date, link: link || null,
+    brochure: upcomingConfBrochure ? upcomingConfBrochure.dataUrl : null,
+    brochureW: upcomingConfBrochure ? upcomingConfBrochure.width : null,
+    brochureH: upcomingConfBrochure ? upcomingConfBrochure.height : null,
+    submittedAt: Date.now()
+  })
+    .then(() => {
+      showSubmitMsg('upcomingconf', true, 'Added to Upcoming Conferences & Workshops. Thank you!');
+      document.getElementById('upcomingConfForm').reset();
+      upcomingConfBrochure = null;
+      document.getElementById('thumb-uc-brochure').innerHTML = '';
+    })
+    .catch(err => showSubmitMsg('upcomingconf', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Add to Upcoming Conferences & Workshops'; });
+}
+
+/* ---------------- Admin dashboard ---------------- */
+let allEventsByMonth = {};        // { "2026-07": { pushId: {...} } }
+let allPublicationsByMonth = {};
+let allConferencesByMonth = {};
+let allBlogsByMonth = {};
+let allUpcomingEvents = {}; // flat: { pushId: {title, date, note} } — admin-curated, shown on every cover page
+let allUpcomingConferences = {}; // flat: { pushId: {title, date, link, brochure} } — shown in a body section until the date passes
+let currentMonth = null;
+let CUSTOM_LOGO_BASE64 = null;       // full data URL, overrides AMITY_LOGO_BASE64 when set
+let CUSTOM_LOGO_W = null, CUSTOM_LOGO_H = null; // natural size of the uploaded logo, to keep its aspect ratio
+let CUSTOM_COVER_PHOTO_BASE64 = null; // full data URL, overrides the auto-picked hero photo when set
+let settingsImages = { logo: null, coverPhoto: null }; // pending uploads not yet saved
+
+function allMonthKeys(){
+  return Array.from(new Set([
+    ...Object.keys(allEventsByMonth),
+    ...Object.keys(allPublicationsByMonth),
+    ...Object.keys(allConferencesByMonth),
+    ...Object.keys(allBlogsByMonth),
+  ]));
+}
+
+function initDashboard(){
+  if(!firebaseReady){
+    document.getElementById('eventList').innerHTML = '<div class="empty-state">Firebase is not configured yet — see the setup notice on the Submit tab.</div>';
+    return;
+  }
+  db.ref('events').on('value', snap => {
+    allEventsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderEventsForMonth();
+  });
+  db.ref('publications').on('value', snap => {
+    allPublicationsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderPublicationsForMonth();
+  });
+  db.ref('conferences').on('value', snap => {
+    allConferencesByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderConferencesForMonth();
+  });
+  db.ref('blogs').on('value', snap => {
+    allBlogsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderBlogsForMonth();
+  });
+  db.ref('upcomingEvents').on('value', snap => {
+    allUpcomingEvents = snap.val() || {};
+    renderUpcomingEvents();
+  });
+  db.ref('upcomingConferences').on('value', snap => {
+    allUpcomingConferences = snap.val() || {};
+    renderUpcomingConferences();
+  });
+  db.ref('settings/newsletter').on('value', snap => {
+    const s = snap.val() || {};
+    document.getElementById('s_mission').value = s.mission || '';
+    document.getElementById('s_vision').value = s.vision || '';
+    document.getElementById('s_quoteText').value = s.quoteText || '';
+    document.getElementById('s_quoteAttr').value = s.quoteAttr || '';
+    document.getElementById('s_website').value = s.website || '';
+    document.getElementById('s_email').value = s.email || '';
+    document.getElementById('s_social').value = s.social || '';
+    if(s.logo) document.getElementById('thumb-logo').innerHTML = `<div class="thumb"><img src="${s.logo}"/></div>`;
+    if(s.coverPhoto) document.getElementById('thumb-coverPhoto').innerHTML = `<div class="thumb"><img src="${s.coverPhoto}"/></div>`;
+    applyNewsletterSettings(s);
+  });
+}
+
+/* Push saved settings into the globals the Word generator reads from */
+function applyNewsletterSettings(s){
+  if(s.mission) MISSION_TEXT = s.mission;
+  if(s.vision) VISION_TEXT = s.vision;
+  if(s.quoteText) QUOTE_TEXT = s.quoteText;
+  if(s.quoteAttr) QUOTE_ATTRIBUTION = s.quoteAttr;
+  if(s.website) CONTACT_WEBSITE = s.website;
+  if(s.email) CONTACT_EMAIL = s.email;
+  if(s.social) CONTACT_SOCIAL = s.social;
+  if(s.logo){
+    CUSTOM_LOGO_BASE64 = s.logo;
+    CUSTOM_LOGO_W = s.logoW || null;
+    CUSTOM_LOGO_H = s.logoH || null;
+    document.getElementById('topbarLogo').src = s.logo;
+  }
+  if(s.coverPhoto) CUSTOM_COVER_PHOTO_BASE64 = s.coverPhoto;
+}
+
+/* Logo / cover-photo file inputs in the Settings card.
+   Logo is compressed as PNG (keeps transparency — JPEG would flatten it to
+   black and distort the colors) and its natural width/height are kept so
+   the newsletter can scale it without squishing the aspect ratio. */
+function handleSettingsImage(type, evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const maxW = type === 'logo' ? 500 : 900;
+  const format = type === 'logo' ? 'image/png' : 'image/jpeg';
+  compressImage(file, maxW, 0.85, format).then(result => {
+    settingsImages[type] = result.dataUrl;
+    if(type === 'logo'){ settingsImages.logoW = result.width; settingsImages.logoH = result.height; }
+    document.getElementById('thumb-' + type).innerHTML = `<div class="thumb"><img src="${result.dataUrl}"/></div>`;
+  });
+  evt.target.value = '';
+}
+
+function saveNewsletterSettings(){
+  if(!firebaseReady) return;
+  const s = {
+    mission: document.getElementById('s_mission').value.trim(),
+    vision: document.getElementById('s_vision').value.trim(),
+    quoteText: document.getElementById('s_quoteText').value.trim(),
+    quoteAttr: document.getElementById('s_quoteAttr').value.trim(),
+    website: document.getElementById('s_website').value.trim(),
+    email: document.getElementById('s_email').value.trim(),
+    social: document.getElementById('s_social').value.trim(),
+  };
+  if(settingsImages.logo){
+    s.logo = settingsImages.logo;
+    if(settingsImages.logoW){ s.logoW = settingsImages.logoW; s.logoH = settingsImages.logoH; }
+  }
+  if(settingsImages.coverPhoto) s.coverPhoto = settingsImages.coverPhoto;
+  const msg = document.getElementById('settingsMsg');
+  db.ref('settings/newsletter').update(s)
+    .then(() => {
+      applyNewsletterSettings(s);
+      msg.className = 'msg ok';
+      msg.textContent = 'Settings saved — future newsletters will use this content.';
+      setTimeout(()=>{ msg.style.display='none'; }, 4000);
+    })
+    .catch(err => {
+      msg.className = 'msg err';
+      msg.textContent = 'Could not save: ' + err.message;
+    });
+}
+
+function changeAdminPassword(){
+  if(!firebaseReady) return;
+  const current = document.getElementById('pw_current').value;
+  const next = document.getElementById('pw_new').value;
+  const confirm = document.getElementById('pw_confirm').value;
+  const msg = document.getElementById('pwMsg');
+  const currentPassword = ADMIN_PASSWORD_OVERRIDE || ADMIN_PASSWORD;
+
+  if(current !== currentPassword){
+    msg.className = 'msg err';
+    msg.textContent = 'Current password is incorrect.';
+    return;
+  }
+  if(!next || next.length < 4){
+    msg.className = 'msg err';
+    msg.textContent = 'New password must be at least 4 characters.';
+    return;
+  }
+  if(next !== confirm){
+    msg.className = 'msg err';
+    msg.textContent = 'New password and confirmation do not match.';
+    return;
+  }
+
+  db.ref('settings/security/adminPassword').set(next)
+    .then(() => {
+      ADMIN_PASSWORD_OVERRIDE = next;
+      document.getElementById('pw_current').value = '';
+      document.getElementById('pw_new').value = '';
+      document.getElementById('pw_confirm').value = '';
+      msg.className = 'msg ok';
+      msg.textContent = 'Password updated. Use the new password next time you log in.';
+      setTimeout(()=>{ msg.style.display='none'; }, 4000);
+    })
+    .catch(err => {
+      msg.className = 'msg err';
+      msg.textContent = 'Could not update: ' + err.message;
+    });
+}
+
+function populateYearSelect(){
+  const sel = document.getElementById('yearSelect');
+  if(!sel) return;
+  const years = Array.from(new Set(allMonthKeys().map(m => m.slice(0,4)))).sort().reverse();
+  const thisYear = String(new Date().getFullYear());
+  if(years.indexOf(thisYear) === -1) years.unshift(thisYear);
+  const prevSelection = sel.value;
+  sel.innerHTML = '';
+  years.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  });
+  sel.value = years.indexOf(prevSelection) !== -1 ? prevSelection : thisYear;
+}
+
+function populateMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  const months = allMonthKeys().sort().reverse();
+  const thisMonth = new Date().toISOString().slice(0,7);
+  if(months.indexOf(thisMonth) === -1) months.unshift(thisMonth);
+
+  const prevSelection = sel.value || currentMonth;
+  sel.innerHTML = '';
+  months.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = monthLabel(m);
+    sel.appendChild(opt);
+  });
+  sel.value = months.indexOf(prevSelection) !== -1 ? prevSelection : thisMonth;
+  currentMonth = sel.value;
+}
+
+function onMonthChange(){
+  currentMonth = document.getElementById('monthSelect').value;
+  renderEventsForMonth();
+  renderPublicationsForMonth();
+  renderConferencesForMonth();
+  renderBlogsForMonth();
+}
+
+function monthLabel(m){
+  const [y, mo] = m.split('-');
+  const d = new Date(parseInt(y), parseInt(mo)-1, 1);
+  return d.toLocaleString('en-US', { month:'long', year:'numeric' });
+}
+
+function categoryClass(cat){
+  return { Academic:'academic', Research:'research', Cultural:'cultural', Social:'social', Other:'other' }[cat] || 'other';
+}
+function roleLabel(role){
+  return role === 'Attended' ? 'Attended by' : 'Organized by';
+}
+
+function renderEventsForMonth(){
+  currentMonth = document.getElementById('monthSelect').value;
+  const monthData = allEventsByMonth[currentMonth] || {};
+  const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+
+  const listEl = document.getElementById('eventList');
+  const pillsEl = document.getElementById('statPills');
+
+  if(ids.length === 0){
+    listEl.innerHTML = `<div class="empty-state">
+      <div class="orbit-mark"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.3" fill="#C6A34A"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="#132340" stroke-width="1.1" transform="rotate(20 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="#132340" stroke-width="1.1" transform="rotate(-20 12 12)"/></svg></div>
+      No events submitted for ${monthLabel(currentMonth)} yet.
+    </div>`;
+    pillsEl.innerHTML = '';
+    return;
+  }
+
+  const counts = {};
+  ids.forEach(id => { const c = monthData[id].category || 'Other'; counts[c] = (counts[c]||0)+1; });
+  pillsEl.innerHTML = `<span class="pill"><b>${ids.length}</b>Total</span>` +
+    Object.entries(counts).map(([c,n]) => `<span class="pill">${c}: ${n}</span>`).join('');
+
+  listEl.innerHTML = ids.map(id => {
+    const e = monthData[id];
+    const photos = (e.photos||[]).map(p => `<img src="${p}"/>`).join('');
+    const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge ${categoryClass(e.category)}">${e.category}</span>
+          <h3>${escapeHtml(e.title)}</h3>
+          <div class="event-meta">
+            <span>📅 ${dateStr}</span>
+            <span>👤 ${roleLabel(e.role)} ${escapeHtml(e.organizer)}</span>
+          </div>
+        </div>
+        <div class="event-actions">
+          <button class="danger" onclick="deleteEvent('${currentMonth}','${id}')">Delete</button>
+        </div>
+      </div>
+      <div class="event-desc">${escapeHtml(e.desc)}</div>
+      ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function formatDate(d){
+  if(!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-US', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function deleteEvent(month, id){
+  if(!confirm('Delete this event? This cannot be undone.')) return;
+  db.ref('events/' + month + '/' + id).remove();
+}
+
+function renderPublicationsForMonth(){
+  const data = allPublicationsByMonth[currentMonth] || {};
+  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
+  const listEl = document.getElementById('pubList');
+  if(!listEl) return;
+  if(ids.length === 0){
+    listEl.innerHTML = `<div class="empty-state">No publications submitted for ${monthLabel(currentMonth)} yet.</div>`;
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const p = data[id];
+    const photos = (p.photos||[]).map(ph => `<img src="${ph}"/>`).join('');
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge academic">${escapeHtml(p.indexing||'')}</span>
+          <h3>${escapeHtml(p.title)}</h3>
+          <div class="event-meta">
+            <span>📅 ${formatDate(p.date)}</span>
+            <span>📖 ${escapeHtml(p.journal)}${p.volume?(' · Vol '+escapeHtml(p.volume)):''}${p.issue?(' · Issue '+escapeHtml(p.issue)):''}</span>
+          </div>
+          <div class="event-meta"><span>✍️ ${escapeHtml(p.authors)}</span></div>
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deletePublication('${currentMonth}','${id}')">Delete</button></div>
+      </div>
+      <div class="event-desc">${escapeHtml(p.abstract)}</div>
+      ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function deletePublication(month, id){
+  if(!confirm('Delete this publication? This cannot be undone.')) return;
+  db.ref('publications/' + month + '/' + id).remove();
+}
+
+function renderConferencesForMonth(){
+  const data = allConferencesByMonth[currentMonth] || {};
+  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
+  const listEl = document.getElementById('confList');
+  if(!listEl) return;
+  if(ids.length === 0){
+    listEl.innerHTML = `<div class="empty-state">No conference presentations submitted for ${monthLabel(currentMonth)} yet.</div>`;
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const c = data[id];
+    const photos = (c.photos||[]).map(ph => `<img src="${ph}"/>`).join('');
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge research">Conference</span>
+          <h3>${escapeHtml(c.paperTitle)}</h3>
+          <div class="event-meta">
+            <span>📅 ${formatDate(c.date)}</span>
+            <span>👤 Presented by ${escapeHtml(c.presenter)}</span>
+          </div>
+          <div class="event-meta"><span>🏛️ ${escapeHtml(c.confName)}</span></div>
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteConference('${currentMonth}','${id}')">Delete</button></div>
+      </div>
+      ${c.confDetails ? `<div class="event-desc" style="font-style:italic;">${escapeHtml(c.confDetails)}</div>` : ''}
+      <div class="event-desc">${escapeHtml(c.abstract)}</div>
+      ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function deleteConference(month, id){
+  if(!confirm('Delete this conference presentation? This cannot be undone.')) return;
+  db.ref('conferences/' + month + '/' + id).remove();
+}
+
+function renderBlogsForMonth(){
+  const data = allBlogsByMonth[currentMonth] || {};
+  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
+  const listEl = document.getElementById('blogList');
+  if(!listEl) return;
+  if(ids.length === 0){
+    listEl.innerHTML = `<div class="empty-state">No blogs written for ${monthLabel(currentMonth)}.</div>`;
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const b = data[id];
+    const snippet = (b.content||'').slice(0,220) + ((b.content||'').length>220 ? '…' : '');
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge cultural">Blog</span>
+          <h3>${escapeHtml(b.title)}</h3>
+          <div class="event-meta">
+            <span>📅 ${formatDate(b.date)}</span>
+            <span>✍️ ${escapeHtml(b.author)}</span>
+          </div>
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteBlog('${currentMonth}','${id}')">Delete</button></div>
+      </div>
+      <div class="event-desc">${escapeHtml(snippet)}</div>
+    </div>`;
+  }).join('');
+}
+function deleteBlog(month, id){
+  if(!confirm('Delete this blog? This cannot be undone.')) return;
+  db.ref('blogs/' + month + '/' + id).remove();
+}
+
+function renderUpcomingEvents(){
+  const listEl = document.getElementById('upcomingList');
+  if(!listEl) return;
+  const ids = Object.keys(allUpcomingEvents).sort((a,b) => (allUpcomingEvents[a].date||'').localeCompare(allUpcomingEvents[b].date||''));
+  if(ids.length === 0){
+    listEl.innerHTML = '<div class="empty-state">No upcoming events added yet.</div>';
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const u = allUpcomingEvents[id];
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <h3 style="margin-top:0;">${escapeHtml(u.title)}</h3>
+          <div class="event-meta"><span>📅 ${formatDate(u.date)}</span></div>
+          ${u.note ? `<div class="event-desc" style="margin-top:4px;">${escapeHtml(u.note)}</div>` : ''}
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteUpcomingEvent(id){
+  if(!confirm('Remove this from Upcoming Events?')) return;
+  db.ref('upcomingEvents/' + id).remove();
+}
+
+function renderUpcomingConferences(){
+  const listEl = document.getElementById('upcomingConfList');
+  if(!listEl) return;
+  const ids = Object.keys(allUpcomingConferences).sort((a,b) => (allUpcomingConferences[a].date||'').localeCompare(allUpcomingConferences[b].date||''));
+  if(ids.length === 0){
+    listEl.innerHTML = '<div class="empty-state">No upcoming conferences or workshops added yet.</div>';
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const u = allUpcomingConferences[id];
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <h3 style="margin-top:0;">${escapeHtml(u.title)}</h3>
+          <div class="event-meta">
+            <span>📅 ${formatDate(u.date)}</span>
+            ${u.link ? `<span>🔗 ${escapeHtml(u.link)}</span>` : ''}
+          </div>
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteUpcomingConference('${id}')">Delete</button></div>
+      </div>
+      ${u.brochure ? `<div class="event-photos"><img src="${u.brochure}"/></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function deleteUpcomingConference(id){
+  if(!confirm('Remove this from Upcoming Conferences & Workshops?')) return;
+  db.ref('upcomingConferences/' + id).remove();
+}
+
+/* =========================================================================
+   WORD NEWSLETTER GENERATION — shared helpers
+   ========================================================================= */
+function noBorders(){
+  const n = { style: docx.BorderStyle.NONE, size:0, color:"FFFFFF" };
+  return { top:n, bottom:n, left:n, right:n, insideHorizontal:n, insideVertical:n };
+}
+function cardBorder(){
+  const b = { style: docx.BorderStyle.SINGLE, size:4, color:"E4DAC3" };
+  return { top:b, bottom:b, left:b, right:b, insideHorizontal:b, insideVertical:b };
+}
+function headerRuleBorder(){
+  const n = { style: docx.BorderStyle.NONE, size:0, color:"FFFFFF" };
+  const g = { style: docx.BorderStyle.SINGLE, size:3, color:"C6A34A" };
+  return { top:n, left:n, right:n, insideHorizontal:n, insideVertical:n, bottom:g };
+}
+function categoryHex(cat){
+  return { Academic:"2C5F8A", Research:"6B4C9A", Cultural:"C1722C", Social:"3A8C64", Other:"736C5E" }[cat] || "736C5E";
+}
+function dataUrlToUint8(dataUrl){
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+function logoBytes(){
+  if(CUSTOM_LOGO_BASE64){ try{ return dataUrlToUint8(CUSTOM_LOGO_BASE64); }catch(e){ /* fall through */ } }
+  return dataUrlToUint8('data:image/png;base64,' + AMITY_LOGO_BASE64);
+}
+/* Returns { width, height } for a logo scaled to targetWidth, preserving its
+   real aspect ratio when a custom logo (with known dimensions) is in use. */
+function logoDims(targetWidth){
+  if(CUSTOM_LOGO_BASE64 && CUSTOM_LOGO_W && CUSTOM_LOGO_H){
+    return { width: targetWidth, height: Math.round(targetWidth * (CUSTOM_LOGO_H / CUSTOM_LOGO_W)) };
+  }
+  return { width: targetWidth, height: targetWidth }; // default Amity mark is square
+}
+/* Prefers an admin-uploaded cover photo; falls back to the month's first event photo */
+function resolveHeroBytes(ids, data){
+  if(CUSTOM_COVER_PHOTO_BASE64){ try{ return dataUrlToUint8(CUSTOM_COVER_PHOTO_BASE64); }catch(e){ /* fall through */ } }
+  return findHeroBytes(ids, data);
+}
+
+/* ---------------------------------------------------------------------
+   EDIT THESE with your department's real Mission / Vision statements.
+   They're placeholders until you replace the text below.
+   --------------------------------------------------------------------- */
+let MISSION_TEXT = "[Replace this placeholder with the department's Mission statement — search for MISSION_TEXT in this file to edit it.]";
+let VISION_TEXT = "[Replace this placeholder with the department's Vision statement — search for VISION_TEXT in this file to edit it.]";
+let QUOTE_TEXT = "[Replace with this month's quote — search for QUOTE_TEXT to edit it.]";
+let QUOTE_ATTRIBUTION = "[Attribution — e.g. a scientist's name, or \"Department of Physical Sciences\"]";
+let CONTACT_WEBSITE = "[Replace with department/university website — search for CONTACT_WEBSITE to edit it.]";
+let CONTACT_EMAIL = "[Replace with department contact email — search for CONTACT_EMAIL to edit it.]";
+let CONTACT_SOCIAL = "[Replace with social media handle(s) — search for CONTACT_SOCIAL to edit it.]";
+
+/* Groups events by category, in a fixed display order, for the cover index */
+function buildIndexGroups(ids, data, pubIds, pubData, confIds, confData){
+  const order = ['Academic','Research','Cultural','Social','Other'];
+  const groups = {};
+  ids.forEach(id => {
+    const e = data[id];
+    const cat = e.category || 'Other';
+    (groups[cat] = groups[cat] || []).push({ title:e.title, date:e.date });
+  });
+  const out = order.filter(c => groups[c] && groups[c].length).map(c => ({ category:c, items:groups[c] }));
+
+  if(pubIds && pubIds.length){
+    out.push({ category:'Publications', items: pubIds.map(id => ({ title:pubData[id].title, date:pubData[id].date })) });
+  }
+  if(confIds && confIds.length){
+    out.push({ category:'Conference Presentations', items: confIds.map(id => ({ title:confData[id].paperTitle, date:confData[id].date })) });
+  }
+  return out;
+}
+
+/* First available event photo — used as the cover "hero" image */
+function findHeroBytes(ids, data){
+  for(const id of ids){
+    const photos = data[id].photos;
+    if(photos && photos.length){
+      try{ return dataUrlToUint8(photos[0]); }catch(e){ /* skip */ }
+    }
+  }
+  return null;
+}
+
+/* Admin-curated Upcoming Events (from the flat upcomingEvents collection),
+   filtered to today-or-later and sorted soonest first — for the cover block */
+function getUpcomingEvents(limit){
+  const todayStr = new Date().toISOString().slice(0,10);
+  const items = Object.values(allUpcomingEvents).filter(u => (u.date||'') >= todayStr);
+  items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  return items.slice(0, limit);
+}
+
+/* Upcoming Conferences & Workshops still ahead of today — these are shown
+   in every issue's own section until their date passes, then drop out on their own */
+function getActiveUpcomingConferences(){
+  const todayStr = new Date().toISOString().slice(0,10);
+  const items = Object.values(allUpcomingConferences).filter(u => (u.date||'') >= todayStr);
+  items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  return items;
+}
+
+/* Scales natW x natH to fit inside maxWidth x maxHeight, preserving aspect ratio */
+function imageDimsFit(natW, natH, maxWidth, maxHeight){
+  if(!natW || !natH) return { width:maxWidth, height:maxHeight };
+  const scale = Math.min(maxWidth / natW, maxHeight / natH);
+  return { width: Math.round(natW * scale), height: Math.round(natH * scale) };
+}
+
+function buildUpcomingConferenceCard(u, sectionTitle, pageBreak){
+  if(pageBreak === undefined) pageBreak = true;
+  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType, ExternalHyperlink } = docx;
+  let out = [];
+  if(sectionTitle){
+    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
+  } else {
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
+  }
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
+    children:[ new TextRun({ text:u.title, color:"132340", font:"Playfair Display" }) ] }));
+  out.push(new Paragraph({ spacing:{after:180},
+    children:[ new TextRun({ text:formatDate(u.date), color:"736C5E", size:19, font:"Inter" }) ] }));
+  if(u.link){
+    const url = /^https?:\/\//i.test(u.link) ? u.link : 'https://' + u.link.replace(/^\/+/, '');
+    out.push(new Paragraph({ spacing:{after:220},
+      children:[ new ExternalHyperlink({ link:url, children:[ new TextRun({ text:u.link, color:"1155CC", underline:{}, size:18, font:"Inter" }) ] }) ] }));
+  }
+  if(u.brochure){
+    try{
+      out.push(new Paragraph({ spacing:{after:100},
+        children:[ new ImageRun({ data:dataUrlToUint8(u.brochure), transformation: imageDimsFit(u.brochureW, u.brochureH, 400, 500) }) ] }));
+    }catch(e){ /* skip unreadable brochure */ }
+  }
+  return out;
+}
+function buildUpcomingConferencesSection(items, firstBreak){
+  if(firstBreak === undefined) firstBreak = true;
+  if(items.length === 0) return [];
+  let out = [];
+  items.forEach((u, idx) => { out = out.concat(buildUpcomingConferenceCard(u, idx===0 ? "UPCOMING CONFERENCES & WORKSHOPS" : null, idx===0 ? firstBreak : true)); });
+  return out;
+}
+
+/* "1-31 July 2026" style date range for a "YYYY-MM" month key */
+function issueDateRangeLabel(monthKey){
+  const [y, m] = monthKey.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const monthName = new Date(y, m - 1, 1).toLocaleString('en-US', { month:'long' });
+  return `1-${lastDay} ${monthName} ${y}`;
+}
+/* "1 January - 31 December 2026" style date range for a year */
+function issueDateRangeLabelYear(year){
+  return `1 January - 31 December ${year}`;
+}
+
+/* Magazine-style cover: date strip, navy masthead with logo, hero photo,
+   Mission/Vision column, and a navy "In This Issue" / "Upcoming Events" sidebar. */
+function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
+  const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, VerticalAlign, BorderStyle, ExternalHyperlink } = docx;
+
+  const topStrip = new Paragraph({
+    shading: { fill:"C6A34A", type:ShadingType.CLEAR, color:"auto" },
+    spacing:{ before:80, after:80 },
+    children:[ new TextRun({ text: issuePeriod.toUpperCase(), color:"132340", bold:true, size:19, font:"Inter" }) ]
+  });
+
+  const masthead = new Table({
+    width:{ size:100, type:WidthType.PERCENTAGE },
+    borders: noBorders(),
+    rows:[ new TableRow({ children:[
+      new TableCell({
+        width:{ size:22, type:WidthType.PERCENTAGE },
+        shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
+        margins:{ top:220, bottom:220, left:360, right:160 },
+        verticalAlign: VerticalAlign.CENTER,
+        children:[ new Paragraph({ alignment:AlignmentType.CENTER, children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(100) }) ] }) ]
+      }),
+      new TableCell({
+        width:{ size:78, type:WidthType.PERCENTAGE },
+        shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
+        margins:{ top:260, bottom:260, left:160, right:400 },
+        verticalAlign: VerticalAlign.CENTER,
+        children:[
+          new Paragraph({ spacing:{after:30}, children:[ new TextRun({ text:"AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES", color:"C6A34A", bold:true, size:15, font:"Inter" }) ] }),
+          new Paragraph({ children:[ new TextRun({ text:"DEPARTMENT NEWSLETTER", color:"FFFFFF", bold:true, size:42, font:"Playfair Display" }) ] }),
+        ]
+      })
+    ]})]
+  });
+
+  const heroPara = heroBytes
+    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes, transformation:{ width:620, height:230 } }) ] })
+    : new Paragraph({ shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, alignment:AlignmentType.CENTER, spacing:{ before:260, after:260 },
+        children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] });
+
+  const missionVisionCell = new TableCell({
+    width:{ size:63, type:WidthType.PERCENTAGE },
+    margins:{ top:320, bottom:320, left:0, right:360 },
+    children:[
+      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:26, font:"Playfair Display" }) ] }),
+      new Paragraph({ spacing:{after:280, line:300}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:19, font:"Inter", italics:true }) ] }),
+      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Vision", color:"132340", bold:true, size:26, font:"Playfair Display" }) ] }),
+      new Paragraph({ spacing:{after:0, line:300}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:19, font:"Inter", italics:true }) ] }),
+    ]
+  });
+
+  const indexChildren = [ new Paragraph({ spacing:{after:180}, children:[ new TextRun({ text:"IN THIS ISSUE", color:"C6A34A", bold:true, size:21, font:"Inter" }) ] }) ];
+  if(indexGroups.length === 0){
+    indexChildren.push(new Paragraph({ children:[ new TextRun({ text:"No events recorded yet.", color:"C9D2E3", italics:true, size:17, font:"Inter" }) ] }));
+  }
+  indexGroups.forEach(g => {
+    indexChildren.push(new Paragraph({ spacing:{before:160, after:60}, children:[ new TextRun({ text:g.category.toUpperCase(), color:"FBF7EE", bold:true, size:17, font:"Inter" }) ] }));
+    g.items.forEach(e => {
+      indexChildren.push(new Paragraph({ spacing:{after:40},
+        children:[
+          new TextRun({ text:formatDate(e.date).replace(/, \d{4}/,'') + "   ", color:"C6A34A", size:15, font:"Inter" }),
+          new TextRun({ text:e.title, color:"E8E4D8", size:15, font:"Inter" }),
+        ]}));
+    });
+  });
+  if(upcoming && upcoming.length){
+    indexChildren.push(new Paragraph({ spacing:{before:220, after:60},
+      border:{ top:{ style:BorderStyle.SINGLE, size:3, color:"3A4E75", space:8 } },
+      children:[ new TextRun({ text:"UPCOMING EVENTS", color:"C6A34A", bold:true, size:17, font:"Inter" }) ] }));
+    upcoming.forEach(e => {
+      indexChildren.push(new Paragraph({ spacing:{after:40},
+        children:[
+          new TextRun({ text:formatDate(e.date).replace(/, \d{4}/,'') + "   ", color:"C6A34A", size:15, font:"Inter" }),
+          new TextRun({ text:e.title, color:"E8E4D8", size:15, font:"Inter" }),
+        ]}));
+    });
+  }
+  const indexCell = new TableCell({
+    width:{ size:37, type:WidthType.PERCENTAGE },
+    shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
+    margins:{ top:320, bottom:320, left:280, right:280 },
+    children: indexChildren
+  });
+
+  const bodyTable = new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:noBorders(), rows:[ new TableRow({ children:[missionVisionCell, indexCell] }) ] });
+
+  const quoteStrip = new Paragraph({
+    alignment: AlignmentType.CENTER, spacing:{ before:260, after:260 },
+    children:[
+      new TextRun({ text: `“${QUOTE_TEXT}”`, italics:true, color:"132340", size:24, font:"Cormorant Garamond" }),
+      new TextRun({ text: `   —   ${QUOTE_ATTRIBUTION}`, color:"736C5E", size:17, font:"Inter" }),
+    ]
+  });
+
+  /* Turns a plain string into a clickable https:// URL if it looks like one
+     (has a dot, no spaces) — bare handles like "@name" are left as plain text
+     since we can't know which platform they belong to. */
+  function maybeUrl(str){
+    if(!str) return null;
+    if(/^https?:\/\//i.test(str)) return str;
+    if(/\./.test(str) && !/\s/.test(str) && !/^\[/.test(str)) return 'https://' + str.replace(/^\/+/, '');
+    return null;
+  }
+  function linkRun(text, url, bold){
+    if(!url) return new TextRun({ text, color:"132340", bold: !!bold, size:16, font:"Inter" });
+    return new ExternalHyperlink({ link:url, children:[ new TextRun({ text, color:"1155CC", bold: !!bold, underline:{}, size:16, font:"Inter" }) ] });
+  }
+  const websiteUrl = maybeUrl(CONTACT_WEBSITE);
+  const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
+  const socialUrl = maybeUrl(CONTACT_SOCIAL);
+
+  const contactFooter = new Paragraph({
+    shading: { fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" },
+    alignment: AlignmentType.CENTER, spacing:{ before:220, after:0 },
+    children:[
+      linkRun(CONTACT_WEBSITE, websiteUrl, true),
+      new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
+      linkRun(CONTACT_EMAIL, emailUrl, false),
+      new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
+      linkRun(CONTACT_SOCIAL, socialUrl, false),
+    ]
+  });
+
+  return [topStrip, masthead, heroPara, quoteStrip, bodyTable, contactFooter];
+}
+
+/* Running header shown on every page except the cover — logo + strapline on
+   the left, issue date range on the right, all vertically centered together */
+function buildRunningHeader(strapline, dateRangeLabel){
+  const { Header, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, VerticalAlign, AlignmentType } = docx;
+  const table = new Table({
+    width:{ size:100, type:WidthType.PERCENTAGE },
+    borders: headerRuleBorder(),
+    rows:[ new TableRow({ children:[
+      new TableCell({
+        width:{ size:9, type:WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlign.CENTER,
+        margins:{ top:60, bottom:100, left:0, right:120 },
+        children:[ new Paragraph({ children:[ new ImageRun({ data: logoBytes(), transformation: logoDims(60) }) ] }) ]
+      }),
+      new TableCell({
+        width:{ size:61, type:WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlign.CENTER,
+        margins:{ top:60, bottom:100, left:0, right:0 },
+        children:[ new Paragraph({ children:[ new TextRun({ text: strapline, color:"736C5E", size:18, font:"Inter", bold:true }) ] }) ]
+      }),
+      new TableCell({
+        width:{ size:30, type:WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlign.CENTER,
+        margins:{ top:60, bottom:100, left:0, right:0 },
+        children:[ new Paragraph({ alignment: AlignmentType.RIGHT, children:[ new TextRun({ text: dateRangeLabel || "", color:"C6A34A", size:18, font:"Inter", bold:true }) ] }) ]
+      }),
+    ]})]
+  });
+  return new Header({ children:[table] });
+}
+function blankHeader(){
+  return new docx.Header({ children:[ new docx.Paragraph({ children:[] }) ] });
+}
+
+/* "Page X of Y" footer shown on every page, including the cover */
+function buildRunningFooter(){
+  const { Footer, Paragraph, TextRun, AlignmentType, PageNumber, BorderStyle } = docx;
+  return new Footer({
+    children:[ new Paragraph({
+      alignment: AlignmentType.CENTER,
+      border:{ top:{ style:BorderStyle.SINGLE, size:2, color:"E4DAC3", space:6 } },
+      children:[
+        new TextRun({ text:"Page ", color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ children:[PageNumber.CURRENT], color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ text:" of ", color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ children:[PageNumber.TOTAL_PAGES], color:"736C5E", size:15, font:"Inter" }),
+      ]
+    })]
+  });
+}
+
+/* One brochure-style event card: image box on the left, title/meta/description
+   aligned beside it, framed in a thin card border. */
+function buildEventCard(e){
+  const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
+  const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
+  const photo = (e.photos || [])[0];
+
+  const imageCell = new TableCell({
+    width:{ size:36, type:WidthType.PERCENTAGE },
+    margins:{ top:60, bottom:60, left:60, right:160 },
+    children:[ new Paragraph({ alignment: docx.AlignmentType.CENTER, children:[
+      photo
+        ? new ImageRun({ data: dataUrlToUint8(photo), transformation:{ width:150, height:150 } })
+        : new ImageRun({ data: logoBytes(), transformation: logoDims(60) })
+    ] }) ]
+  });
+
+  const textCell = new TableCell({
+    width:{ size:64, type:WidthType.PERCENTAGE },
+    margins:{ top:60, bottom:60, left:160, right:60 },
+    children:[
+      new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:e.category.toUpperCase(), color:categoryHex(e.category), bold:true, size:15, font:"Inter" }) ] }),
+      new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:e.title, color:"132340", bold:true, size:23, font:"Playfair Display" }) ] }),
+      new Paragraph({ spacing:{after:100}, children:[ new TextRun({ text:`${dateStr}  ·  ${roleLabel(e.role)} ${e.organizer}`, italics:true, color:"736C5E", size:16, font:"Inter" }) ] }),
+      new Paragraph({ spacing:{after:0, line:280}, children:[ new TextRun({ text:e.desc, color:"1B1B18", size:18, font:"Inter" }) ] }),
+    ]
+  });
+
+  const innerTable = new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:noBorders(), rows:[ new TableRow({ children:[imageCell, textCell] }) ] });
+
+  return new Table({
+    width:{ size:100, type:WidthType.PERCENTAGE },
+    borders: cardBorder(),
+    rows:[ new TableRow({ children:[ new TableCell({ margins:{ top:180, bottom:180, left:180, right:180 }, children:[ innerTable ] }) ] }) ]
+  });
+}
+
+/* Two event cards per page, brochure-style, with a gap between them */
+function buildBrochureSections(ids, data, firstBreak){
+  if(firstBreak === undefined) firstBreak = true;
+  const { Paragraph, TextRun } = docx;
+  let out = [];
+  for(let i=0; i<ids.length; i+=2){
+    const pair = ids.slice(i, i+2);
+    const isFirstGroup = (i === 0);
+    out.push(new Paragraph({ pageBreakBefore: isFirstGroup ? firstBreak : true, spacing:{after:0}, children:[ new TextRun({ text:"", size:2 }) ] }));
+    pair.forEach((id, idx) => {
+      out.push(buildEventCard(data[id]));
+      if(idx < pair.length - 1) out.push(new Paragraph({ spacing:{after:260}, children:[] }));
+    });
+  }
+  return out;
+}
+
+/* ---------- Publications: one full page per paper, with figures ---------- */
+function buildPublicationPage(p, sectionTitle, pageBreak){
+  if(pageBreak === undefined) pageBreak = true;
+  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = docx;
+  let out = [];
+  if(sectionTitle){
+    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
+  } else {
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
+  }
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
+    children:[ new TextRun({ text:p.title, color:"132340", font:"Playfair Display" }) ] }));
+  out.push(new Paragraph({ spacing:{after:60},
+    children:[ new TextRun({ text:p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : ""), italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
+  out.push(new Paragraph({ spacing:{after:60},
+    children:[ new TextRun({ text:"Authors: ", color:"132340", bold:true, size:18, font:"Inter" }), new TextRun({ text:p.authors, color:"1B1B18", size:18, font:"Inter" }) ] }));
+  out.push(new Paragraph({ spacing:{after:220},
+    children:[ new TextRun({ text:formatDate(p.date), color:"736C5E", size:16, font:"Inter" }) ] }));
+
+  const photos = (p.photos || []).slice(0,2);
+  if(photos.length){
+    const runs = [];
+    photos.forEach(ph => {
+      try{
+        runs.push(new ImageRun({ data:dataUrlToUint8(ph), transformation:{ width: photos.length>1?220:340, height: photos.length>1?170:240 } }));
+        runs.push(new TextRun({ text:"  " }));
+      }catch(e){ /* skip unreadable image */ }
+    });
+    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
+  }
+  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:p.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
+  return out;
+}
+function buildPublicationsSection(ids, data, firstBreak){
+  if(firstBreak === undefined) firstBreak = true;
+  if(ids.length === 0) return [];
+  let out = [];
+  ids.forEach((id, idx) => { out = out.concat(buildPublicationPage(data[id], idx===0 ? "PUBLICATIONS" : null, idx===0 ? firstBreak : true)); });
+  return out;
+}
+
+/* ---------- Conference presentations: one full page per paper, with photos ---------- */
+function buildConferencePage(c, sectionTitle, pageBreak){
+  if(pageBreak === undefined) pageBreak = true;
+  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = docx;
+  let out = [];
+  if(sectionTitle){
+    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
+  } else {
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
+  }
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
+    children:[ new TextRun({ text:c.paperTitle, color:"132340", font:"Playfair Display" }) ] }));
+  out.push(new Paragraph({ spacing:{after:60},
+    children:[ new TextRun({ text:c.confName, italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
+  if(c.confDetails){
+    out.push(new Paragraph({ spacing:{after:60}, children:[ new TextRun({ text:c.confDetails, color:"736C5E", size:17, font:"Inter" }) ] }));
+  }
+  out.push(new Paragraph({ spacing:{after:220},
+    children:[
+      new TextRun({ text:"Presented by ", color:"132340", bold:true, size:18, font:"Inter" }),
+      new TextRun({ text:c.presenter + "   ·   " + formatDate(c.date), color:"1B1B18", size:18, font:"Inter" }),
+    ] }));
+
+  const photos = (c.photos || []).slice(0,2);
+  if(photos.length){
+    const runs = [];
+    photos.forEach(ph => {
+      try{
+        runs.push(new ImageRun({ data:dataUrlToUint8(ph), transformation:{ width: photos.length>1?220:340, height: photos.length>1?170:240 } }));
+        runs.push(new TextRun({ text:"  " }));
+      }catch(e){ /* skip unreadable image */ }
+    });
+    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
+  }
+  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:c.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
+  return out;
+}
+function buildConferencesSection(ids, data, firstBreak){
+  if(firstBreak === undefined) firstBreak = true;
+  if(ids.length === 0) return [];
+  let out = [];
+  ids.forEach((id, idx) => { out = out.concat(buildConferencePage(data[id], idx===0 ? "CONFERENCE PRESENTATIONS" : null, idx===0 ? firstBreak : true)); });
+  return out;
+}
+
+/* ---------- Research blog: carries forward from the last month someone wrote one ---------- */
+function findLatestBlogEntries(uptoMonthInclusive){
+  const months = Object.keys(allBlogsByMonth).filter(m => m <= uptoMonthInclusive).sort().reverse();
+  for(const m of months){
+    const ids = Object.keys(allBlogsByMonth[m] || {});
+    if(ids.length){
+      ids.sort((a,b) => (allBlogsByMonth[m][a].date||'').localeCompare(allBlogsByMonth[m][b].date||''));
+      return { month:m, ids, data: allBlogsByMonth[m] };
+    }
+  }
+  return { month:null, ids:[], data:{} };
+}
+function buildBlogPage(b, sectionTitle, sourceLabel, pageBreak){
+  if(pageBreak === undefined) pageBreak = true;
+  const { Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+  let out = [];
+  if(sectionTitle){
+    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after: sourceLabel?60:280 },
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    if(sourceLabel){
+      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:280},
+        children:[ new TextRun({ text:`Featured from ${sourceLabel}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
+    }
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
+  } else {
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
+  }
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:80 },
+    children:[ new TextRun({ text:b.title, color:"132340", font:"Playfair Display" }) ] }));
+  out.push(new Paragraph({ spacing:{after:220},
+    children:[ new TextRun({ text:`By ${b.author}   ·   ${formatDate(b.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
+  (b.content || '').split(/\n+/).forEach(para => {
+    if(para.trim()) out.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
+  });
+  return out;
+}
+function buildBlogSection(ids, data, sourceLabel, firstBreak){
+  if(firstBreak === undefined) firstBreak = true;
+  if(ids.length === 0) return [];
+  let out = [];
+  ids.forEach((id, idx) => { out = out.concat(buildBlogPage(data[id], idx===0 ? "RESEARCH BLOG" : null, idx===0 ? sourceLabel : null, idx===0 ? firstBreak : true)); });
+  return out;
+}
+
+/* ---------- Monthly newsletter ---------- */
+async function generateNewsletter(){
+  const monthData = allEventsByMonth[currentMonth] || {};
+  const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+  const pubData = allPublicationsByMonth[currentMonth] || {};
+  const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
+  const confData = allConferencesByMonth[currentMonth] || {};
+  const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+  const blogInfo = findLatestBlogEntries(currentMonth);
+
+  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0){
+    alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.');
+    return;
+  }
+
+  const btn = document.getElementById('genWordBtn');
+  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+
+  try{
+    const { Document, Packer } = docx;
+    const dateRange = issueDateRangeLabel(currentMonth);
+
+    const cover = buildCoverPage({
+      issuePeriod: dateRange,
+      heroBytes: resolveHeroBytes(ids, monthData),
+      indexGroups: buildIndexGroups(ids, monthData, pubIds, pubData, confIds, confData),
+      upcoming: getUpcomingEvents(6)
+    });
+
+    const body = [
+      ...buildBrochureSections(ids, monthData),
+      ...buildPublicationsSection(pubIds, pubData),
+      ...buildConferencesSection(confIds, confData),
+      ...buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== currentMonth ? monthLabel(blogInfo.month) : null),
+      ...buildUpcomingConferencesSection(getActiveUpcomingConferences()),
+    ];
+
+    const doc = new Document({
+      styles: { default: { document: { run: { font:"Inter", size:22 } } } },
+      sections: [{
+        properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },
+        headers: { default: buildRunningHeader("SCHOOL OF PHYSICAL SCIENCES · DEPARTMENT NEWSLETTER", dateRange), first: blankHeader() },
+        footers: { default: buildRunningFooter(), first: buildRunningFooter() },
+        children: [ ...cover, ...body ]
+      }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `Newsletter_${currentMonth}.docx`);
+  }catch(err){
+    console.error(err);
+    alert('Could not generate the Word document: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+
+/* ---------- Annual newsletter ---------- */
+async function generateAnnualNewsletter(){
+  const year = document.getElementById('yearSelect').value;
+  const months = allMonthKeys().filter(m => m.startsWith(year + '-')).sort();
+  const totalIds = months.reduce((sum,m) => sum + Object.keys(allEventsByMonth[m]||{}).length, 0);
+  const hasOtherContent = months.some(m =>
+    Object.keys(allPublicationsByMonth[m]||{}).length ||
+    Object.keys(allConferencesByMonth[m]||{}).length ||
+    Object.keys(allBlogsByMonth[m]||{}).length
+  );
+  if(totalIds === 0 && !hasOtherContent){ alert('No content found for ' + year + '.'); return; }
+
+  const btn = document.getElementById('genAnnualWordBtn');
+  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+
+  try{
+    const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+
+    // Merge all months of the year into one id list + one combined data map for the cover index/hero
+    let allIds = [];
+    let allData = {};
+    let allPubIds = [];
+    let allPubData = {};
+    let allConfIds = [];
+    let allConfData = {};
+    months.forEach(m => {
+      Object.keys(allEventsByMonth[m]||{}).forEach(id => { allIds.push(id); allData[id] = allEventsByMonth[m][id]; });
+      Object.keys(allPublicationsByMonth[m]||{}).forEach(id => { allPubIds.push(id); allPubData[id] = allPublicationsByMonth[m][id]; });
+      Object.keys(allConferencesByMonth[m]||{}).forEach(id => { allConfIds.push(id); allConfData[id] = allConferencesByMonth[m][id]; });
+    });
+
+    const annualDateRange = issueDateRangeLabelYear(year);
+    const cover = buildCoverPage({
+      issuePeriod: `Annual Edition · ${annualDateRange}`,
+      heroBytes: resolveHeroBytes(allIds, allData),
+      indexGroups: buildIndexGroups(allIds, allData, allPubIds, allPubData, allConfIds, allConfData),
+      upcoming: getUpcomingEvents(6)
+    });
+
+    let body = [];
+    months.forEach(m => {
+      body.push(new Paragraph({ pageBreakBefore:true, alignment: AlignmentType.CENTER, spacing:{ before:120, after:120 },
+        children:[ new TextRun({ text: monthLabel(m).split(' ')[0].toUpperCase(), color:"132340", bold:true, size:52, font:"Playfair Display" }) ] }));
+      body.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{after:280},
+        children:[ new TextRun({ text: monthLabel(m).split(' ')[1], color:"C6A34A", bold:true, size:28, font:"Inter" }) ] }));
+
+      const monthData = allEventsByMonth[m] || {};
+      const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+      const pubData = allPublicationsByMonth[m] || {};
+      const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
+      const confData = allConferencesByMonth[m] || {};
+      const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+      const blogInfo = findLatestBlogEntries(m);
+
+      // Whichever content type comes first for this month flows directly below
+      // the month heading (no page break); everything after that starts fresh pages as usual.
+      let firstUsed = false;
+      const takeFirstBreak = () => { const f = !firstUsed; firstUsed = true; return !f; };
+
+      body = body.concat(buildBrochureSections(ids, monthData, ids.length ? takeFirstBreak() : true));
+      body = body.concat(buildPublicationsSection(pubIds, pubData, pubIds.length ? takeFirstBreak() : true));
+      body = body.concat(buildConferencesSection(confIds, confData, confIds.length ? takeFirstBreak() : true));
+      body = body.concat(buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== m ? monthLabel(blogInfo.month) : null, blogInfo.ids.length ? takeFirstBreak() : true));
+    });
+
+    // Upcoming Conferences & Workshops is evergreen standing content, shown once
+    // at the end of the annual edition rather than repeated inside every month.
+    body = body.concat(buildUpcomingConferencesSection(getActiveUpcomingConferences()));
+
+    const doc = new Document({
+      styles: { default: { document: { run: { font:"Inter", size:22 } } } },
+      sections: [{
+        properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },
+        headers: { default: buildRunningHeader(`SCHOOL OF PHYSICAL SCIENCES · ANNUAL NEWSLETTER ${year}`, annualDateRange), first: blankHeader() },
+        footers: { default: buildRunningFooter(), first: buildRunningFooter() },
+        children: [ ...cover, ...body ]
+      }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `Annual_Newsletter_${year}.docx`);
+  }catch(err){
+    console.error(err);
+    alert('Could not generate the annual newsletter: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+
+
+/* =========================================================================
+   EXCEL REPORT GENERATION
+   ========================================================================= */
+/* Shared Excel sheet builders for Publications and Conference Presentations */
+function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
+  if(rows.length === 0) return;
+  const ws = wb.addWorksheet('Publications - ' + sheetLabel, { views:[{state:'frozen', ySplit:1}] });
+  const cols = [];
+  if(includeMonth) cols.push({ header:'Month', key:'month', width:16 });
+  cols.push(
+    { header:'Date', key:'date', width:14 },
+    { header:'Title', key:'title', width:36 },
+    { header:'Journal', key:'journal', width:26 },
+    { header:'Volume', key:'volume', width:10 },
+    { header:'Issue', key:'issue', width:10 },
+    { header:'Indexing', key:'indexing', width:12 },
+    { header:'Authors', key:'authors', width:28 },
+    { header:'Abstract', key:'abstract', width:60 },
+    { header:'Figures', key:'photos', width:10 },
+  );
+  ws.columns = cols;
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF6B4C9A'} };
+    cell.font = { bold:true, color:{argb:'FFFBF7EE'}, size:11 };
+  });
+  ws.getRow(1).height = 22;
+  rows.forEach(({ month, p }) => {
+    const row = ws.addRow({
+      month, date: formatDate(p.date), title: p.title, journal: p.journal,
+      volume: p.volume || '', issue: p.issue || '', indexing: p.indexing || '',
+      authors: p.authors, abstract: p.abstract, photos: (p.photos||[]).length,
+    });
+    row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
+    row.alignment = { vertical:'top' };
+  });
+}
+function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
+  if(rows.length === 0) return;
+  const ws = wb.addWorksheet('Conferences - ' + sheetLabel, { views:[{state:'frozen', ySplit:1}] });
+  const cols = [];
+  if(includeMonth) cols.push({ header:'Month', key:'month', width:16 });
+  cols.push(
+    { header:'Date', key:'date', width:14 },
+    { header:'Paper Title', key:'paperTitle', width:34 },
+    { header:'Conference Name', key:'confName', width:30 },
+    { header:'Conference Details', key:'confDetails', width:36 },
+    { header:'Presented By', key:'presenter', width:22 },
+    { header:'Abstract', key:'abstract', width:60 },
+    { header:'Photos', key:'photos', width:10 },
+  );
+  ws.columns = cols;
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF2C5F8A'} };
+    cell.font = { bold:true, color:{argb:'FFFBF7EE'}, size:11 };
+  });
+  ws.getRow(1).height = 22;
+  rows.forEach(({ month, c }) => {
+    const row = ws.addRow({
+      month, date: formatDate(c.date), paperTitle: c.paperTitle, confName: c.confName,
+      confDetails: c.confDetails || '', presenter: c.presenter, abstract: c.abstract, photos: (c.photos||[]).length,
+    });
+    row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
+    row.alignment = { vertical:'top' };
+  });
+}
+
+async function generateExcel(){
+  const monthData = allEventsByMonth[currentMonth] || {};
+  const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+  const pubData = allPublicationsByMonth[currentMonth] || {};
+  const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
+  const confData = allConferencesByMonth[currentMonth] || {};
+  const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+
+  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0){
+    alert('No content to include for ' + monthLabel(currentMonth) + '.');
+    return;
+  }
+
+  const btn = document.getElementById('genExcelBtn');
+  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+
+  try{
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Department Newsletter Manager';
+    wb.created = new Date();
+
+    /* ---- Sheet: Events (only if there are any) ---- */
+    const catFill = { Academic:'FFDCE7F2', Research:'FFE7DEF2', Cultural:'FFF6E1CE', Social:'FFDCF0E3', Other:'FFEAEAEA' };
+    if(ids.length > 0){
+      const ws = wb.addWorksheet('Events - ' + monthLabel(currentMonth), { views:[{state:'frozen', ySplit:1}] });
+      ws.columns = [
+        { header:'Date', key:'date', width:14 },
+        { header:'End Date', key:'dateEnd', width:14 },
+        { header:'Category', key:'category', width:14 },
+        { header:'Event Title', key:'title', width:36 },
+        { header:'Description', key:'desc', width:60 },
+        { header:'Name', key:'organizer', width:24 },
+        { header:'Role', key:'role', width:14 },
+        { header:'Photos', key:'photos', width:10 },
+      ];
+      ws.getRow(1).eachCell(cell => {
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
+        cell.font = { bold:true, color:{argb:'FFFBF7EE'}, size:11 };
+        cell.alignment = { vertical:'middle' };
+      });
+      ws.getRow(1).height = 22;
+
+      ids.forEach(id => {
+        const e = monthData[id];
+        const row = ws.addRow({
+          date: formatDate(e.date),
+          dateEnd: e.dateEnd ? formatDate(e.dateEnd) : '',
+          category: e.category,
+          title: e.title,
+          desc: e.desc,
+          organizer: e.organizer,
+          role: e.role === 'Attended' ? 'Attended' : 'Organized',
+          photos: (e.photos||[]).length,
+        });
+        row.getCell('category').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[e.category] || catFill.Other} };
+        row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
+        row.alignment = { vertical:'top' };
+      });
+      ws.getColumn('desc').alignment = { wrapText:true, vertical:'top' };
+    }
+
+    /* ---- Sheets: Publications & Conference Presentations ---- */
+    addPublicationsSheet(wb, monthLabel(currentMonth), pubIds.map(id => ({ month:null, p:pubData[id] })), false);
+    addConferencesSheet(wb, monthLabel(currentMonth), confIds.map(id => ({ month:null, c:confData[id] })), false);
+
+    /* ---- Sheet: Summary ---- */
+    const ws2 = wb.addWorksheet('Summary');
+    ws2.columns = [ { header:'Category', key:'cat', width:20 }, { header:'Number of Events', key:'n', width:20 } ];
+    ws2.getRow(1).eachCell(cell => {
+      cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
+      cell.font = { bold:true, color:{argb:'FFFBF7EE'} };
+    });
+    const counts = {};
+    ids.forEach(id => { const c = monthData[id].category || 'Other'; counts[c] = (counts[c]||0)+1; });
+    Object.entries(counts).forEach(([cat,n]) => {
+      const row = ws2.addRow({ cat, n });
+      row.getCell('cat').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[cat] || catFill.Other} };
+    });
+    if(pubIds.length) ws2.addRow({ cat:'Publications', n: pubIds.length });
+    if(confIds.length) ws2.addRow({ cat:'Conference Presentations', n: confIds.length });
+    ws2.addRow({});
+    const totalRow = ws2.addRow({ cat:'Total', n: ids.length });
+    totalRow.font = { bold:true };
+    ws2.addRow({});
+    ws2.addRow({ cat:'Generated', n: new Date().toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'}) });
+
+    const buf = await wb.xlsx.writeBuffer();
+    saveAs(new Blob([buf], { type:'application/octet-stream' }), `Events_${currentMonth}.xlsx`);
+  }catch(err){
+    console.error(err);
+    alert('Could not generate the Excel report: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+
+async function generateAnnualExcel(){
+  const year = document.getElementById('yearSelect').value;
+  const months = allMonthKeys().filter(m => m.startsWith(year + '-')).sort();
+  const totalIds = months.reduce((sum,m) => sum + Object.keys(allEventsByMonth[m]||{}).length, 0);
+  const totalPubs = months.reduce((sum,m) => sum + Object.keys(allPublicationsByMonth[m]||{}).length, 0);
+  const totalConfs = months.reduce((sum,m) => sum + Object.keys(allConferencesByMonth[m]||{}).length, 0);
+  if(totalIds === 0 && totalPubs === 0 && totalConfs === 0){ alert('No content found for ' + year + '.'); return; }
+
+  const btn = document.getElementById('genAnnualExcelBtn');
+  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+
+  try{
+    const catFill = { Academic:'FFDCE7F2', Research:'FFE7DEF2', Cultural:'FFF6E1CE', Social:'FFDCF0E3', Other:'FFEAEAEA' };
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Department Newsletter Manager';
+    wb.created = new Date();
+
+    const counts = {};
+    if(totalIds > 0){
+      const ws = wb.addWorksheet('Events - ' + year, { views:[{state:'frozen', ySplit:1}] });
+      ws.columns = [
+        { header:'Month', key:'month', width:16 },
+        { header:'Date', key:'date', width:14 },
+        { header:'End Date', key:'dateEnd', width:14 },
+        { header:'Category', key:'category', width:14 },
+        { header:'Event Title', key:'title', width:36 },
+        { header:'Description', key:'desc', width:60 },
+        { header:'Name', key:'organizer', width:24 },
+        { header:'Role', key:'role', width:14 },
+        { header:'Photos', key:'photos', width:10 },
+      ];
+      ws.getRow(1).eachCell(cell => {
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
+        cell.font = { bold:true, color:{argb:'FFFBF7EE'}, size:11 };
+      });
+      ws.getRow(1).height = 22;
+
+      months.forEach(m => {
+        const monthData = allEventsByMonth[m] || {};
+        const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+        ids.forEach(id => {
+          const e = monthData[id];
+          counts[e.category||'Other'] = (counts[e.category||'Other']||0)+1;
+          const row = ws.addRow({
+            month: monthLabel(m),
+            date: formatDate(e.date),
+            dateEnd: e.dateEnd ? formatDate(e.dateEnd) : '',
+            category: e.category,
+            title: e.title,
+            desc: e.desc,
+            organizer: e.organizer,
+            role: e.role === 'Attended' ? 'Attended' : 'Organized',
+            photos: (e.photos||[]).length,
+          });
+          row.getCell('category').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[e.category] || catFill.Other} };
+          row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
+          row.alignment = { vertical:'top' };
+        });
+      });
+    }
+
+    /* ---- Sheets: Publications & Conference Presentations across the year ---- */
+    let pubRows = [];
+    let confRows = [];
+    months.forEach(m => {
+      const pubData = allPublicationsByMonth[m] || {};
+      Object.keys(pubData).forEach(id => pubRows.push({ month: monthLabel(m), p: pubData[id] }));
+      const confData = allConferencesByMonth[m] || {};
+      Object.keys(confData).forEach(id => confRows.push({ month: monthLabel(m), c: confData[id] }));
+    });
+    pubRows.sort((a,b) => (a.p.date||'').localeCompare(b.p.date||''));
+    confRows.sort((a,b) => (a.c.date||'').localeCompare(b.c.date||''));
+    addPublicationsSheet(wb, year, pubRows, true);
+    addConferencesSheet(wb, year, confRows, true);
+
+    const ws2 = wb.addWorksheet('Summary');
+    ws2.columns = [ { header:'Category', key:'cat', width:20 }, { header:'Number of Events', key:'n', width:20 } ];
+    ws2.getRow(1).eachCell(cell => {
+      cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
+      cell.font = { bold:true, color:{argb:'FFFBF7EE'} };
+    });
+    Object.entries(counts).forEach(([cat,n]) => {
+      const row = ws2.addRow({ cat, n });
+      row.getCell('cat').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[cat] || catFill.Other} };
+    });
+    if(pubRows.length) ws2.addRow({ cat:'Publications', n: pubRows.length });
+    if(confRows.length) ws2.addRow({ cat:'Conference Presentations', n: confRows.length });
+    ws2.addRow({});
+    const totalRow = ws2.addRow({ cat:'Total', n: totalIds });
+    totalRow.font = { bold:true };
+    ws2.addRow({});
+    ws2.addRow({ cat:'Generated', n: new Date().toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'}) });
+
+    const buf = await wb.xlsx.writeBuffer();
+    saveAs(new Blob([buf], { type:'application/octet-stream' }), `Annual_Events_${year}.xlsx`);
+  }catch(err){
+    console.error(err);
+    alert('Could not generate the annual Excel report: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = origText;
+  }
+}
+
+/* ---------------- Init ---------------- */
+document.getElementById('topbarLogo').src = 'data:image/png;base64,' + AMITY_LOGO_BASE64;
+document.getElementById('f_date').valueAsDate = new Date();
+if(sessionStorage.getItem('nl_admin') === 'yes' && location.hash === '#admin'){
+  switchTab('admin');
+}
+</script>
+</body>
+</html>

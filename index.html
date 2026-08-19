@@ -823,7 +823,7 @@ function handlePhotoSelect(type, evt){
   const arr = photoState[type];
   const files = Array.from(evt.target.files).slice(0, 6 - arr.length);
   files.forEach(file => compressImage(file, 900, 0.68).then(result => {
-    arr.push({ name: file.name, dataUrl: result.dataUrl });
+    arr.push({ name: file.name, dataUrl: result.dataUrl, width: result.width, height: result.height });
     renderThumbs(type);
   }));
   evt.target.value = '';
@@ -894,7 +894,7 @@ function submitEvent(){
 
   const eventData = {
     title, category, organizer, role, date, dateEnd: dateEnd || null, desc,
-    photos: photoState.event.map(p => p.dataUrl),
+    photos: photoState.event.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
   };
 
@@ -934,7 +934,7 @@ function submitPublication(){
 
   const pubData = {
     title, journal, indexing, volume, issue, authors, date, abstract,
-    photos: photoState.publication.map(p => p.dataUrl),
+    photos: photoState.publication.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
   };
 
@@ -972,7 +972,7 @@ function submitConference(){
 
   const confData = {
     confName, confDetails, paperTitle, presenter, date, abstract,
-    photos: photoState.conference.map(p => p.dataUrl),
+    photos: photoState.conference.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
   };
 
@@ -1100,6 +1100,7 @@ let currentMonth = null;
 let CUSTOM_LOGO_BASE64 = null;       // full data URL, overrides AMITY_LOGO_BASE64 when set
 let CUSTOM_LOGO_W = null, CUSTOM_LOGO_H = null; // natural size of the uploaded logo, to keep its aspect ratio
 let CUSTOM_COVER_PHOTO_BASE64 = null; // full data URL, overrides the auto-picked hero photo when set
+let CUSTOM_COVER_PHOTO_W = null, CUSTOM_COVER_PHOTO_H = null; // natural size, to keep its aspect ratio
 let settingsImages = { logo: null, coverPhoto: null }; // pending uploads not yet saved
 
 function allMonthKeys(){
@@ -1170,7 +1171,11 @@ function applyNewsletterSettings(s){
     CUSTOM_LOGO_H = s.logoH || null;
     document.getElementById('topbarLogo').src = s.logo;
   }
-  if(s.coverPhoto) CUSTOM_COVER_PHOTO_BASE64 = s.coverPhoto;
+  if(s.coverPhoto){
+    CUSTOM_COVER_PHOTO_BASE64 = s.coverPhoto;
+    CUSTOM_COVER_PHOTO_W = s.coverPhotoW || null;
+    CUSTOM_COVER_PHOTO_H = s.coverPhotoH || null;
+  }
 }
 
 /* Logo / cover-photo file inputs in the Settings card.
@@ -1184,7 +1189,8 @@ function handleSettingsImage(type, evt){
   const format = type === 'logo' ? 'image/png' : 'image/jpeg';
   compressImage(file, maxW, 0.85, format).then(result => {
     settingsImages[type] = result.dataUrl;
-    if(type === 'logo'){ settingsImages.logoW = result.width; settingsImages.logoH = result.height; }
+    settingsImages[type + 'W'] = result.width;
+    settingsImages[type + 'H'] = result.height;
     document.getElementById('thumb-' + type).innerHTML = `<div class="thumb"><img src="${result.dataUrl}"/></div>`;
   });
   evt.target.value = '';
@@ -1205,7 +1211,10 @@ function saveNewsletterSettings(){
     s.logo = settingsImages.logo;
     if(settingsImages.logoW){ s.logoW = settingsImages.logoW; s.logoH = settingsImages.logoH; }
   }
-  if(settingsImages.coverPhoto) s.coverPhoto = settingsImages.coverPhoto;
+  if(settingsImages.coverPhoto){
+    s.coverPhoto = settingsImages.coverPhoto;
+    if(settingsImages.coverPhotoW){ s.coverPhotoW = settingsImages.coverPhotoW; s.coverPhotoH = settingsImages.coverPhotoH; }
+  }
   const msg = document.getElementById('settingsMsg');
   db.ref('settings/newsletter').update(s)
     .then(() => {
@@ -1339,7 +1348,7 @@ function renderEventsForMonth(){
 
   listEl.innerHTML = ids.map(id => {
     const e = monthData[id];
-    const photos = (e.photos||[]).map(p => `<img src="${p}"/>`).join('');
+    const photos = (e.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
     const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
     return `
     <div class="event-card">
@@ -1374,6 +1383,12 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+/* Photos were originally stored as plain data-URL strings; newer submissions
+   store { url, w, h } so images can be sized without distortion. These two
+   helpers work with either shape so old data keeps displaying fine. */
+function photoUrl(p){ return typeof p === 'string' ? p : (p && p.url) || ''; }
+function photoWH(p){ return (p && typeof p === 'object') ? { w: p.w || null, h: p.h || null } : { w: null, h: null }; }
+
 function deleteEvent(month, id){
   if(!confirm('Delete this event? This cannot be undone.')) return;
   db.ref('events/' + month + '/' + id).remove();
@@ -1390,7 +1405,7 @@ function renderPublicationsForMonth(){
   }
   listEl.innerHTML = ids.map(id => {
     const p = data[id];
-    const photos = (p.photos||[]).map(ph => `<img src="${ph}"/>`).join('');
+    const photos = (p.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
     return `
     <div class="event-card">
       <div class="top">
@@ -1426,7 +1441,7 @@ function renderConferencesForMonth(){
   }
   listEl.innerHTML = ids.map(id => {
     const c = data[id];
-    const photos = (c.photos||[]).map(ph => `<img src="${ph}"/>`).join('');
+    const photos = (c.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
     return `
     <div class="event-card">
       <div class="top">
@@ -1585,9 +1600,13 @@ function logoDims(targetWidth){
   }
   return { width: targetWidth, height: targetWidth }; // default Amity mark is square
 }
-/* Prefers an admin-uploaded cover photo; falls back to the month's first event photo */
+/* Prefers an admin-uploaded cover photo; falls back to the month's first event photo.
+   Returns { bytes, w, h } — w/h are null when the dimensions aren't known (older data). */
 function resolveHeroBytes(ids, data){
-  if(CUSTOM_COVER_PHOTO_BASE64){ try{ return dataUrlToUint8(CUSTOM_COVER_PHOTO_BASE64); }catch(e){ /* fall through */ } }
+  if(CUSTOM_COVER_PHOTO_BASE64){
+    try{ return { bytes: dataUrlToUint8(CUSTOM_COVER_PHOTO_BASE64), w: CUSTOM_COVER_PHOTO_W, h: CUSTOM_COVER_PHOTO_H }; }
+    catch(e){ /* fall through */ }
+  }
   return findHeroBytes(ids, data);
 }
 
@@ -1628,10 +1647,14 @@ function findHeroBytes(ids, data){
   for(const id of ids){
     const photos = data[id].photos;
     if(photos && photos.length){
-      try{ return dataUrlToUint8(photos[0]); }catch(e){ /* skip */ }
+      const first = photos[0];
+      try{
+        const { w, h } = photoWH(first);
+        return { bytes: dataUrlToUint8(photoUrl(first)), w, h };
+      }catch(e){ /* skip */ }
     }
   }
-  return null;
+  return { bytes: null, w: null, h: null };
 }
 
 /* Admin-curated Upcoming Events (from the flat upcomingEvents collection),
@@ -1744,8 +1767,8 @@ function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
     ]})]
   });
 
-  const heroPara = heroBytes
-    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes, transformation:{ width:620, height:230 } }) ] })
+  const heroPara = (heroBytes && heroBytes.bytes)
+    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes.bytes, transformation: imageDimsFit(heroBytes.w, heroBytes.h, 620, 320) }) ] })
     : new Paragraph({ shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, alignment:AlignmentType.CENTER, spacing:{ before:260, after:260 },
         children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] });
 
@@ -1892,13 +1915,14 @@ function buildEventCard(e){
   const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
   const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
   const photo = (e.photos || [])[0];
+  const photoWHVal = photoWH(photo);
 
   const imageCell = new TableCell({
     width:{ size:36, type:WidthType.PERCENTAGE },
     margins:{ top:60, bottom:60, left:60, right:160 },
     children:[ new Paragraph({ alignment: docx.AlignmentType.CENTER, children:[
       photo
-        ? new ImageRun({ data: dataUrlToUint8(photo), transformation:{ width:150, height:150 } })
+        ? new ImageRun({ data: dataUrlToUint8(photoUrl(photo)), transformation: imageDimsFit(photoWHVal.w, photoWHVal.h, 150, 150) })
         : new ImageRun({ data: logoBytes(), transformation: logoDims(60) })
     ] }) ]
   });
@@ -1968,7 +1992,9 @@ function buildPublicationPage(p, sectionTitle, pageBreak){
     const runs = [];
     photos.forEach(ph => {
       try{
-        runs.push(new ImageRun({ data:dataUrlToUint8(ph), transformation:{ width: photos.length>1?220:340, height: photos.length>1?170:240 } }));
+        const { w, h } = photoWH(ph);
+        const maxW = photos.length>1?220:340, maxH = photos.length>1?170:240;
+        runs.push(new ImageRun({ data:dataUrlToUint8(photoUrl(ph)), transformation: imageDimsFit(w, h, maxW, maxH) }));
         runs.push(new TextRun({ text:"  " }));
       }catch(e){ /* skip unreadable image */ }
     });
@@ -2017,7 +2043,9 @@ function buildConferencePage(c, sectionTitle, pageBreak){
     const runs = [];
     photos.forEach(ph => {
       try{
-        runs.push(new ImageRun({ data:dataUrlToUint8(ph), transformation:{ width: photos.length>1?220:340, height: photos.length>1?170:240 } }));
+        const { w, h } = photoWH(ph);
+        const maxW = photos.length>1?220:340, maxH = photos.length>1?170:240;
+        runs.push(new ImageRun({ data:dataUrlToUint8(photoUrl(ph)), transformation: imageDimsFit(w, h, maxW, maxH) }));
         runs.push(new TextRun({ text:"  " }));
       }catch(e){ /* skip unreadable image */ }
     });

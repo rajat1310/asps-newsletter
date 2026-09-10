@@ -1809,22 +1809,6 @@ function headerRuleBorder(){
   return { top:n, left:n, right:n, insideHorizontal:n, insideVertical:n, bottom:g };
 }
 
-/* A white content card sitting on the navy interior-page background.
-   Every piece of substantive content (an event, a publication, a puzzle...)
-   lives inside one of these so it reads clearly against the navy behind it. */
-function whiteCard(children, opts={}){
-  const { Table, TableRow, TableCell, WidthType, ShadingType } = docx;
-  return new Table({
-    width: { size:100, type:WidthType.PERCENTAGE },
-    borders: opts.bordered ? cardBorder() : noBorders(),
-    rows: [ new TableRow({ children: [ new TableCell({
-      shading: { fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
-      margins: { top: opts.padY || 240, bottom: opts.padY || 240, left: opts.padX || 280, right: opts.padX || 280 },
-      children,
-    }) ] }) ],
-  });
-}
-
 function categoryHex(cat){
   return { Academic:"2C5F8A", Research:"6B4C9A", Cultural:"C1722C", Social:"3A8C64", Other:"736C5E" }[cat] || "736C5E";
 }
@@ -1929,38 +1913,49 @@ function imageDimsFit(natW, natH, maxWidth, maxHeight){
   return { width: Math.round(natW * scale), height: Math.round(natH * scale) };
 }
 
+/* The cover's hero photo should always span the same full width as the
+   masthead/index tables above and below it so the whole cover lines up —
+   a box-fit (imageDimsFit) can leave the photo much narrower than that for
+   portrait shots, which is what created the "not aligned" look. This fills
+   the full content width and lets height follow proportionally, only
+   falling back to a bounded box for unusually tall (very portrait) photos
+   where a full-width render would make the cover absurdly long. */
+function heroImageDims(natW, natH){
+  const CONTENT_W = 700, MAX_H = 460;
+  if(!natW || !natH) return { width: CONTENT_W, height: 260 };
+  const height = Math.round(CONTENT_W * (natH / natW));
+  if(height <= MAX_H) return { width: CONTENT_W, height };
+  return imageDimsFit(natW, natH, CONTENT_W, MAX_H);
+}
+
 function buildUpcomingConferenceCard(u, sectionTitle, pageBreak){
   if(pageBreak === undefined) pageBreak = true;
   const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType, ExternalHyperlink } = docx;
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"UPCOMING", color:"F0CBA6", bold:true, size:18, font:"Inter" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"UPCOMING", color:"F0CBA6", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:100 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
     children:[ new TextRun({ text:u.title, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:180},
+  out.push(new Paragraph({ spacing:{after:180},
     children:[ new TextRun({ text:formatDate(u.date), color:"736C5E", size:19, font:"Inter" }) ] }));
   if(u.link){
     const url = /^https?:\/\//i.test(u.link) ? u.link : 'https://' + u.link.replace(/^\/+/, '');
-    cardChildren.push(new Paragraph({ spacing:{after:220},
+    out.push(new Paragraph({ spacing:{after:220},
       children:[ new ExternalHyperlink({ link:url, children:[ new TextRun({ text:u.link, color:"1155CC", underline:{}, size:18, font:"Inter" }) ] }) ] }));
   }
   if(u.brochure){
     try{
-      cardChildren.push(new Paragraph({ spacing:{after:100},
+      out.push(new Paragraph({ spacing:{after:100},
         children:[ new ImageRun({ data:dataUrlToUint8(u.brochure), transformation: imageDimsFit(u.brochureW, u.brochureH, 400, 500) }) ] }));
     }catch(e){ /* skip unreadable brochure */ }
   }
-
-  out.push(whiteCard(cardChildren));
   return out;
 }
 function buildUpcomingConferencesSection(items, firstBreak){
@@ -2019,14 +2014,13 @@ function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
   });
 
   const heroPara = (heroBytes && heroBytes.bytes)
-    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes.bytes, transformation: imageDimsFit(heroBytes.w, heroBytes.h, 620, 320) }) ] })
+    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes.bytes, transformation: heroImageDims(heroBytes.w, heroBytes.h) }) ] })
     : new Paragraph({ shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, alignment:AlignmentType.CENTER, spacing:{ before:260, after:260 },
         children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] });
 
   const missionVisionCell = new TableCell({
     width:{ size:63, type:WidthType.PERCENTAGE },
-    shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
-    margins:{ top:320, bottom:320, left:280, right:360 },
+    margins:{ top:320, bottom:320, left:0, right:360 },
     children:[
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:26, font:"Playfair Display" }) ] }),
       new Paragraph({ spacing:{after:280, line:300}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:19, font:"Inter", italics:true }) ] }),
@@ -2054,11 +2048,15 @@ function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
       border:{ top:{ style:BorderStyle.SINGLE, size:3, color:"3A4E75", space:8 } },
       children:[ new TextRun({ text:"UPCOMING EVENTS", color:"C6A34A", bold:true, size:17, font:"Inter" }) ] }));
     upcoming.forEach(e => {
-      indexChildren.push(new Paragraph({ spacing:{after:40},
+      indexChildren.push(new Paragraph({ spacing:{after: e.note ? 15 : 40},
         children:[
           new TextRun({ text:formatDate(e.date).replace(/, \d{4}/,'') + "   ", color:"C6A34A", size:15, font:"Inter" }),
-          new TextRun({ text:e.title, color:"E8E4D8", size:15, font:"Inter" }),
+          new TextRun({ text:e.title, color:"E8E4D8", bold:true, size:15, font:"Inter" }),
         ]}));
+      if(e.note){
+        indexChildren.push(new Paragraph({ spacing:{after:40},
+          children:[ new TextRun({ text:e.note, color:"AEBBD6", italics:true, size:14, font:"Inter" }) ] }));
+      }
     });
   }
   const indexCell = new TableCell({
@@ -2071,7 +2069,6 @@ function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
   const bodyTable = new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:noBorders(), rows:[ new TableRow({ children:[missionVisionCell, indexCell] }) ] });
 
   const quoteStrip = new Paragraph({
-    shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" },
     alignment: AlignmentType.CENTER, spacing:{ before:260, after:260 },
     children:[
       new TextRun({ text: `“${QUOTE_TEXT}”`, italics:true, color:"132340", size:24, font:"Cormorant Garamond" }),
@@ -2129,7 +2126,7 @@ function buildRunningHeader(strapline, dateRangeLabel){
         width:{ size:61, type:WidthType.PERCENTAGE },
         verticalAlign: VerticalAlign.CENTER,
         margins:{ top:60, bottom:100, left:0, right:0 },
-        children:[ new Paragraph({ children:[ new TextRun({ text: strapline, color:"C9D2E3", size:18, font:"Inter", bold:true }) ] }) ]
+        children:[ new Paragraph({ children:[ new TextRun({ text: strapline, color:"736C5E", size:18, font:"Inter", bold:true }) ] }) ]
       }),
       new TableCell({
         width:{ size:30, type:WidthType.PERCENTAGE },
@@ -2151,12 +2148,12 @@ function buildRunningFooter(){
   return new Footer({
     children:[ new Paragraph({
       alignment: AlignmentType.CENTER,
-      border:{ top:{ style:BorderStyle.SINGLE, size:2, color:"3A4E75", space:6 } },
+      border:{ top:{ style:BorderStyle.SINGLE, size:2, color:"E4DAC3", space:6 } },
       children:[
-        new TextRun({ text:"Page ", color:"C9D2E3", size:15, font:"Inter" }),
-        new TextRun({ children:[PageNumber.CURRENT], color:"C9D2E3", size:15, font:"Inter" }),
-        new TextRun({ text:" of ", color:"C9D2E3", size:15, font:"Inter" }),
-        new TextRun({ children:[PageNumber.TOTAL_PAGES], color:"C9D2E3", size:15, font:"Inter" }),
+        new TextRun({ text:"Page ", color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ children:[PageNumber.CURRENT], color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ text:" of ", color:"736C5E", size:15, font:"Inter" }),
+        new TextRun({ children:[PageNumber.TOTAL_PAGES], color:"736C5E", size:15, font:"Inter" }),
       ]
     })]
   });
@@ -2196,10 +2193,7 @@ function buildEventCard(e){
   return new Table({
     width:{ size:100, type:WidthType.PERCENTAGE },
     borders: cardBorder(),
-    rows:[ new TableRow({ children:[ new TableCell({
-      shading:{ fill:"FFFFFF", type:docx.ShadingType.CLEAR, color:"auto" },
-      margins:{ top:180, bottom:180, left:180, right:180 }, children:[ innerTable ]
-    }) ] }) ]
+    rows:[ new TableRow({ children:[ new TableCell({ margins:{ top:180, bottom:180, left:180, right:180 }, children:[ innerTable ] }) ] }) ]
   });
 }
 
@@ -2227,22 +2221,20 @@ function buildPublicationPage(p, sectionTitle, pageBreak){
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"D9C9F0", bold:true, size:18, font:"Inter" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"D9C9F0", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:100 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
     children:[ new TextRun({ text:p.title, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:60},
+  out.push(new Paragraph({ spacing:{after:60},
     children:[ new TextRun({ text:p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : ""), italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:60},
+  out.push(new Paragraph({ spacing:{after:60},
     children:[ new TextRun({ text:"Authors: ", color:"132340", bold:true, size:18, font:"Inter" }), new TextRun({ text:p.authors, color:"1B1B18", size:18, font:"Inter" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:220},
+  out.push(new Paragraph({ spacing:{after:220},
     children:[ new TextRun({ text:formatDate(p.date), color:"736C5E", size:16, font:"Inter" }) ] }));
 
   const photos = (p.photos || []).slice(0,2);
@@ -2256,11 +2248,9 @@ function buildPublicationPage(p, sectionTitle, pageBreak){
         runs.push(new TextRun({ text:"  " }));
       }catch(e){ /* skip unreadable image */ }
     });
-    cardChildren.push(new Paragraph({ children:runs, spacing:{after:220} }));
+    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
   }
-  cardChildren.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:p.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
-
-  out.push(whiteCard(cardChildren));
+  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:p.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
   return out;
 }
 function buildPublicationsSection(ids, data, firstBreak){
@@ -2278,23 +2268,21 @@ function buildConferencePage(c, sectionTitle, pageBreak){
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"BBD3E8", bold:true, size:18, font:"Inter" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"BBD3E8", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:100 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
     children:[ new TextRun({ text:c.paperTitle, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:60},
+  out.push(new Paragraph({ spacing:{after:60},
     children:[ new TextRun({ text:c.confName, italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
   if(c.confDetails){
-    cardChildren.push(new Paragraph({ spacing:{after:60}, children:[ new TextRun({ text:c.confDetails, color:"736C5E", size:17, font:"Inter" }) ] }));
+    out.push(new Paragraph({ spacing:{after:60}, children:[ new TextRun({ text:c.confDetails, color:"736C5E", size:17, font:"Inter" }) ] }));
   }
-  cardChildren.push(new Paragraph({ spacing:{after:220},
+  out.push(new Paragraph({ spacing:{after:220},
     children:[
       new TextRun({ text:"Presented by ", color:"132340", bold:true, size:18, font:"Inter" }),
       new TextRun({ text:c.presenter + "   ·   " + formatDate(c.date), color:"1B1B18", size:18, font:"Inter" }),
@@ -2311,11 +2299,9 @@ function buildConferencePage(c, sectionTitle, pageBreak){
         runs.push(new TextRun({ text:"  " }));
       }catch(e){ /* skip unreadable image */ }
     });
-    cardChildren.push(new Paragraph({ children:runs, spacing:{after:220} }));
+    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
   }
-  cardChildren.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:c.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
-
-  out.push(whiteCard(cardChildren));
+  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:c.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
   return out;
 }
 function buildConferencesSection(ids, data, firstBreak){
@@ -2344,28 +2330,24 @@ function buildBlogPage(b, sectionTitle, sourceLabel, pageBreak){
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after: sourceLabel?60:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
     if(sourceLabel){
       out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:280},
-        children:[ new TextRun({ text:`Featured from ${sourceLabel}`, italics:true, color:"C9D2E3", size:18, font:"Inter" }) ] }));
+        children:[ new TextRun({ text:`Featured from ${sourceLabel}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
     }
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"RESEARCH BLOG", color:"BFE3CC", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"RESEARCH BLOG", color:"BFE3CC", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:80 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:80 },
     children:[ new TextRun({ text:b.title, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:220},
+  out.push(new Paragraph({ spacing:{after:220},
     children:[ new TextRun({ text:`By ${b.author}   ·   ${formatDate(b.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
   (b.content || '').split(/\n+/).forEach(para => {
-    if(para.trim()) cardChildren.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
+    if(para.trim()) out.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
   });
-
-  out.push(whiteCard(cardChildren));
   return out;
 }
 function buildBlogSection(ids, data, sourceLabel, firstBreak){
@@ -2383,24 +2365,20 @@ function buildEditorialPage(ed, sectionTitle, pageBreak){
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"EDITORIAL", color:"E8D9AF", bold:true, size:18, font:"Inter" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"EDITORIAL", color:"C6A34A", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"EDITORIAL", color:"E8D9AF", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"EDITORIAL", color:"C6A34A", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:80 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:80 },
     children:[ new TextRun({ text:ed.title, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:220},
+  out.push(new Paragraph({ spacing:{after:220},
     children:[ new TextRun({ text:`By ${ed.author}   ·   ${formatDate(ed.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
   (ed.content || '').split(/\n+/).forEach(para => {
-    if(para.trim()) cardChildren.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
+    if(para.trim()) out.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
   });
-
-  out.push(whiteCard(cardChildren));
   return out;
 }
 function buildEditorialSection(ids, data, firstBreak){
@@ -2418,29 +2396,25 @@ function buildPuzzlePage(pz, sectionTitle, pageBreak){
   let out = [];
   if(sectionTitle){
     out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"FFFFFF", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({ spacing:{after:120},
-      children:[ new TextRun({ text:"PUZZLE", color:"A8E0D2", bold:true, size:18, font:"Inter" }) ] }));
+      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
+    out.push(new Paragraph({
+      children:[ new TextRun({ text:"PUZZLE", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
   } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, spacing:{after:120},
-      children:[ new TextRun({ text:"PUZZLE", color:"A8E0D2", bold:true, size:18, font:"Inter" }) ] }));
+    out.push(new Paragraph({ pageBreakBefore:pageBreak,
+      children:[ new TextRun({ text:"PUZZLE", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
   }
-
-  const cardChildren = [];
-  cardChildren.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:0, after:100 },
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
     children:[ new TextRun({ text:pz.title, color:"132340", font:"Playfair Display" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:200},
+  out.push(new Paragraph({ spacing:{after:200},
     children:[ new TextRun({ text:`Submitted by ${pz.author}   ·   ${formatDate(pz.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
-  cardChildren.push(new Paragraph({ spacing:{after:220, line:300},
+  out.push(new Paragraph({ spacing:{after:220, line:300},
     children:[ new TextRun({ text:pz.puzzleText, color:"1B1B18", size:20, font:"Inter" }) ] }));
   if(pz.image){
     try{
-      cardChildren.push(new Paragraph({ spacing:{after:0},
+      out.push(new Paragraph({ spacing:{after:0},
         children:[ new ImageRun({ data:dataUrlToUint8(pz.image), transformation: imageDimsFit(pz.imageW, pz.imageH, 380, 380) }) ] }));
     }catch(e){ /* skip unreadable image */ }
   }
-
-  out.push(whiteCard(cardChildren));
   return out;
 }
 function buildPuzzleSection(ids, data, firstBreak){
@@ -2495,7 +2469,6 @@ async function generateNewsletter(){
     ];
 
     const doc = new Document({
-      background: { color: "132340" },
       styles: { default: { document: { run: { font:"Inter", size:22 } } } },
       sections: [{
         properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },
@@ -2559,7 +2532,7 @@ async function generateAnnualNewsletter(){
     let body = [];
     months.forEach(m => {
       body.push(new Paragraph({ pageBreakBefore:true, alignment: AlignmentType.CENTER, spacing:{ before:120, after:120 },
-        children:[ new TextRun({ text: monthLabel(m).split(' ')[0].toUpperCase(), color:"FFFFFF", bold:true, size:52, font:"Playfair Display" }) ] }));
+        children:[ new TextRun({ text: monthLabel(m).split(' ')[0].toUpperCase(), color:"132340", bold:true, size:52, font:"Playfair Display" }) ] }));
       body.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{after:280},
         children:[ new TextRun({ text: monthLabel(m).split(' ')[1], color:"C6A34A", bold:true, size:28, font:"Inter" }) ] }));
 
@@ -2593,7 +2566,6 @@ async function generateAnnualNewsletter(){
     body = body.concat(buildUpcomingConferencesSection(getActiveUpcomingConferences()));
 
     const doc = new Document({
-      background: { color: "132340" },
       styles: { default: { document: { run: { font:"Inter", size:22 } } } },
       sections: [{
         properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },

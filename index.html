@@ -167,6 +167,14 @@
   }
   .subtab.active{ background:var(--navy); border-color:var(--navy); color:var(--paper); }
   .subtab:hover:not(.active){ border-color:var(--gold); }
+  .author-row{ display:grid; grid-template-columns:1fr 1.6fr auto; gap:10px; margin-bottom:8px; align-items:center; }
+  .author-row .rm-author{
+    background:transparent; border:1px solid var(--line); color:#A5342C; border-radius:7px;
+    width:34px; height:40px; font-size:16px; cursor:pointer;
+  }
+  .author-row .rm-author:hover{ border-color:#D9534F; }
+  @media(max-width:640px){ .author-row{ grid-template-columns:1fr auto; } .author-row .ca_aff{ grid-column:1 / 2; } }
+  .field-hint{ font-size:12.5px; color:var(--muted); margin:-2px 0 8px; }
   .subview{ display:none; }
   .subview.active{ display:block; }
 
@@ -323,8 +331,6 @@
         <button class="subtab" onclick="switchSubtab('blog')">Research Blog</button>
         <button class="subtab" onclick="switchSubtab('upcoming')">Upcoming Event</button>
         <button class="subtab" onclick="switchSubtab('upcomingconf')">Upcoming Conference/Workshop</button>
-        <button class="subtab" onclick="switchSubtab('editorial')">Editorial</button>
-        <button class="subtab" onclick="switchSubtab('puzzle')">Puzzle of the Month</button>
       </div>
     </div>
 
@@ -462,6 +468,11 @@
         <label>Paper / Talk Title *</label>
         <input type="text" id="c_paperTitle" placeholder="Title of the paper presented" required />
 
+        <label>Authors &amp; Affiliations *</label>
+        <p class="field-hint">Add every author in the order they appear on the paper. Authors sharing an affiliation are grouped automatically in the newsletter.</p>
+        <div id="c_authors"></div>
+        <button type="button" class="ghost" onclick="addConfAuthorRow()">+ Add another author</button>
+
         <div class="row2">
           <div>
             <label>Presented By *</label>
@@ -508,6 +519,14 @@
 
         <label>Blog Content *</label>
         <textarea id="b_content" style="min-height:220px;" placeholder="Write your research blog here..." required></textarea>
+
+        <label>Photos / Figures</label>
+        <div class="photo-drop" onclick="document.getElementById('b_photos').click()">
+          <input type="file" id="b_photos" accept="image/*" multiple onchange="handlePhotoSelect('blog', event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">JPG/PNG, up to 6 images. They're placed into the text newspaper-style.</div>
+        </div>
+        <div class="thumbs" id="thumbs-blog"></div>
 
         <button class="primary" id="submitBtn-blog" onclick="submitBlog()">Submit Blog</button>
         <div class="msg" id="submitMsg-blog"></div>
@@ -565,66 +584,6 @@
 
         <button class="primary" id="submitBtn-upcomingconf" onclick="submitUpcomingConference()">Add to Upcoming Conferences & Workshops</button>
         <div class="msg" id="submitMsg-upcomingconf"></div>
-      </form>
-    </div>
-
-    <!-- ---- Editorial form ---- -->
-    <div class="card subview" id="subview-editorial">
-      <p class="section-desc" style="margin-top:0;">Have a viewpoint, reflection, or opening note you'd like to share with the department? Add it here — editorials appear near the front of the newsletter.</p>
-      <form id="editorialForm" onsubmit="return false;">
-        <label class="first">Title *</label>
-        <input type="text" id="ed_title" placeholder="e.g. Reflections on a Year of Growth" required />
-
-        <div class="row2">
-          <div>
-            <label>Author *</label>
-            <input type="text" id="ed_author" placeholder="Your name" required />
-          </div>
-          <div>
-            <label>Date *</label>
-            <input type="date" id="ed_date" required />
-          </div>
-        </div>
-
-        <label>Editorial *</label>
-        <textarea id="ed_content" style="min-height:200px;" placeholder="Write your editorial here..." required></textarea>
-
-        <button class="primary" id="submitBtn-editorial" onclick="submitEditorial()">Submit Editorial</button>
-        <div class="msg" id="submitMsg-editorial"></div>
-      </form>
-    </div>
-
-    <!-- ---- Puzzle of the Month form ---- -->
-    <div class="card subview" id="subview-puzzle">
-      <p class="section-desc" style="margin-top:0;">Have a puzzle, riddle, or brain-teaser for colleagues to try? Add it here — it'll appear in the "Puzzle of the Month" section of the newsletter.</p>
-      <form id="puzzleForm" onsubmit="return false;">
-        <label class="first">Puzzle Title *</label>
-        <input type="text" id="pz_title" placeholder="e.g. The Weighing Balance Problem" required />
-
-        <div class="row2">
-          <div>
-            <label>Submitted By *</label>
-            <input type="text" id="pz_author" placeholder="Your name" required />
-          </div>
-          <div>
-            <label>Date *</label>
-            <input type="date" id="pz_date" required />
-          </div>
-        </div>
-
-        <label>Puzzle *</label>
-        <textarea id="pz_text" placeholder="Describe the puzzle or question..." required></textarea>
-
-        <label>Diagram / Image (optional)</label>
-        <div class="photo-drop" onclick="document.getElementById('pz_image').click()">
-          <input type="file" id="pz_image" accept="image/*" onchange="handlePuzzleImage(event)" />
-          <div><strong>Click to upload an image</strong></div>
-          <div class="hint">Only needed if the puzzle involves a diagram or figure.</div>
-        </div>
-        <div class="thumbs" id="thumb-pz-image"></div>
-
-        <button class="primary" id="submitBtn-puzzle" onclick="submitPuzzle()">Submit Puzzle</button>
-        <div class="msg" id="submitMsg-puzzle"></div>
       </form>
     </div>
   </section>
@@ -764,13 +723,43 @@
     </div>
 
     <div class="card">
-      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Editorials This Month</h2>
-      <div id="editorialList"></div>
+      <h2 class="section-title" style="font-size:19px;">Editorial — <span class="epMonthLabel"></span></h2>
+      <p class="section-desc">Appears as the first section after the cover of this month's newsletter, with a link from the cover index. Saving again replaces it.</p>
+      <label class="first">Title</label>
+      <input type="text" id="ed_title" placeholder="e.g. From the Editor's Desk" />
+      <label>Written by</label>
+      <input type="text" id="ed_author" placeholder="e.g. Dr. A. Sharma, Editor-in-Chief" />
+      <label>Editorial Text *</label>
+      <textarea id="ed_content" style="min-height:180px;" placeholder="Write the editorial here. Use blank lines between paragraphs."></textarea>
+      <label>Photo (optional)</label>
+      <div class="photo-drop" onclick="document.getElementById('ed_photo').click()">
+        <input type="file" id="ed_photo" accept="image/*" onchange="handleEPImage('editorial', event)" />
+        <div><strong>Click to add a photo</strong></div>
+        <div class="hint">Wrapped into the text, newspaper-style.</div>
+      </div>
+      <div class="thumbs" id="thumb-editorial"></div>
+      <button class="primary" onclick="saveEP('editorial')">Save Editorial</button>
+      <button class="danger" style="margin-left:10px;" onclick="removeEP('editorial')">Remove</button>
+      <div class="msg" id="epMsg-editorial"></div>
     </div>
 
     <div class="card">
-      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Puzzle of the Month</h2>
-      <div id="puzzleList"></div>
+      <h2 class="section-title" style="font-size:19px;">Puzzle — <span class="epMonthLabel"></span></h2>
+      <p class="section-desc">Appears as the last section of this month's newsletter, with a link from the cover index. Saving again replaces it.</p>
+      <label class="first">Title</label>
+      <input type="text" id="pz_title" placeholder="e.g. Physics Crossword" />
+      <label>Puzzle Text</label>
+      <textarea id="pz_content" style="min-height:140px;" placeholder="Questions, clues, instructions, where to send answers..."></textarea>
+      <label>Puzzle Image (optional)</label>
+      <div class="photo-drop" onclick="document.getElementById('pz_image').click()">
+        <input type="file" id="pz_image" accept="image/*" onchange="handleEPImage('puzzle', event)" />
+        <div><strong>Click to add an image</strong></div>
+        <div class="hint">e.g. a crossword grid or diagram. Shown large and centred.</div>
+      </div>
+      <div class="thumbs" id="thumb-puzzle"></div>
+      <button class="primary" onclick="saveEP('puzzle')">Save Puzzle</button>
+      <button class="danger" style="margin-left:10px;" onclick="removeEP('puzzle')">Remove</button>
+      <div class="msg" id="epMsg-puzzle"></div>
     </div>
 
     <div class="card">
@@ -866,7 +855,7 @@ function switchTab(tab){
 }
 
 function switchSubtab(name){
-  ['event','publication','conference','blog','upcoming','upcomingconf','editorial','puzzle'].forEach(n => {
+  ['event','publication','conference','blog','upcoming','upcomingconf'].forEach(n => {
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
@@ -889,7 +878,7 @@ function adminLogin(){
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], conference: [] };
+let photoState = { event: [], publication: [], conference: [], blog: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1031,9 +1020,18 @@ function submitConference(){
   const presenter = document.getElementById('c_presenter').value.trim();
   const date = document.getElementById('c_date').value;
   const abstract = document.getElementById('c_abstract').value.trim();
+  const authors = collectConfAuthors();
 
   if(!confName || !paperTitle || !presenter || !date || !abstract){
     showSubmitMsg('conference', false, 'Please fill in all required fields.');
+    return;
+  }
+  if(authors.length === 0){
+    showSubmitMsg('conference', false, 'Please add at least one author with their affiliation.');
+    return;
+  }
+  if(authors.some(a => !a.affiliation)){
+    showSubmitMsg('conference', false, 'Please add an affiliation for every author.');
     return;
   }
 
@@ -1043,7 +1041,7 @@ function submitConference(){
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   const confData = {
-    confName, confDetails, paperTitle, presenter, date, abstract,
+    confName, confDetails, paperTitle, authors, presenter, date, abstract,
     photos: photoState.conference.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
   };
@@ -1052,11 +1050,46 @@ function submitConference(){
     .then(() => {
       showSubmitMsg('conference', true, 'Conference presentation submitted successfully. Thank you!');
       document.getElementById('confForm').reset();
+      resetConfAuthors();
       photoState.conference = [];
       renderThumbs('conference');
     })
     .catch(err => showSubmitMsg('conference', false, 'Could not submit: ' + err.message))
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Conference Presentation'; });
+}
+
+/* Author rows on the Conference Presentation form */
+function addConfAuthorRow(name, aff){
+  const box = document.getElementById('c_authors');
+  const rows = box.querySelectorAll('.author-row');
+  // pre-fill the affiliation from the row above — co-authors usually share it
+  const prevAff = rows.length ? rows[rows.length - 1].querySelector('.ca_aff').value : '';
+  const row = document.createElement('div');
+  row.className = 'author-row';
+  row.innerHTML = `<input type="text" class="ca_name" placeholder="Author name" />
+    <input type="text" class="ca_aff" placeholder="Affiliation, e.g. Amity School of Physical Sciences, Amity University Punjab" />
+    <button type="button" class="rm-author" title="Remove author" onclick="removeConfAuthorRow(this)">×</button>`;
+  row.querySelector('.ca_name').value = name || '';
+  row.querySelector('.ca_aff').value = aff !== undefined ? aff : prevAff;
+  box.appendChild(row);
+}
+function removeConfAuthorRow(btn){
+  const box = document.getElementById('c_authors');
+  if(box.querySelectorAll('.author-row').length <= 1){
+    btn.parentElement.querySelectorAll('input').forEach(i => i.value = '');
+    return;
+  }
+  btn.parentElement.remove();
+}
+function resetConfAuthors(){
+  document.getElementById('c_authors').innerHTML = '';
+  addConfAuthorRow('', '');
+}
+function collectConfAuthors(){
+  return Array.from(document.querySelectorAll('#c_authors .author-row')).map(r => ({
+    name: r.querySelector('.ca_name').value.trim(),
+    affiliation: r.querySelector('.ca_aff').value.trim()
+  })).filter(a => a.name);
 }
 
 /* ---------------- Submit: Research Blog ---------------- */
@@ -1078,12 +1111,16 @@ function submitBlog(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  const blogData = { title, author, date, content, submittedAt: Date.now() };
+  const blogData = { title, author, date, content,
+    photos: photoState.blog.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
+    submittedAt: Date.now() };
 
   db.ref('blogs/' + monthKey).push(blogData)
     .then(() => {
       showSubmitMsg('blog', true, 'Blog submitted successfully. Thank you!');
       document.getElementById('blogForm').reset();
+      photoState.blog = [];
+      renderThumbs('blog');
     })
     .catch(err => showSubmitMsg('blog', false, 'Could not submit: ' + err.message))
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Blog'; });
@@ -1161,92 +1198,18 @@ function submitUpcomingConference(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Add to Upcoming Conferences & Workshops'; });
 }
 
-/* ---------------- Submit: Editorial ---------------- */
-function submitEditorial(){
-  if(!firebaseReady){ showSubmitMsg('editorial', false, 'Firebase is not configured yet.'); return; }
-
-  const title = document.getElementById('ed_title').value.trim();
-  const author = document.getElementById('ed_author').value.trim();
-  const date = document.getElementById('ed_date').value;
-  const content = document.getElementById('ed_content').value.trim();
-
-  if(!title || !author || !date || !content){
-    showSubmitMsg('editorial', false, 'Please fill in all required fields.');
-    return;
-  }
-
-  const monthKey = date.slice(0,7);
-  const btn = document.getElementById('submitBtn-editorial');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Submitting...';
-
-  db.ref('editorials/' + monthKey).push({ title, author, date, content, submittedAt: Date.now() })
-    .then(() => {
-      showSubmitMsg('editorial', true, 'Editorial submitted successfully. Thank you!');
-      document.getElementById('editorialForm').reset();
-    })
-    .catch(err => showSubmitMsg('editorial', false, 'Could not submit: ' + err.message))
-    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Editorial'; });
-}
-
-/* ---------------- Submit: Puzzle of the Month ---------------- */
-let puzzleImage = null; // pending { dataUrl, width, height } for the puzzle form
-
-function handlePuzzleImage(evt){
-  const file = evt.target.files[0];
-  if(!file) return;
-  compressImage(file, 900, 0.72).then(result => {
-    puzzleImage = result;
-    document.getElementById('thumb-pz-image').innerHTML = `<div class="thumb"><img src="${result.dataUrl}"/></div>`;
-  });
-  evt.target.value = '';
-}
-
-function submitPuzzle(){
-  if(!firebaseReady){ showSubmitMsg('puzzle', false, 'Firebase is not configured yet.'); return; }
-
-  const title = document.getElementById('pz_title').value.trim();
-  const author = document.getElementById('pz_author').value.trim();
-  const date = document.getElementById('pz_date').value;
-  const puzzleText = document.getElementById('pz_text').value.trim();
-
-  if(!title || !author || !date || !puzzleText){
-    showSubmitMsg('puzzle', false, 'Please fill in all required fields.');
-    return;
-  }
-
-  const monthKey = date.slice(0,7);
-  const btn = document.getElementById('submitBtn-puzzle');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Submitting...';
-
-  db.ref('puzzles/' + monthKey).push({
-    title, author, date, puzzleText,
-    image: puzzleImage ? puzzleImage.dataUrl : null,
-    imageW: puzzleImage ? puzzleImage.width : null,
-    imageH: puzzleImage ? puzzleImage.height : null,
-    submittedAt: Date.now()
-  })
-    .then(() => {
-      showSubmitMsg('puzzle', true, 'Puzzle submitted successfully. Thank you!');
-      document.getElementById('puzzleForm').reset();
-      puzzleImage = null;
-      document.getElementById('thumb-pz-image').innerHTML = '';
-    })
-    .catch(err => showSubmitMsg('puzzle', false, 'Could not submit: ' + err.message))
-    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Puzzle'; });
-}
-
 /* ---------------- Admin dashboard ---------------- */
 let allEventsByMonth = {};        // { "2026-07": { pushId: {...} } }
 let allPublicationsByMonth = {};
 let allConferencesByMonth = {};
 let allBlogsByMonth = {};
-let allEditorialsByMonth = {};
-let allPuzzlesByMonth = {};
 let allUpcomingEvents = {}; // flat: { pushId: {title, date, note} } — admin-curated, shown on every cover page
 let allUpcomingConferences = {}; // flat: { pushId: {title, date, link, brochure} } — shown in a body section until the date passes
+let allEditorialsByMonth = {};    // { "2026-07": { title, author, content, photo } } — one per month
+let allPuzzlesByMonth = {};       // { "2026-07": { title, content, image } } — one per month
+let epImages = { editorial: undefined, puzzle: undefined }; // undefined = unchanged, null = removed, {url,w,h} = new
 let currentMonth = null;
+let dashboardInitialized = false;
 let CUSTOM_LOGO_BASE64 = null;       // full data URL, overrides AMITY_LOGO_BASE64 when set
 let CUSTOM_LOGO_W = null, CUSTOM_LOGO_H = null; // natural size of the uploaded logo, to keep its aspect ratio
 let CUSTOM_COVER_PHOTO_BASE64 = null; // full data URL, overrides the auto-picked hero photo when set
@@ -1269,6 +1232,16 @@ function initDashboard(){
     document.getElementById('eventList').innerHTML = '<div class="empty-state">Firebase is not configured yet — see the setup notice on the Submit tab.</div>';
     return;
   }
+  if(dashboardInitialized) return; // listeners already attached — don't stack duplicates
+  dashboardInitialized = true;
+  db.ref('editorials').on('value', snap => {
+    allEditorialsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); fillEPForms();
+  });
+  db.ref('puzzles').on('value', snap => {
+    allPuzzlesByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); fillEPForms();
+  });
   db.ref('events').on('value', snap => {
     allEventsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderEventsForMonth();
@@ -1284,14 +1257,6 @@ function initDashboard(){
   db.ref('blogs').on('value', snap => {
     allBlogsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderBlogsForMonth();
-  });
-  db.ref('editorials').on('value', snap => {
-    allEditorialsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth();
-  });
-  db.ref('puzzles').on('value', snap => {
-    allPuzzlesByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
   });
   db.ref('upcomingEvents').on('value', snap => {
     allUpcomingEvents = snap.val() || {};
@@ -1469,8 +1434,80 @@ function onMonthChange(){
   renderPublicationsForMonth();
   renderConferencesForMonth();
   renderBlogsForMonth();
-  renderEditorialsForMonth();
-  renderPuzzlesForMonth();
+  fillEPForms();
+}
+
+/* ---------------- Editorial & Puzzle (admin, one per month) ---------------- */
+function handleEPImage(type, evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  compressImage(file, type === 'puzzle' ? 1200 : 900, 0.85).then(result => {
+    epImages[type] = { url: result.dataUrl, w: result.width, h: result.height };
+    renderEPThumb(type, epImages[type].url);
+  });
+  evt.target.value = '';
+}
+function renderEPThumb(type, url){
+  const box = document.getElementById('thumb-' + type);
+  box.innerHTML = url ? `<div class="thumb"><img src="${url}"/><button type="button" class="rm" onclick="clearEPImage('${type}')">×</button></div>` : '';
+}
+function clearEPImage(type){ epImages[type] = null; renderEPThumb(type, null); }
+
+function fillEPForms(){
+  if(!currentMonth) return;
+  document.querySelectorAll('.epMonthLabel').forEach(el => el.textContent = monthLabel(currentMonth));
+  const ed = allEditorialsByMonth[currentMonth] || {};
+  document.getElementById('ed_title').value = ed.title || '';
+  document.getElementById('ed_author').value = ed.author || '';
+  document.getElementById('ed_content').value = ed.content || '';
+  epImages.editorial = undefined;
+  renderEPThumb('editorial', ed.photo ? ed.photo.url : null);
+  const pz = allPuzzlesByMonth[currentMonth] || {};
+  document.getElementById('pz_title').value = pz.title || '';
+  document.getElementById('pz_content').value = pz.content || '';
+  epImages.puzzle = undefined;
+  renderEPThumb('puzzle', pz.image ? pz.image.url : null);
+}
+function epMsg(type, ok, text){
+  const msg = document.getElementById('epMsg-' + type);
+  msg.className = 'msg ' + (ok ? 'ok' : 'err');
+  msg.textContent = text;
+  if(ok) setTimeout(()=>{ msg.style.display='none'; }, 4000);
+}
+function saveEP(type){
+  if(!firebaseReady || !currentMonth) return;
+  let rec, path;
+  if(type === 'editorial'){
+    const prev = allEditorialsByMonth[currentMonth] || {};
+    rec = {
+      title: document.getElementById('ed_title').value.trim(),
+      author: document.getElementById('ed_author').value.trim(),
+      content: document.getElementById('ed_content').value.trim(),
+      photo: epImages.editorial === undefined ? (prev.photo || null) : epImages.editorial,
+      updatedAt: Date.now()
+    };
+    if(!rec.content){ epMsg(type, false, 'Please write the editorial text first.'); return; }
+    path = 'editorials/' + currentMonth;
+  } else {
+    const prev = allPuzzlesByMonth[currentMonth] || {};
+    rec = {
+      title: document.getElementById('pz_title').value.trim(),
+      content: document.getElementById('pz_content').value.trim(),
+      image: epImages.puzzle === undefined ? (prev.image || null) : epImages.puzzle,
+      updatedAt: Date.now()
+    };
+    if(!rec.content && !rec.image){ epMsg(type, false, 'Add the puzzle text or an image first.'); return; }
+    path = 'puzzles/' + currentMonth;
+  }
+  db.ref(path).set(rec)
+    .then(() => epMsg(type, true, (type === 'editorial' ? 'Editorial' : 'Puzzle') + ' saved for ' + monthLabel(currentMonth) + '.'))
+    .catch(err => epMsg(type, false, 'Could not save: ' + err.message));
+}
+function removeEP(type){
+  if(!firebaseReady || !currentMonth) return;
+  if(!confirm('Remove the ' + type + ' for ' + monthLabel(currentMonth) + '?')) return;
+  db.ref((type === 'editorial' ? 'editorials/' : 'puzzles/') + currentMonth).remove()
+    .then(() => epMsg(type, true, 'Removed.'));
 }
 
 function monthLabel(m){
@@ -1615,6 +1652,7 @@ function renderConferencesForMonth(){
             <span>👤 Presented by ${escapeHtml(c.presenter)}</span>
           </div>
           <div class="event-meta"><span>🏛️ ${escapeHtml(c.confName)}</span></div>
+          ${confAuthorsList(c).length ? `<div class="event-meta"><span>✍️ ${confAuthorsList(c).map(a => escapeHtml(a.name) + (a.affiliation ? ' <i>(' + escapeHtml(a.affiliation) + ')</i>' : '')).join(', ')}</span></div>` : ''}
         </div>
         <div class="event-actions"><button class="danger" onclick="deleteConference('${currentMonth}','${id}')">Delete</button></div>
       </div>
@@ -1655,80 +1693,13 @@ function renderBlogsForMonth(){
         <div class="event-actions"><button class="danger" onclick="deleteBlog('${currentMonth}','${id}')">Delete</button></div>
       </div>
       <div class="event-desc">${escapeHtml(snippet)}</div>
+      ${(b.photos||[]).length ? `<div class="event-photos">${(b.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
 function deleteBlog(month, id){
   if(!confirm('Delete this blog? This cannot be undone.')) return;
   db.ref('blogs/' + month + '/' + id).remove();
-}
-
-function renderEditorialsForMonth(){
-  const data = allEditorialsByMonth[currentMonth] || {};
-  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
-  const listEl = document.getElementById('editorialList');
-  if(!listEl) return;
-  if(ids.length === 0){
-    listEl.innerHTML = `<div class="empty-state">No editorials submitted for ${monthLabel(currentMonth)} yet.</div>`;
-    return;
-  }
-  listEl.innerHTML = ids.map(id => {
-    const ed = data[id];
-    const snippet = (ed.content||'').slice(0,220) + ((ed.content||'').length>220 ? '…' : '');
-    return `
-    <div class="event-card">
-      <div class="top">
-        <div>
-          <span class="badge other">Editorial</span>
-          <h3>${escapeHtml(ed.title)}</h3>
-          <div class="event-meta">
-            <span>📅 ${formatDate(ed.date)}</span>
-            <span>✍️ ${escapeHtml(ed.author)}</span>
-          </div>
-        </div>
-        <div class="event-actions"><button class="danger" onclick="deleteEditorial('${currentMonth}','${id}')">Delete</button></div>
-      </div>
-      <div class="event-desc">${escapeHtml(snippet)}</div>
-    </div>`;
-  }).join('');
-}
-function deleteEditorial(month, id){
-  if(!confirm('Delete this editorial? This cannot be undone.')) return;
-  db.ref('editorials/' + month + '/' + id).remove();
-}
-
-function renderPuzzlesForMonth(){
-  const data = allPuzzlesByMonth[currentMonth] || {};
-  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
-  const listEl = document.getElementById('puzzleList');
-  if(!listEl) return;
-  if(ids.length === 0){
-    listEl.innerHTML = `<div class="empty-state">No puzzles submitted for ${monthLabel(currentMonth)} yet.</div>`;
-    return;
-  }
-  listEl.innerHTML = ids.map(id => {
-    const pz = data[id];
-    return `
-    <div class="event-card">
-      <div class="top">
-        <div>
-          <span class="badge social">Puzzle</span>
-          <h3>${escapeHtml(pz.title)}</h3>
-          <div class="event-meta">
-            <span>📅 ${formatDate(pz.date)}</span>
-            <span>✍️ ${escapeHtml(pz.author)}</span>
-          </div>
-        </div>
-        <div class="event-actions"><button class="danger" onclick="deletePuzzle('${currentMonth}','${id}')">Delete</button></div>
-      </div>
-      <div class="event-desc">${escapeHtml(pz.puzzleText)}</div>
-      ${pz.image ? `<div class="event-photos"><img src="${pz.image}"/></div>` : ''}
-    </div>`;
-  }).join('');
-}
-function deletePuzzle(month, id){
-  if(!confirm('Delete this puzzle? This cannot be undone.')) return;
-  db.ref('puzzles/' + month + '/' + id).remove();
 }
 
 function renderUpcomingEvents(){
@@ -1795,6 +1766,15 @@ function deleteUpcomingConference(id){
 /* =========================================================================
    WORD NEWSLETTER GENERATION — shared helpers
    ========================================================================= */
+
+/* Page geometry (A4, 800-twip side margins). Everything that should span the
+   full text width — masthead, cover photo, cover body — is sized from these. */
+const PAGE_CONTENT_TW = 11906 - 800 - 800;            // 10306 twips of usable width
+const PAGE_CONTENT_PX = Math.floor(PAGE_CONTENT_TW / 15); // same width in px (docx uses 96 dpi)
+const BODY_SIZE = 22;   // 11 pt body text everywhere (docx sizes are half-points)
+const META_SIZE = 19;   // 9.5 pt for small meta lines (dates, bylines)
+const INDEX_LINK_COLOR = "C6A34A"; // gold link colour on the navy index panel
+
 function noBorders(){
   const n = { style: docx.BorderStyle.NONE, size:0, color:"FFFFFF" };
   return { top:n, bottom:n, left:n, right:n, insideHorizontal:n, insideVertical:n };
@@ -1808,7 +1788,6 @@ function headerRuleBorder(){
   const g = { style: docx.BorderStyle.SINGLE, size:3, color:"C6A34A" };
   return { top:n, left:n, right:n, insideHorizontal:n, insideVertical:n, bottom:g };
 }
-
 function categoryHex(cat){
   return { Academic:"2C5F8A", Research:"6B4C9A", Cultural:"C1722C", Social:"3A8C64", Other:"736C5E" }[cat] || "736C5E";
 }
@@ -1831,14 +1810,14 @@ function logoDims(targetWidth){
   }
   return { width: targetWidth, height: targetWidth }; // default Amity mark is square
 }
-/* Prefers an admin-uploaded cover photo; falls back to the month's first event photo.
-   Returns { bytes, w, h } — w/h are null when the dimensions aren't known (older data). */
-function resolveHeroBytes(ids, data){
-  if(CUSTOM_COVER_PHOTO_BASE64){
-    try{ return { bytes: dataUrlToUint8(CUSTOM_COVER_PHOTO_BASE64), w: CUSTOM_COVER_PHOTO_W, h: CUSTOM_COVER_PHOTO_H }; }
-    catch(e){ /* fall through */ }
+/* Same, but scaled to a target HEIGHT (used so the logo matches the ribbon height) */
+function logoDimsForHeight(targetHeight, maxWidth){
+  let w = targetHeight, h = targetHeight;
+  if(CUSTOM_LOGO_BASE64 && CUSTOM_LOGO_W && CUSTOM_LOGO_H){
+    w = Math.round(targetHeight * (CUSTOM_LOGO_W / CUSTOM_LOGO_H));
   }
-  return findHeroBytes(ids, data);
+  if(maxWidth && w > maxWidth){ h = Math.round(h * maxWidth / w); w = maxWidth; }
+  return { width:w, height:h };
 }
 
 /* ---------------------------------------------------------------------
@@ -1853,39 +1832,89 @@ let CONTACT_WEBSITE = "[Replace with department/university website — search fo
 let CONTACT_EMAIL = "[Replace with department contact email — search for CONTACT_EMAIL to edit it.]";
 let CONTACT_SOCIAL = "[Replace with social media handle(s) — search for CONTACT_SOCIAL to edit it.]";
 
-/* Groups events by category, in a fixed display order, for the cover index */
-function buildIndexGroups(ids, data, pubIds, pubData, confIds, confData){
-  const order = ['Academic','Research','Cultural','Social','Other'];
-  const groups = {};
-  ids.forEach(id => {
-    const e = data[id];
-    const cat = e.category || 'Other';
-    (groups[cat] = groups[cat] || []).push({ title:e.title, date:e.date });
-  });
-  const out = order.filter(c => groups[c] && groups[c].length).map(c => ({ category:c, items:groups[c] }));
-
-  if(pubIds && pubIds.length){
-    out.push({ category:'Publications', items: pubIds.map(id => ({ title:pubData[id].title, date:pubData[id].date })) });
-  }
-  if(confIds && confIds.length){
-    out.push({ category:'Conference Presentations', items: confIds.map(id => ({ title:confData[id].paperTitle, date:confData[id].date })) });
-  }
-  return out;
+/* ---------------------------------------------------------------------
+   Bookmark registry — every event / paper / section gets a bookmark while
+   the body is built, and the cover index then links to those bookmarks.
+   --------------------------------------------------------------------- */
+let REG = null;
+function resetRegistry(){ REG = { seq:0, sections:{}, items:{} }; }
+function newAnchor(prefix){ REG.seq++; return `nl_${prefix}${REG.seq}`; }
+/* Anchor for a section heading; the index links to the FIRST one of each name */
+function sectionAnchor(name){
+  const a = newAnchor('sec');
+  if(!REG.sections[name]) REG.sections[name] = a;
+  return a;
+}
+/* Anchor for one item (event, paper, conference...) */
+function itemAnchor(kind, id){
+  const a = newAnchor(kind);
+  if(!REG.items[kind + ':' + id]) REG.items[kind + ':' + id] = a;
+  return a;
+}
+function bookmarked(anchor, runs){
+  if(!anchor) return runs;
+  return [ new docx.Bookmark({ id: anchor, children: runs }) ];
 }
 
-/* First available event photo — used as the cover "hero" image */
-function findHeroBytes(ids, data){
+/* Big centered section heading (e.g. "ACADEMIC", "PUBLICATIONS") with a bookmark */
+function sectionTitlePara(text, pageBreak, anchor, afterSpacing){
+  const { Paragraph, TextRun, AlignmentType } = docx;
+  return new Paragraph({ pageBreakBefore: !!pageBreak, alignment:AlignmentType.CENTER, spacing:{ after: afterSpacing === undefined ? 280 : afterSpacing },
+    children: bookmarked(anchor, [ new TextRun({ text, color:"132340", bold:true, size:40, font:"Playfair Display" }) ]) });
+}
+
+/* Scales natW x natH to fit inside maxWidth x maxHeight, preserving aspect ratio */
+function imageDimsFit(natW, natH, maxWidth, maxHeight){
+  if(!natW || !natH) return { width:maxWidth, height:maxHeight };
+  const scale = Math.min(maxWidth / natW, maxHeight / natH);
+  return { width: Math.round(natW * scale), height: Math.round(natH * scale) };
+}
+function loadImageEl(url){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Cover photo — always stretched to the full text width (same width as the
+   logo + blue ribbon above it). Very tall photos are centre-cropped so the
+   cover still fits on one page.
+   --------------------------------------------------------------------- */
+const COVER_HERO_MAX_H = 330;
+function resolveHeroSource(ids, data){
+  if(CUSTOM_COVER_PHOTO_BASE64) return { url: CUSTOM_COVER_PHOTO_BASE64, w: CUSTOM_COVER_PHOTO_W, h: CUSTOM_COVER_PHOTO_H };
   for(const id of ids){
     const photos = data[id].photos;
-    if(photos && photos.length){
-      const first = photos[0];
-      try{
-        const { w, h } = photoWH(first);
-        return { bytes: dataUrlToUint8(photoUrl(first)), w, h };
-      }catch(e){ /* skip */ }
+    if(photos && photos.length && photoUrl(photos[0])){
+      const { w, h } = photoWH(photos[0]);
+      return { url: photoUrl(photos[0]), w, h };
     }
   }
-  return { bytes: null, w: null, h: null };
+  return null;
+}
+async function prepareFullWidthHero(src, maxH){
+  if(!src) return null;
+  const W = PAGE_CONTENT_PX;
+  maxH = maxH || COVER_HERO_MAX_H;
+  try{
+    const img = await loadImageEl(src.url);
+    const nw = img.naturalWidth, nh = img.naturalHeight;
+    let sy = 0, sh = nh;
+    const maxRatio = maxH / W;
+    if(nh / nw > maxRatio){ sh = Math.round(nw * maxRatio); sy = Math.round((nh - sh) / 2); }
+    const c = document.createElement('canvas');
+    c.width = nw; c.height = sh;
+    c.getContext('2d').drawImage(img, 0, sy, nw, sh, 0, 0, nw, sh);
+    return { bytes: dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)), w: W, h: Math.round(W * sh / nw) };
+  }catch(e){
+    try{
+      const d = (src.w && src.h) ? { width:W, height:Math.min(maxH, Math.round(W * src.h / src.w)) } : { width:W, height:maxH };
+      return { bytes: dataUrlToUint8(src.url), w: d.width, h: d.height };
+    }catch(e2){ return null; }
+  }
 }
 
 /* Admin-curated Upcoming Events (from the flat upcomingEvents collection),
@@ -1897,73 +1926,15 @@ function getUpcomingEvents(limit){
   return items.slice(0, limit);
 }
 
-/* Upcoming Conferences & Workshops still ahead of today — these are shown
-   in every issue's own section until their date passes, then drop out on their own */
+/* Upcoming Conferences & Workshops still ahead of today, as [{ id, ...data }] —
+   shown in every issue until their date passes, then dropped automatically */
 function getActiveUpcomingConferences(){
   const todayStr = new Date().toISOString().slice(0,10);
-  const items = Object.values(allUpcomingConferences).filter(u => (u.date||'') >= todayStr);
+  const items = Object.entries(allUpcomingConferences)
+    .map(([id, u]) => Object.assign({ id }, u))
+    .filter(u => (u.date||'') >= todayStr);
   items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
   return items;
-}
-
-/* Scales natW x natH to fit inside maxWidth x maxHeight, preserving aspect ratio */
-function imageDimsFit(natW, natH, maxWidth, maxHeight){
-  if(!natW || !natH) return { width:maxWidth, height:maxHeight };
-  const scale = Math.min(maxWidth / natW, maxHeight / natH);
-  return { width: Math.round(natW * scale), height: Math.round(natH * scale) };
-}
-
-/* The cover's hero photo should always span the same full width as the
-   masthead/index tables above and below it so the whole cover lines up —
-   a box-fit (imageDimsFit) can leave the photo much narrower than that for
-   portrait shots, which is what created the "not aligned" look. This fills
-   the full content width and lets height follow proportionally, only
-   falling back to a bounded box for unusually tall (very portrait) photos
-   where a full-width render would make the cover absurdly long. */
-function heroImageDims(natW, natH){
-  const CONTENT_W = 700, MAX_H = 460;
-  if(!natW || !natH) return { width: CONTENT_W, height: 260 };
-  const height = Math.round(CONTENT_W * (natH / natW));
-  if(height <= MAX_H) return { width: CONTENT_W, height };
-  return imageDimsFit(natW, natH, CONTENT_W, MAX_H);
-}
-
-function buildUpcomingConferenceCard(u, sectionTitle, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType, ExternalHyperlink } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"UPCOMING", color:"C1722C", bold:true, size:18, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
-    children:[ new TextRun({ text:u.title, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:180},
-    children:[ new TextRun({ text:formatDate(u.date), color:"736C5E", size:19, font:"Inter" }) ] }));
-  if(u.link){
-    const url = /^https?:\/\//i.test(u.link) ? u.link : 'https://' + u.link.replace(/^\/+/, '');
-    out.push(new Paragraph({ spacing:{after:220},
-      children:[ new ExternalHyperlink({ link:url, children:[ new TextRun({ text:u.link, color:"1155CC", underline:{}, size:18, font:"Inter" }) ] }) ] }));
-  }
-  if(u.brochure){
-    try{
-      out.push(new Paragraph({ spacing:{after:100},
-        children:[ new ImageRun({ data:dataUrlToUint8(u.brochure), transformation: imageDimsFit(u.brochureW, u.brochureH, 400, 500) }) ] }));
-    }catch(e){ /* skip unreadable brochure */ }
-  }
-  return out;
-}
-function buildUpcomingConferencesSection(items, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(items.length === 0) return [];
-  let out = [];
-  items.forEach((u, idx) => { out = out.concat(buildUpcomingConferenceCard(u, idx===0 ? "UPCOMING CONFERENCES & WORKSHOPS" : null, idx===0 ? firstBreak : true)); });
-  return out;
 }
 
 /* "1-31 July 2026" style date range for a "YYYY-MM" month key */
@@ -1978,107 +1949,265 @@ function issueDateRangeLabelYear(year){
   return `1 January - 31 December ${year}`;
 }
 
-/* Magazine-style cover: date strip, navy masthead with logo, hero photo,
-   Mission/Vision column, and a navy "In This Issue" / "Upcoming Events" sidebar. */
-function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
-  const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, VerticalAlign, BorderStyle, ExternalHyperlink } = docx;
+/* ---------------------------------------------------------------------
+   Cover index ("In This Issue"). Built AFTER the body so every entry can
+   link to the bookmark created for it.
+     { kind:'group', title, items:[{date,title,anchor}] }  — listed with links
+     { kind:'link',  title, anchor }                       — section name only (Editorial, Research Blog, Puzzle)
+     { kind:'list',  title, items:[{date,title}] }         — listed, no page to link to (Upcoming Events)
+   --------------------------------------------------------------------- */
+function buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs, upcoming }){
+  const spec = [];
 
-  const topStrip = new Paragraph({
-    shading: { fill:"C6A34A", type:ShadingType.CLEAR, color:"auto" },
-    spacing:{ before:80, after:80 },
-    children:[ new TextRun({ text: issuePeriod.toUpperCase(), color:"132340", bold:true, size:19, font:"Inter" }) ]
+  const order = ['Academic','Research','Cultural','Social','Other'];
+  const groups = {};
+  ids.forEach(id => {
+    const e = data[id];
+    const cat = e.category || 'Other';
+    (groups[cat] = groups[cat] || []).push({ title:e.title, date:e.date, anchor:REG.items['ev:' + id] });
   });
+  order.filter(c => groups[c] && groups[c].length).forEach(c => spec.push({ kind:'group', title:c, sectionKey:'CAT ' + c, items:groups[c] }));
 
-  const masthead = new Table({
-    width:{ size:100, type:WidthType.PERCENTAGE },
-    borders: noBorders(),
-    rows:[ new TableRow({ children:[
-      new TableCell({
-        width:{ size:22, type:WidthType.PERCENTAGE },
-        shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
-        margins:{ top:220, bottom:220, left:360, right:160 },
-        verticalAlign: VerticalAlign.CENTER,
-        children:[ new Paragraph({ alignment:AlignmentType.CENTER, children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(100) }) ] }) ]
-      }),
-      new TableCell({
-        width:{ size:78, type:WidthType.PERCENTAGE },
-        shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
-        margins:{ top:260, bottom:260, left:160, right:400 },
-        verticalAlign: VerticalAlign.CENTER,
-        children:[
-          new Paragraph({ spacing:{after:30}, children:[ new TextRun({ text:"AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES", color:"C6A34A", bold:true, size:15, font:"Inter" }) ] }),
-          new Paragraph({ children:[ new TextRun({ text:"DEPARTMENT NEWSLETTER", color:"FFFFFF", bold:true, size:42, font:"Playfair Display" }) ] }),
-        ]
-      })
-    ]})]
-  });
-
-  const heroPara = (heroBytes && heroBytes.bytes)
-    ? new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:heroBytes.bytes, transformation: heroImageDims(heroBytes.w, heroBytes.h) }) ] })
-    : new Paragraph({ shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, alignment:AlignmentType.CENTER, spacing:{ before:260, after:260 },
-        children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] });
-
-  const missionVisionCell = new TableCell({
-    width:{ size:63, type:WidthType.PERCENTAGE },
-    margins:{ top:320, bottom:320, left:0, right:360 },
-    children:[
-      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:26, font:"Playfair Display" }) ] }),
-      new Paragraph({ spacing:{after:280, line:300}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:19, font:"Inter", italics:true }) ] }),
-      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Vision", color:"132340", bold:true, size:26, font:"Playfair Display" }) ] }),
-      new Paragraph({ spacing:{after:0, line:300}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:19, font:"Inter", italics:true }) ] }),
-    ]
-  });
-
-  const indexChildren = [ new Paragraph({ spacing:{after:180}, children:[ new TextRun({ text:"IN THIS ISSUE", color:"C6A34A", bold:true, size:21, font:"Inter" }) ] }) ];
-  if(indexGroups.length === 0){
-    indexChildren.push(new Paragraph({ children:[ new TextRun({ text:"No events recorded yet.", color:"C9D2E3", italics:true, size:17, font:"Inter" }) ] }));
+  if(pubIds && pubIds.length){
+    spec.push({ kind:'group', title:'Publications', sectionKey:'PUBLICATIONS', items: pubIds.map(id => ({ title:pubData[id].title, date:pubData[id].date, anchor:REG.items['pub:' + id] })) });
   }
-  indexGroups.forEach(g => {
-    indexChildren.push(new Paragraph({ spacing:{before:160, after:60}, children:[ new TextRun({ text:g.category.toUpperCase(), color:"FBF7EE", bold:true, size:17, font:"Inter" }) ] }));
-    g.items.forEach(e => {
-      indexChildren.push(new Paragraph({ spacing:{after:40},
-        children:[
-          new TextRun({ text:formatDate(e.date).replace(/, \d{4}/,'') + "   ", color:"C6A34A", size:15, font:"Inter" }),
-          new TextRun({ text:e.title, color:"E8E4D8", size:15, font:"Inter" }),
-        ]}));
-    });
-  });
+  if(confIds && confIds.length){
+    spec.push({ kind:'group', title:'Conference Presentations', sectionKey:'CONFERENCE PRESENTATIONS', items: confIds.map(id => ({ title:confData[id].paperTitle, date:confData[id].date, anchor:REG.items['conf:' + id] })) });
+  }
+  if(upConfs && upConfs.length){
+    spec.push({ kind:'group', title:'Upcoming Conferences & Workshops', sectionKey:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ title:u.title, date:u.date, anchor:REG.items['uc:' + u.id] })) });
+  }
   if(upcoming && upcoming.length){
-    indexChildren.push(new Paragraph({ spacing:{before:220, after:60},
-      border:{ top:{ style:BorderStyle.SINGLE, size:3, color:"3A4E75", space:8 } },
-      children:[ new TextRun({ text:"UPCOMING EVENTS", color:"C6A34A", bold:true, size:17, font:"Inter" }) ] }));
-    upcoming.forEach(e => {
-      indexChildren.push(new Paragraph({ spacing:{after: e.note ? 15 : 40},
-        children:[
-          new TextRun({ text:formatDate(e.date).replace(/, \d{4}/,'') + "   ", color:"C6A34A", size:15, font:"Inter" }),
-          new TextRun({ text:e.title, color:"E8E4D8", bold:true, size:15, font:"Inter" }),
-        ]}));
-      if(e.note){
-        indexChildren.push(new Paragraph({ spacing:{after:40},
-          children:[ new TextRun({ text:e.note, color:"AEBBD6", italics:true, size:14, font:"Inter" }) ] }));
-      }
-    });
+    spec.push({ kind:'list', title:'Upcoming Events', items: upcoming.map(u => ({ title:u.title, date:u.date })) });
   }
-  const indexCell = new TableCell({
-    width:{ size:37, type:WidthType.PERCENTAGE },
-    shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
-    margins:{ top:320, bottom:320, left:280, right:280 },
-    children: indexChildren
+  // Section-name-only links go at the very bottom of the index
+  if(REG.sections['EDITORIAL']) spec.push({ kind:'link', title:'Editorial', anchor:REG.sections['EDITORIAL'] });
+  if(REG.sections['RESEARCH BLOG']) spec.push({ kind:'link', title:'Research Blog', anchor:REG.sections['RESEARCH BLOG'] });
+  if(REG.sections['PUZZLE']) spec.push({ kind:'link', title:'Puzzle', anchor:REG.sections['PUZZLE'] });
+  return spec;
+}
+
+/* ---------------------------------------------------------------------
+   COVER PAGE — guaranteed to fit on ONE page.
+   The whole cover is a single table whose rows all have EXACT heights that
+   add up to less than the page, so Word can never push it onto page 2.
+   The index text size and the cover-photo height are chosen automatically
+   so the index fits in the space that's left (more entries → smaller text,
+   then a shorter photo).
+   --------------------------------------------------------------------- */
+const PAGE_BODY_TW = 16838 - 700 - 800;   // A4 height minus top/bottom margins
+const COVER_SAFETY_TW = 420;              // breathing room so rounding can't overflow
+const COVER_ROWS_TW = { strip:420, mast:1500, quote:760, contact:440 };
+const COVER_FLEX_PX = Math.floor((PAGE_BODY_TW - COVER_SAFETY_TW - COVER_ROWS_TW.strip - COVER_ROWS_TW.mast - COVER_ROWS_TW.quote - COVER_ROWS_TW.contact) / 15) - 4;
+// COVER_FLEX_PX = px shared by the photo row and the Mission/Vision + Index row
+const IDX_DATE_TW = 620;
+const IDX_PAD_TW = 260;
+function coverIndexWidths(){
+  const MV_TW = Math.round(PAGE_CONTENT_TW * 0.6);
+  return { MV_TW, IDX_TW: PAGE_CONTENT_TW - MV_TW };
+}
+function estimateIndexHeightPx(indexSpec, size){
+  const { IDX_TW } = coverIndexWidths();
+  const pt = size / 2, linePx = pt * 1.333 * 1.3, charPx = pt * 1.333 * 0.6;
+  const titleW = (IDX_TW - IDX_PAD_TW * 2 - IDX_DATE_TW) / 15;
+  const headW = (IDX_TW - IDX_PAD_TW * 2) / 15;
+  let h = 36 + linePx * 1.2 + 11; // cell padding + "IN THIS ISSUE"
+  indexSpec.forEach(s => {
+    h += 14 + Math.max(1, Math.ceil(s.title.length * charPx * 1.15 / headW)) * linePx;
+    (s.items || []).forEach(e => { h += 3.5 + Math.max(1, Math.ceil((e.title || '').length * charPx * 1.1 / titleW)) * linePx; });
   });
+  return Math.ceil(h * 1.12);
+}
+function estimateMissionVisionPx(){
+  const { MV_TW } = coverIndexWidths();
+  const w = (MV_TW - 360) / 15, charPx = 6.4, linePx = 20;
+  const lines = t => Math.max(1, Math.ceil((t || '').length * charPx * 1.08 / w));
+  return 40 + 2 * 40 + 19 + (lines(MISSION_TEXT) + lines(VISION_TEXT)) * linePx;
+}
+function planCover(indexSpec){
+  const mv = estimateMissionVisionPx();
+  const sizes = [19, 18, 17, 16, 15, 14];
+  for(const size of sizes){
+    const need = Math.max(mv, estimateIndexHeightPx(indexSpec, size));
+    const heroMax = Math.min(COVER_HERO_MAX_H, COVER_FLEX_PX - need);
+    const minHero = size >= 15 ? 210 : 130;
+    if(heroMax >= minHero) return { idxSize:size, heroMaxH:heroMax, showHero:true };
+  }
+  return null; // doesn't fit legibly
+}
+/* Too many entries for the cover? The cover then lists each section once
+   (with a count, linked to the section), and a full linked Contents page
+   follows the cover — so the cover still fits on one page and nothing is lost. */
+function compactIndexSpec(fullSpec, contentsAnchor){
+  const spec = [ { kind:'link', title:'Full Contents', anchor:contentsAnchor } ];
+  fullSpec.forEach(s => {
+    if(s.kind === 'group') spec.push({ kind:'link', title:`${s.title} (${s.items.length})`, anchor: REG.sections[s.sectionKey] || (s.items[0] && s.items[0].anchor) });
+    else spec.push(s);
+  });
+  return spec;
+}
+function buildContentsPage(fullSpec, anchor){
+  const { Paragraph, TextRun, InternalHyperlink } = docx;
+  const LINK = "A8842F";
+  const out = [ sectionTitlePara("CONTENTS", true, anchor, 240) ];
+  const shortDate = d => formatDate(d).replace(/, \d{4}/,'');
+  fullSpec.forEach(s => {
+    const head = new TextRun({ text:s.title.toUpperCase(), color:"132340", bold:true, size:21, font:"Inter" });
+    if(s.kind === 'link'){
+      out.push(new Paragraph({ spacing:{ before:220, after:80 }, children:[ new InternalHyperlink({ anchor:s.anchor,
+        children:[ new TextRun({ text:s.title.toUpperCase(), color:LINK, bold:true, underline:{}, size:21, font:"Inter" }) ] }) ] }));
+      return;
+    }
+    out.push(new Paragraph({ spacing:{ before:220, after:80 }, keepNext:true,
+      border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:4, color:"E4DAC3", space:2 } }, children:[ head ] }));
+    s.items.forEach(e => {
+      const title = (s.kind === 'group' && e.anchor)
+        ? new InternalHyperlink({ anchor:e.anchor, children:[ new TextRun({ text:e.title, color:LINK, underline:{}, size:BODY_SIZE - 1, font:"Inter" }) ] })
+        : new TextRun({ text:e.title, color:"1B1B18", size:BODY_SIZE - 1, font:"Inter" });
+      out.push(new Paragraph({ spacing:{ after:60 }, indent:{ left:1000, hanging:1000 },
+        tabStops:[ { type: docx.TabStopType.LEFT, position:1000 } ],
+        children:[ new TextRun({ text:shortDate(e.date) + "\t", color:"736C5E", bold:true, size:BODY_SIZE - 1, font:"Inter" }), title ] }));
+    });
+  });
+  return out;
+}
+async function buildCover({ issuePeriod, heroSrc, indexSpec }){
+  let spec = indexSpec, contents = [];
+  let plan = planCover(indexSpec);
+  if(!plan){
+    const contentsAnchor = newAnchor('contents');
+    spec = compactIndexSpec(indexSpec, contentsAnchor);
+    contents = buildContentsPage(indexSpec, contentsAnchor);
+    plan = planCover(spec) || { idxSize:14, heroMaxH:130, showHero:true };
+  }
+  const hero = plan.showHero ? await prepareFullWidthHero(heroSrc, plan.heroMaxH) : null;
+  const cover = buildCoverPage({ issuePeriod, hero, indexSpec:spec, idxSize: plan.idxSize, heroMaxH: plan.heroMaxH, showHero: plan.showHero });
+  return cover.concat(contents);
+}
 
-  const bodyTable = new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:noBorders(), rows:[ new TableRow({ children:[missionVisionCell, indexCell] }) ] });
+function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showHero }){
+  const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType,
+          VerticalAlign, ExternalHyperlink, InternalHyperlink, HeightRule, TableLayoutType } = docx;
+  const exact = tw => ({ value: Math.round(tw), rule: HeightRule.EXACT });
+  const zero = { top:0, bottom:0, left:0, right:0 };
 
-  const quoteStrip = new Paragraph({
-    alignment: AlignmentType.CENTER, spacing:{ before:260, after:260 },
-    children:[
+  /* Column grid: [logo | rest of Mission/Vision width | index]. The ribbon
+     spans the last two, Mission/Vision the first two, full-width rows all three. */
+  const MAST_H_PX = COVER_ROWS_TW.mast / 15;
+  const logoSize = logoDimsForHeight(MAST_H_PX - 4, Math.round(PAGE_CONTENT_PX * 0.35));
+  const LOGO_PAD_TW = 180;
+  const logoCellTw = logoSize.width * 15 + LOGO_PAD_TW;
+  const { MV_TW, IDX_TW } = coverIndexWidths();
+  const cols = [ logoCellTw, MV_TW - logoCellTw, IDX_TW ];
+  const ribbonTw = cols[1] + cols[2];
+
+  /* ---- 1. date strip ---- */
+  const stripRow = new TableRow({ height: exact(COVER_ROWS_TW.strip), children:[ new TableCell({
+    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
+    shading:{ fill:"C6A34A", type:ShadingType.CLEAR, color:"auto" },
+    margins:{ top:0, bottom:0, left:100, right:100 }, verticalAlign: VerticalAlign.CENTER,
+    children:[ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new TextRun({ text: issuePeriod.toUpperCase(), color:"132340", bold:true, size:19, font:"Inter" }) ] }) ]
+  }) ] });
+
+  /* ---- 2. logo + NEWSLETTER ribbon (same height) ---- */
+  const mastRow = new TableRow({ height: exact(COVER_ROWS_TW.mast), children:[
+    new TableCell({
+      width:{ size:logoCellTw, type:WidthType.DXA },
+      shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
+      margins:{ top:0, bottom:0, left:0, right:LOGO_PAD_TW }, verticalAlign: VerticalAlign.CENTER,
+      children:[ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:logoBytes(), transformation: logoSize }) ] }) ]
+    }),
+    new TableCell({
+      columnSpan:2, width:{ size:ribbonTw, type:WidthType.DXA },
+      shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
+      margins:{ top:0, bottom:0, left:300, right:300 }, verticalAlign: VerticalAlign.CENTER,
+      children:[
+        new Paragraph({ spacing:{ before:0, after:40 }, children:[ new TextRun({ text:"AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES", color:"C6A34A", bold:true, size:16, font:"Inter" }) ] }),
+        new Paragraph({ spacing:{ before:0, after:0 }, children:[ new TextRun({ text:"NEWSLETTER", color:"FFFFFF", bold:true, size:56, characterSpacing:40, font:"Playfair Display" }) ] }),
+      ]
+    })
+  ] });
+
+  /* ---- 3. full-width cover photo ---- */
+  let heroH = 0, heroRow = null;
+  if(showHero){
+    if(hero && hero.bytes){
+      heroH = hero.h;
+      heroRow = new TableRow({ height: exact(heroH * 15 + 20), children:[ new TableCell({
+        columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:zero,
+        children:[ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ]
+      }) ] });
+    } else {
+      heroH = Math.min(200, heroMaxH || 200);
+      heroRow = new TableRow({ height: exact(heroH * 15), children:[ new TableCell({
+        columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:zero,
+        shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER,
+        children:[ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] }) ]
+      }) ] });
+    }
+  }
+
+  /* ---- 4. quote ---- */
+  const quoteRow = new TableRow({ height: exact(COVER_ROWS_TW.quote), children:[ new TableCell({
+    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:200, right:200 }, verticalAlign: VerticalAlign.CENTER,
+    children:[ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
       new TextRun({ text: `“${QUOTE_TEXT}”`, italics:true, color:"132340", size:24, font:"Cormorant Garamond" }),
       new TextRun({ text: `   —   ${QUOTE_ATTRIBUTION}`, color:"736C5E", size:17, font:"Inter" }),
+    ] }) ]
+  }) ] });
+
+  /* ---- 5. Mission / Vision  +  linked index ---- */
+  const missionVisionCell = new TableCell({
+    columnSpan:2, width:{ size:MV_TW, type:WidthType.DXA },
+    margins:{ top:240, bottom:0, left:0, right:360 },
+    children:[
+      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
+      new Paragraph({ spacing:{after:280, line:290}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
+      new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Vision", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
+      new Paragraph({ spacing:{after:0, line:290}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
     ]
   });
 
-  /* Turns a plain string into a clickable https:// URL if it looks like one
-     (has a dot, no spaces) — bare handles like "@name" are left as plain text
-     since we can't know which platform they belong to. */
+  const IDX_SIZE = idxSize || 19;
+  const IDX_HEAD = IDX_SIZE + 1;
+  const linkRunsTo = (anchor, text, opts) => {
+    const run = new TextRun(Object.assign({ text, color:INDEX_LINK_COLOR, underline:{}, size:IDX_SIZE, font:"Inter" }, opts || {}));
+    return anchor ? new InternalHyperlink({ anchor, children:[ run ] }) : new TextRun(Object.assign({ text, color:"E8E4D8", size:IDX_SIZE, font:"Inter" }, opts || {}));
+  };
+  const shortDate = d => formatDate(d).replace(/, \d{4}/,'');
+  const indexChildren = [ new Paragraph({ spacing:{after:140}, children:[ new TextRun({ text:"IN THIS ISSUE", color:"C6A34A", bold:true, size:IDX_HEAD + 2, font:"Inter" }) ] }) ];
+  if(indexSpec.length === 0){
+    indexChildren.push(new Paragraph({ children:[ new TextRun({ text:"No content recorded yet.", color:"C9D2E3", italics:true, size:IDX_SIZE, font:"Inter" }) ] }));
+  }
+  indexSpec.forEach(s => {
+    if(s.kind === 'link'){
+      indexChildren.push(new Paragraph({ spacing:{ before:140, after:50 }, children:[ linkRunsTo(s.anchor, s.title.toUpperCase(), { bold:true, size:IDX_HEAD }) ] }));
+      return;
+    }
+    const isUpcomingEvents = s.kind === 'list';
+    indexChildren.push(new Paragraph({ spacing:{ before:140, after:50 },
+      children:[ new TextRun({ text:s.title.toUpperCase(), color: isUpcomingEvents ? "C6A34A" : "FFFFFF", bold:true, size:IDX_HEAD, font:"Inter" }) ] }));
+    s.items.forEach(e => {
+      indexChildren.push(new Paragraph({ spacing:{ after:50 }, indent:{ left:IDX_DATE_TW, hanging:IDX_DATE_TW },
+        tabStops:[ { type: docx.TabStopType.LEFT, position:IDX_DATE_TW } ],
+        children:[
+          new TextRun({ text: shortDate(e.date) + "\t", color:"FFFFFF", bold:true, size:IDX_SIZE, font:"Inter" }),
+          s.kind === 'group' ? linkRunsTo(e.anchor, e.title) : new TextRun({ text:e.title, color:"E8E4D8", size:IDX_SIZE, font:"Inter" }),
+        ]
+      }));
+    });
+  });
+  const indexCell = new TableCell({
+    width:{ size:IDX_TW, type:WidthType.DXA },
+    shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
+    margins:{ top:280, bottom:200, left:IDX_PAD_TW, right:IDX_PAD_TW },
+    children: indexChildren
+  });
+  // This row takes whatever height is left, so the cover always ends exactly on page 1
+  const bodyPx = COVER_FLEX_PX - heroH - (heroRow && hero && hero.bytes ? 2 : 0);
+  const bodyRow = new TableRow({ height: exact(bodyPx * 15), children:[ missionVisionCell, indexCell ] });
+
+  /* ---- 6. contacts ---- */
   function maybeUrl(str){
     if(!str) return null;
     if(/^https?:\/\//i.test(str)) return str;
@@ -2092,20 +2221,30 @@ function buildCoverPage({ issuePeriod, heroBytes, indexGroups, upcoming }){
   const websiteUrl = maybeUrl(CONTACT_WEBSITE);
   const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
   const socialUrl = maybeUrl(CONTACT_SOCIAL);
-
-  const contactFooter = new Paragraph({
-    shading: { fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" },
-    alignment: AlignmentType.CENTER, spacing:{ before:220, after:0 },
-    children:[
+  const contactRow = new TableRow({ height: exact(COVER_ROWS_TW.contact), children:[ new TableCell({
+    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:100, right:100 },
+    shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER,
+    children:[ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
       linkRun(CONTACT_WEBSITE, websiteUrl, true),
       new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
       linkRun(CONTACT_EMAIL, emailUrl, false),
       new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
       linkRun(CONTACT_SOCIAL, socialUrl, false),
-    ]
-  });
+    ] }) ]
+  }) ] });
 
-  return [topStrip, masthead, heroPara, quoteStrip, bodyTable, contactFooter];
+  const rows = [ stripRow, mastRow ];
+  if(heroRow) rows.push(heroRow);
+  rows.push(quoteRow, bodyRow, contactRow);
+  const coverTable = new Table({
+    width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
+    columnWidths: cols,
+    layout: TableLayoutType.FIXED,
+    indent:{ size:0, type:WidthType.DXA },
+    borders: noBorders(),
+    rows
+  });
+  return [ coverTable ];
 }
 
 /* Running header shown on every page except the cover — logo + strapline on
@@ -2139,7 +2278,7 @@ function buildRunningHeader(strapline, dateRangeLabel){
   return new Header({ children:[table] });
 }
 function blankHeader(){
-  return new docx.Header({ children:[ new docx.Paragraph({ children:[] }) ] });
+  return new docx.Header({ children:[ new docx.Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[ new docx.TextRun({ text:'', size:2 }) ] }) ] });
 }
 
 /* "Page X of Y" footer shown on every page, including the cover */
@@ -2159,157 +2298,346 @@ function buildRunningFooter(){
   });
 }
 
-/* One brochure-style event card: image box on the left, title/meta/description
-   aligned beside it, framed in a thin card border. */
-function buildEventCard(e){
-  const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType } = docx;
-  const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
-  const photo = (e.photos || [])[0];
-  const photoWHVal = photoWH(photo);
+/* =========================================================================
+   NEWSPAPER-STYLE FLOW LAYOUT
+   Long write-ups with several photos are laid out like a newspaper: photos
+   float alternately right/left and the text wraps around them. Because Word
+   positions a floating picture relative to the paragraph it is attached to,
+   we estimate where the text will reach on the page and attach each photo to
+   the paragraph that starts once the previous photo has been passed. If the
+   text runs out first, the remaining photos go in a gallery underneath.
+   ========================================================================= */
+const FLOW = {
+  CHAR_PX: 6.25,      // average character width of 11pt body text
+  LINE_PX: 19.5,      // line height of 11pt body text at the line spacing below
+  PARA_GAP_PX: 10,    // space after each paragraph
+  IMG_GAP_PX: 14,     // white space between photo and wrapped text
+  FLOAT_MAX_W: 300,
+  FLOAT_MAX_H: 235,
+  PAGE_PX: 900,       // usable body height per page (below the running header)
+  MIN_WRAP_CHARS: 260,// don't float a photo unless at least this much text is left to wrap round it
+  MIN_SPLIT_CHARS: 140// don't split a paragraph if less than this would be left over
+};
+const BODY_LINE = 276; // 1.15 line spacing in Word units
 
-  const imageCell = new TableCell({
-    width:{ size:36, type:WidthType.PERCENTAGE },
-    margins:{ top:60, bottom:60, left:60, right:160 },
-    children:[ new Paragraph({ alignment: docx.AlignmentType.CENTER, children:[
-      photo
-        ? new ImageRun({ data: dataUrlToUint8(photoUrl(photo)), transformation: imageDimsFit(photoWHVal.w, photoWHVal.h, 150, 150) })
-        : new ImageRun({ data: logoBytes(), transformation: logoDims(60) })
-    ] }) ]
+const ABBREV_END = /(?:\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Vol|No|Nos|Fig|Figs|Eq|Ref|Refs|vs|etc|al|approx|Dept|Univ|Inc|Ltd|Co|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.|\b[A-Z]\.|\bPh\.\s?D\.|\be\.g\.|\bi\.e\.)$/;
+function splitSentences(text){
+  const raw = text.match(/[^.!?]*[.!?]+["'”’)\]]*\s*|[^.!?]+$/g) || [text];
+  const out = []; let buf = '';
+  raw.forEach((r, i) => {
+    buf += r;
+    const last = i === raw.length - 1;
+    if(last || (/\s$/.test(buf) && !ABBREV_END.test(buf.trim()))){ out.push(buf); buf = ''; }
   });
+  if(buf) out.push(buf);
+  return out;
+}
 
-  const textCell = new TableCell({
-    width:{ size:64, type:WidthType.PERCENTAGE },
-    margins:{ top:60, bottom:60, left:160, right:60 },
-    children:[
-      new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:e.category.toUpperCase(), color:categoryHex(e.category), bold:true, size:15, font:"Inter" }) ] }),
-      new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text:e.title, color:"132340", bold:true, size:23, font:"Playfair Display" }) ] }),
-      new Paragraph({ spacing:{after:100}, children:[ new TextRun({ text:`${dateStr}  ·  ${roleLabel(e.role)} ${e.organizer}`, italics:true, color:"736C5E", size:16, font:"Inter" }) ] }),
-      new Paragraph({ spacing:{after:0, line:280}, children:[ new TextRun({ text:e.desc, color:"1B1B18", size:18, font:"Inter" }) ] }),
-    ]
-  });
+/* A line break that moves following text below any floating photo (Word's "clear all" break) */
+function clearBreakRun(){
+  return docx.ImportedXmlComponent.fromXmlString('<w:r><w:br w:type="textWrapping" w:clear="all"/></w:r>').root[0];
+}
+function clearFloatsPara(){
+  return new docx.Paragraph({ spacing:{ before:0, after:0, line:240 }, children:[ clearBreakRun() ] });
+}
 
-  const innerTable = new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:noBorders(), rows:[ new TableRow({ children:[imageCell, textCell] }) ] });
-
-  return new Table({
-    width:{ size:100, type:WidthType.PERCENTAGE },
-    borders: cardBorder(),
-    rows:[ new TableRow({ children:[ new TableCell({ margins:{ top:180, bottom:180, left:180, right:180 }, children:[ innerTable ] }) ] }) ]
+function floatingImageRun(img, side){
+  const { ImageRun, HorizontalPositionRelativeFrom, HorizontalPositionAlign, VerticalPositionRelativeFrom, TextWrappingType, TextWrappingSide } = docx;
+  const EMU = 9525;
+  return new ImageRun({
+    data: dataUrlToUint8(img.url),
+    transformation: { width: img.dw, height: img.dh },
+    floating: {
+      horizontalPosition: { relative: HorizontalPositionRelativeFrom.MARGIN, align: side === 'right' ? HorizontalPositionAlign.RIGHT : HorizontalPositionAlign.LEFT },
+      verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+      // text only on the open side, so a photo is never split by text running on both sides
+      wrap: { type: TextWrappingType.SQUARE, side: side === 'right' ? TextWrappingSide.LEFT : TextWrappingSide.RIGHT },
+      margins: { top: 0, bottom: Math.round(FLOW.IMG_GAP_PX * 0.7 * EMU), left: FLOW.IMG_GAP_PX * EMU, right: FLOW.IMG_GAP_PX * EMU },
+      allowOverlap: false,
+      layoutInCell: true,
+    }
   });
 }
 
-/* Two event cards per page, brochure-style, with a gap between them */
-function buildBrochureSections(ids, data, firstBreak){
+/* opts: { kicker:{text,color}, title, anchor, metaParas:[{runs,chars}] (or metaRuns + metaLength), floatMax:{w,h},
+           text, images:[{url,w,h}], pageBreak, startY } */
+function buildFlowArticle(opts){
+  const { Paragraph, TextRun, ImageRun, AlignmentType } = docx;
+  const out = [];
+  const W = PAGE_CONTENT_PX;
+  const fmax = opts.floatMax || { w:FLOW.FLOAT_MAX_W, h:FLOW.FLOAT_MAX_H };
+  const imgs = (opts.images || []).filter(i => i && i.url).map(i => {
+    const d = imageDimsFit(i.w, i.h, fmax.w, fmax.h);
+    return { url:i.url, dw:d.width, dh:d.height };
+  });
+  const paras = (opts.text || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
+  let remaining = paras.reduce((n, p) => n + p.length, 0);
+
+  let y = opts.startY || 0;
+  let floatBottom = -1, floatW = 0;
+  let imgIdx = 0, side = 'right';
+  const fitsPage = (top, h) => (top % FLOW.PAGE_PX) + h <= FLOW.PAGE_PX - 8;
+  const charsPerLine = top => Math.max(20, Math.floor(((top < floatBottom) ? (W - floatW - FLOW.IMG_GAP_PX) : W) / FLOW.CHAR_PX));
+  const canPlace = () => imgIdx < imgs.length && y >= floatBottom && remaining >= FLOW.MIN_WRAP_CHARS && fitsPage(y, imgs[imgIdx].dh);
+  const place = () => {
+    const img = imgs[imgIdx++];
+    const run = floatingImageRun(img, side);
+    floatBottom = y + img.dh + FLOW.IMG_GAP_PX;
+    floatW = img.dw;
+    side = side === 'right' ? 'left' : 'right';
+    return run;
+  };
+  /* advance y for n characters of text in a block whose glyphs are `charPx` wide and lines `linePx` tall */
+  const flowText = (n, charPx, linePx) => {
+    let col = 0; n = Math.ceil(n * 1.06); // ~6% lost to word-wrap
+    while(n > 0){
+      const cap = Math.max(10, Math.floor(charsPerLine(y) * FLOW.CHAR_PX / charPx)) - col;
+      if(n < cap){ col += n; n = 0; } else { n -= cap; col = 0; y += linePx; }
+    }
+    if(col > 0) y += linePx;
+  };
+
+  /* ---- header: kicker, title, meta. The first photo is attached to the kicker
+         so it sits at the top-right, level with the title (always, even for a
+         short write-up — a clearing break at the end keeps the next item below it). ---- */
+  const firstFloat = (imgs.length && fitsPage(y, imgs[0].dh)) ? place() : null;
+  if(opts.kicker){
+    out.push(new Paragraph({ pageBreakBefore: !!opts.pageBreak, spacing:{ after:60 },
+      children:[ ...(firstFloat ? [firstFloat] : []), new TextRun({ text:opts.kicker.text, color:opts.kicker.color || "132340", bold:true, size:18, font:"Inter" }) ] }));
+    y += 22;
+  }
+  const titleRuns = bookmarked(opts.anchor, [ new TextRun({ text:opts.title || '', color:"132340", bold:true, size:32, font:"Playfair Display" }) ]);
+  out.push(new Paragraph({ pageBreakBefore: !opts.kicker && !!opts.pageBreak, spacing:{ after:80 },
+    children: (!opts.kicker && firstFloat) ? [firstFloat, ...titleRuns] : titleRuns }));
+  flowText((opts.title || '').length, 10.5, 28); y += 5;
+  /* meta lines under the title: [{ runs, chars }] (journal, authors, date ...) */
+  const metaParas = opts.metaParas || ((opts.metaRuns && opts.metaRuns.length) ? [ { runs:opts.metaRuns, chars:opts.metaLength || 60 } ] : []);
+  metaParas.forEach((m, i) => {
+    const last = i === metaParas.length - 1;
+    out.push(new Paragraph({ spacing:{ after: last ? 160 : (m.after || 50) }, children: m.runs }));
+    flowText(m.chars || 60, 6.0, 19); y += last ? 10 : 3;
+  });
+
+  /* ---- body paragraphs, broken at sentence ends where a new photo should start ---- */
+  const bodyPara = (text, floatRun) => new Paragraph({ spacing:{ after:Math.round(FLOW.PARA_GAP_PX * 15), line:BODY_LINE },
+    children:[ ...(floatRun ? [floatRun] : []), new TextRun({ text, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] });
+
+  paras.forEach(p => {
+    const sents = splitSentences(p);
+    let cur = '';
+    let curFloat = canPlace() ? place() : null;
+    let col = 0;
+    let paraLeft = p.length;
+    sents.forEach(s => {
+      // a photo is due and this paragraph still has plenty of text: break here
+      if(cur && paraLeft >= FLOW.MIN_SPLIT_CHARS && canPlace()){
+        if(col > 0){ y += FLOW.LINE_PX; col = 0; }
+        y += FLOW.PARA_GAP_PX;
+        out.push(bodyPara(cur.trim(), curFloat));
+        cur = ''; curFloat = place();
+      }
+      cur += s;
+      paraLeft -= s.length; remaining -= s.length;
+      // advance the line model through this sentence
+      let n = Math.ceil(s.length * 1.06);
+      while(n > 0){
+        const cap = charsPerLine(y) - col;
+        if(n < cap){ col += n; n = 0; } else { n -= cap; col = 0; y += FLOW.LINE_PX; }
+      }
+    });
+    if(col > 0){ y += FLOW.LINE_PX; }
+    y += FLOW.PARA_GAP_PX;
+    if(cur.trim()) out.push(bodyPara(cur.trim(), curFloat));
+  });
+
+  /* ---- photos that didn't get text to wrap round: gallery below the text ---- */
+  const left = imgs.slice(imgIdx);
+  if(left.length){
+    out.push(clearFloatsPara());
+    y = Math.max(y, floatBottom);
+    const GAL_GAP = 12;
+    for(let i = 0; i < left.length; i += 2){
+      const pair = left.slice(i, i + 2);
+      const maxW = pair.length > 1 ? Math.floor((W - GAL_GAP) / 2) : Math.round(W * 0.5);
+      const runs = [];
+      pair.forEach((img, k) => {
+        const src = (opts.images || []).find(o => o && o.url === img.url) || {};
+        const d = imageDimsFit(src.w, src.h, maxW, 230);
+        runs.push(new ImageRun({ data:dataUrlToUint8(img.url), transformation:d }));
+        if(k < pair.length - 1) runs.push(new TextRun({ text:"   " }));
+      });
+      out.push(new Paragraph({ alignment:AlignmentType.CENTER, keepLines:true,
+        spacing:{ before: i === 0 ? 120 : 0, after:200 }, children:runs }));
+      y += 290;
+    }
+    floatBottom = -1;
+  }
+  // nothing after this article may sit beside one of its floating photos
+  out.push(clearFloatsPara());
+  out.endY = Math.max(y, floatBottom);
+  return out;
+}
+
+/* =========================================================================
+   STACKED SECTIONS — every section (events by category, publications,
+   conference presentations, research blog, upcoming conferences) is a
+   heading followed by newspaper-style articles that follow one another,
+   separated by a thin rule. A new article (or heading) starts a new page
+   only when too little of the current page is left.
+   groups: [{ heading, anchorKey, subtitle, items:[ (pageBreak, startY) => elements ] }]
+   ========================================================================= */
+const STACK = { HEAD_PX:62, SUB_PX:30, SEP_PX:42, MIN_ROOM_PX:300 };
+function separatorPara(){
+  return new docx.Paragraph({ spacing:{ before:240, after:260 },
+    border:{ top:{ style:docx.BorderStyle.SINGLE, size:6, color:"E4DAC3", space:1 } }, children:[] });
+}
+function buildStackedSections(groups, firstBreak, firstStartY){
   if(firstBreak === undefined) firstBreak = true;
-  const { Paragraph, TextRun } = docx;
+  const { Paragraph, TextRun, AlignmentType } = docx;
+  const PAGE = FLOW.PAGE_PX;
   let out = [];
-  for(let i=0; i<ids.length; i+=2){
-    const pair = ids.slice(i, i+2);
-    const isFirstGroup = (i === 0);
-    out.push(new Paragraph({ pageBreakBefore: isFirstGroup ? firstBreak : true, spacing:{after:0}, children:[ new TextRun({ text:"", size:2 }) ] }));
-    pair.forEach((id, idx) => {
-      out.push(buildEventCard(data[id]));
-      if(idx < pair.length - 1) out.push(new Paragraph({ spacing:{after:260}, children:[] }));
+  let pageY = null;
+  groups.filter(g => g.items && g.items.length).forEach(g => {
+    let brk;
+    if(pageY === null){ brk = firstBreak; pageY = brk ? 0 : (firstStartY || 130); }
+    else {
+      brk = pageY + 30 + STACK.HEAD_PX + STACK.MIN_ROOM_PX > PAGE;
+      if(brk) pageY = 0; else { out.push(new Paragraph({ spacing:{ after:300 }, children:[] })); pageY += 30; }
+    }
+    out.push(sectionTitlePara(g.heading, brk, sectionAnchor(g.anchorKey), g.subtitle ? 60 : 200));
+    pageY += STACK.HEAD_PX;
+    if(g.subtitle){
+      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:240},
+        children:[ new TextRun({ text:g.subtitle, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
+      pageY += STACK.SUB_PX;
+    }
+    g.items.forEach((build, i) => {
+      let pb = false;
+      if(i > 0){
+        if(pageY + STACK.SEP_PX + STACK.MIN_ROOM_PX > PAGE){ pb = true; pageY = 0; }
+        else { out.push(separatorPara()); pageY += STACK.SEP_PX; }
+      }
+      const art = build(pb, pageY);
+      out = out.concat(art);
+      pageY = (art.endY || pageY) % PAGE;
     });
-  }
+  });
   return out;
 }
+const textRun = (text, o) => new docx.TextRun(Object.assign({ text, color:"1B1B18", size:BODY_SIZE - 1, font:"Inter" }, o || {}));
+const metaLine = (text, o) => ({ runs:[ textRun(text, Object.assign({ italics:true, color:"736C5E", size:META_SIZE }, o || {})) ], chars:(text || '').length });
+const allPhotos = list => (list || []).map(p => ({ url:photoUrl(p), ...photoWH(p) })).filter(p => p.url);
 
-/* ---------- Publications: one full page per paper, with figures ---------- */
-function buildPublicationPage(p, sectionTitle, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A", bold:true, size:18, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
-    children:[ new TextRun({ text:p.title, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:60},
-    children:[ new TextRun({ text:p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : ""), italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
-  out.push(new Paragraph({ spacing:{after:60},
-    children:[ new TextRun({ text:"Authors: ", color:"132340", bold:true, size:18, font:"Inter" }), new TextRun({ text:p.authors, color:"1B1B18", size:18, font:"Inter" }) ] }));
-  out.push(new Paragraph({ spacing:{after:220},
-    children:[ new TextRun({ text:formatDate(p.date), color:"736C5E", size:16, font:"Inter" }) ] }));
+/* ---------- Events (grouped by category) ---------- */
+function eventMetaText(e){
+  const dateStr = e.dateEnd ? `${formatDate(e.date)} – ${formatDate(e.dateEnd)}` : formatDate(e.date);
+  return `${dateStr}  ·  ${roleLabel(e.role)} ${e.organizer}`;
+}
+function buildEventArticle(e, anchor, pageBreak, startY){
+  return buildFlowArticle({
+    kicker:{ text:(e.category || 'Other').toUpperCase(), color:categoryHex(e.category) },
+    title: e.title, anchor,
+    metaParas:[ metaLine(eventMetaText(e)) ],
+    text: e.desc || '', images: allPhotos(e.photos), pageBreak, startY
+  });
+}
+function buildEventsSection(ids, data, firstBreak){
+  const order = ['Academic','Research','Cultural','Social','Other'];
+  const groups = {};
+  ids.forEach(id => { const c = order.includes(data[id].category) ? data[id].category : 'Other'; (groups[c] = groups[c] || []).push(id); });
+  return buildStackedSections(order.filter(c => groups[c]).map(cat => ({
+    heading: cat.toUpperCase(), anchorKey: 'CAT ' + cat,
+    items: groups[cat].map(id => (pb, sy) => buildEventArticle(data[id], itemAnchor('ev', id), pb, sy))
+  })), firstBreak);
+}
 
-  const photos = (p.photos || []).slice(0,2);
-  if(photos.length){
-    const runs = [];
-    photos.forEach(ph => {
-      try{
-        const { w, h } = photoWH(ph);
-        const maxW = photos.length>1?220:340, maxH = photos.length>1?170:240;
-        runs.push(new ImageRun({ data:dataUrlToUint8(photoUrl(ph)), transformation: imageDimsFit(w, h, maxW, maxH) }));
-        runs.push(new TextRun({ text:"  " }));
-      }catch(e){ /* skip unreadable image */ }
-    });
-    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
-  }
-  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:p.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
-  return out;
+/* ---------- Publications ---------- */
+function bodyParagraphs(text){
+  const { Paragraph, TextRun } = docx;
+  return (text || '').split(/\n+/).map(s => s.trim()).filter(Boolean)
+    .map(s => new Paragraph({ spacing:{after:160, line:BODY_LINE}, children:[ new TextRun({ text:s, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] }));
+}
+function buildPublicationArticle(p, anchor, pageBreak, startY){
+  const journal = p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : "");
+  return buildFlowArticle({
+    kicker:{ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A" },
+    title: p.title, anchor,
+    metaParas:[
+      metaLine(journal, { size:BODY_SIZE - 1 }),
+      { runs:[ textRun("Authors: ", { bold:true, color:"132340" }), textRun(p.authors) ], chars:9 + (p.authors || '').length },
+      metaLine(formatDate(p.date)),
+    ],
+    text: p.abstract, images: allPhotos(p.photos), pageBreak, startY
+  });
 }
 function buildPublicationsSection(ids, data, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(ids.length === 0) return [];
-  let out = [];
-  ids.forEach((id, idx) => { out = out.concat(buildPublicationPage(data[id], idx===0 ? "PUBLICATIONS" : null, idx===0 ? firstBreak : true)); });
-  return out;
+  return buildStackedSections([{ heading:'PUBLICATIONS', anchorKey:'PUBLICATIONS',
+    items: ids.map(id => (pb, sy) => buildPublicationArticle(data[id], itemAnchor('pub', id), pb, sy)) }], firstBreak);
 }
 
-/* ---------- Conference presentations: one full page per paper, with photos ---------- */
-function buildConferencePage(c, sectionTitle, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"CONFERENCE PRESENTATION", color:"2C5F8A", bold:true, size:18, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
-    children:[ new TextRun({ text:c.paperTitle, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:60},
-    children:[ new TextRun({ text:c.confName, italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
-  if(c.confDetails){
-    out.push(new Paragraph({ spacing:{after:60}, children:[ new TextRun({ text:c.confDetails, color:"736C5E", size:17, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ spacing:{after:220},
-    children:[
-      new TextRun({ text:"Presented by ", color:"132340", bold:true, size:18, font:"Inter" }),
-      new TextRun({ text:c.presenter + "   ·   " + formatDate(c.date), color:"1B1B18", size:18, font:"Inter" }),
-    ] }));
-
-  const photos = (c.photos || []).slice(0,2);
-  if(photos.length){
-    const runs = [];
-    photos.forEach(ph => {
-      try{
-        const { w, h } = photoWH(ph);
-        const maxW = photos.length>1?220:340, maxH = photos.length>1?170:240;
-        runs.push(new ImageRun({ data:dataUrlToUint8(photoUrl(ph)), transformation: imageDimsFit(w, h, maxW, maxH) }));
-        runs.push(new TextRun({ text:"  " }));
-      }catch(e){ /* skip unreadable image */ }
-    });
-    out.push(new Paragraph({ children:runs, spacing:{after:220} }));
-  }
-  out.push(new Paragraph({ spacing:{line:300}, children:[ new TextRun({ text:c.abstract, color:"1B1B18", size:20, font:"Inter" }) ] }));
-  return out;
+/* ---------- Conference presentations: authors with numbered affiliations ---------- */
+function confAuthorsList(c){
+  return Array.isArray(c.authors) ? c.authors.filter(a => a && (a.name || '').trim()) : [];
+}
+/* Returns meta lines: "Authors: A¹, B², C¹" then one line per affiliation */
+function confAuthorMeta(c){
+  const authors = confAuthorsList(c);
+  if(!authors.length) return [];
+  const affs = [];
+  authors.forEach(a => { const af = (a.affiliation || '').trim(); if(af && !affs.includes(af)) affs.push(af); });
+  const numbered = affs.length > 1;
+  const runs = [ textRun("Authors: ", { bold:true, color:"132340" }) ];
+  let chars = 9;
+  authors.forEach((a, i) => {
+    runs.push(textRun(a.name.trim())); chars += a.name.trim().length + 3;
+    const af = (a.affiliation || '').trim();
+    if(numbered && af) runs.push(textRun(String(affs.indexOf(af) + 1), { superScript:true }));
+    if(i < authors.length - 1) runs.push(textRun(", "));
+  });
+  const lines = [ { runs, chars } ];
+  affs.forEach((af, i) => lines.push({ after:10, chars:af.length + 2, runs:[
+    ...(numbered ? [ textRun(String(i + 1), { superScript:true, color:"736C5E", size:META_SIZE }) ] : []),
+    textRun(af, { italics:true, color:"736C5E", size:META_SIZE }),
+  ] }));
+  return lines;
+}
+function buildConferenceArticle(c, anchor, pageBreak, startY){
+  const presented = c.presenter + "   ·   " + formatDate(c.date);
+  return buildFlowArticle({
+    kicker:{ text:"CONFERENCE PRESENTATION", color:"2C5F8A" },
+    title: c.paperTitle, anchor,
+    metaParas:[
+      metaLine(c.confName, { size:BODY_SIZE - 1 }),
+      ...(c.confDetails ? [ metaLine(c.confDetails, { italics:false }) ] : []),
+      ...confAuthorMeta(c),
+      { runs:[ textRun("Presented by ", { bold:true, color:"132340" }), textRun(presented) ], chars:13 + presented.length },
+    ],
+    text: c.abstract, images: allPhotos(c.photos), pageBreak, startY
+  });
 }
 function buildConferencesSection(ids, data, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(ids.length === 0) return [];
-  let out = [];
-  ids.forEach((id, idx) => { out = out.concat(buildConferencePage(data[id], idx===0 ? "CONFERENCE PRESENTATIONS" : null, idx===0 ? firstBreak : true)); });
-  return out;
+  return buildStackedSections([{ heading:'CONFERENCE PRESENTATIONS', anchorKey:'CONFERENCE PRESENTATIONS',
+    items: ids.map(id => (pb, sy) => buildConferenceArticle(data[id], itemAnchor('conf', id), pb, sy)) }], firstBreak);
+}
+
+/* ---------- Upcoming conferences & workshops: brochure on the right, details wrap beside it ---------- */
+function buildUpcomingConferenceArticle(u, anchor, pageBreak, startY){
+  const { ExternalHyperlink } = docx;
+  const meta = [ metaLine(formatDate(u.date), { italics:false, bold:true, color:"132340", size:BODY_SIZE - 1 }) ];
+  if(u.link){
+    const url = /^https?:\/\//i.test(u.link) ? u.link : 'https://' + u.link.replace(/^\/+/, '');
+    meta.push({ chars:u.link.length, runs:[ textRun("Details & registration: ", { bold:true, color:"132340" }),
+      new ExternalHyperlink({ link:url, children:[ textRun(u.link, { color:"1155CC", underline:{} }) ] }) ] });
+  }
+  return buildFlowArticle({
+    kicker:{ text:"UPCOMING", color:"C1722C" }, title: u.title, anchor, metaParas: meta,
+    text: u.note || '', images: u.brochure ? [ { url:u.brochure, w:u.brochureW, h:u.brochureH } ] : [],
+    floatMax:{ w:290, h:400 }, pageBreak, startY
+  });
+}
+function buildUpcomingConferencesSection(items, firstBreak){
+  return buildStackedSections([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', anchorKey:'UPCOMING CONFERENCES & WORKSHOPS',
+    items: items.map(u => (pb, sy) => buildUpcomingConferenceArticle(u, itemAnchor('uc', u.id), pb, sy)) }], firstBreak);
 }
 
 /* ---------- Research blog: carries forward from the last month someone wrote one ---------- */
@@ -2324,122 +2652,68 @@ function findLatestBlogEntries(uptoMonthInclusive){
   }
   return { month:null, ids:[], data:{} };
 }
-function buildBlogPage(b, sectionTitle, sourceLabel, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after: sourceLabel?60:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    if(sourceLabel){
-      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:280},
-        children:[ new TextRun({ text:`Featured from ${sourceLabel}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
-    }
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"RESEARCH BLOG", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:80 },
-    children:[ new TextRun({ text:b.title, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:220},
-    children:[ new TextRun({ text:`By ${b.author}   ·   ${formatDate(b.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
-  (b.content || '').split(/\n+/).forEach(para => {
-    if(para.trim()) out.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
-  });
-  return out;
-}
 function buildBlogSection(ids, data, sourceLabel, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(ids.length === 0) return [];
-  let out = [];
-  ids.forEach((id, idx) => { out = out.concat(buildBlogPage(data[id], idx===0 ? "RESEARCH BLOG" : null, idx===0 ? sourceLabel : null, idx===0 ? firstBreak : true)); });
-  return out;
+  return buildStackedSections([{ heading:'RESEARCH BLOG', anchorKey:'RESEARCH BLOG',
+    subtitle: sourceLabel ? `Featured from ${sourceLabel}` : null,
+    items: ids.map(id => (pb, sy) => {
+      const b = data[id];
+      return buildFlowArticle({
+        kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor:itemAnchor('blog', id),
+        metaParas:[ metaLine(`By ${b.author}   ·   ${formatDate(b.date)}`) ],
+        text:b.content, images: allPhotos(b.photos), pageBreak:pb, startY:sy
+      });
+    }) }], firstBreak);
 }
 
-/* ---------- Editorial ---------- */
-function buildEditorialPage(ed, sectionTitle, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"EDITORIAL", color:"C6A34A", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"EDITORIAL", color:"C6A34A", bold:true, size:18, font:"Inter" }) ] }));
-  }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:80 },
-    children:[ new TextRun({ text:ed.title, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:220},
-    children:[ new TextRun({ text:`By ${ed.author}   ·   ${formatDate(ed.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
-  (ed.content || '').split(/\n+/).forEach(para => {
-    if(para.trim()) out.push(new Paragraph({ spacing:{after:180, line:300}, children:[ new TextRun({ text:para.trim(), color:"1B1B18", size:20, font:"Inter" }) ] }));
-  });
-  return out;
-}
-function buildEditorialSection(ids, data, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(ids.length === 0) return [];
-  let out = [];
-  ids.forEach((id, idx) => { out = out.concat(buildEditorialPage(data[id], idx===0 ? "EDITORIAL" : null, idx===0 ? firstBreak : true)); });
-  return out;
+/* ---------- Editorial (admin-written, one per month) ---------- */
+function buildEditorialSection(ed, firstBreak){
+  if(!ed || !(ed.content || '').trim()) return [];
+  return buildStackedSections([{ heading:'EDITORIAL', anchorKey:'EDITORIAL',
+    items:[ (pb, sy) => buildFlowArticle({
+      kicker:null, title: ed.title || 'From the Editor’s Desk', anchor:null,
+      metaParas: ed.author ? [ metaLine(`— ${ed.author}`) ] : [],
+      text: ed.content,
+      images: ed.photo ? [ { url:ed.photo.url, w:ed.photo.w, h:ed.photo.h } ] : [],
+      pageBreak:pb, startY:sy
+    }) ] }], firstBreak);
 }
 
-/* ---------- Puzzle of the Month ---------- */
-function buildPuzzlePage(pz, sectionTitle, pageBreak){
-  if(pageBreak === undefined) pageBreak = true;
-  const { Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType } = docx;
-  let out = [];
-  if(sectionTitle){
-    out.push(new Paragraph({ pageBreakBefore:pageBreak, alignment:AlignmentType.CENTER, spacing:{ after:280 },
-      children:[ new TextRun({ text:sectionTitle, color:"132340", bold:true, size:40, font:"Playfair Display" }) ] }));
-    out.push(new Paragraph({
-      children:[ new TextRun({ text:"PUZZLE", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
-  } else {
-    out.push(new Paragraph({ pageBreakBefore:pageBreak,
-      children:[ new TextRun({ text:"PUZZLE", color:"3A8C64", bold:true, size:18, font:"Inter" }) ] }));
+/* ---------- Puzzle (admin-written, one per month) ---------- */
+function buildPuzzleSection(pz, firstBreak){
+  if(!pz || (!(pz.content || '').trim() && !pz.image)) return [];
+  if(firstBreak === undefined) firstBreak = true;
+  const { Paragraph, TextRun, ImageRun, AlignmentType } = docx;
+  let out = [ sectionTitlePara("PUZZLE", firstBreak, sectionAnchor("PUZZLE"), 200) ];
+  if(pz.title){
+    out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:200 },
+      children:[ new TextRun({ text:pz.title, color:"132340", bold:true, size:30, font:"Playfair Display" }) ] }));
   }
-  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{ before:80, after:100 },
-    children:[ new TextRun({ text:pz.title, color:"132340", font:"Playfair Display" }) ] }));
-  out.push(new Paragraph({ spacing:{after:200},
-    children:[ new TextRun({ text:`Submitted by ${pz.author}   ·   ${formatDate(pz.date)}`, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
-  out.push(new Paragraph({ spacing:{after:220, line:300},
-    children:[ new TextRun({ text:pz.puzzleText, color:"1B1B18", size:20, font:"Inter" }) ] }));
-  if(pz.image){
+  out = out.concat(bodyParagraphs(pz.content));
+  if(pz.image && pz.image.url){
     try{
-      out.push(new Paragraph({ spacing:{after:0},
-        children:[ new ImageRun({ data:dataUrlToUint8(pz.image), transformation: imageDimsFit(pz.imageW, pz.imageH, 380, 380) }) ] }));
+      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:120, after:120 },
+        children:[ new ImageRun({ data:dataUrlToUint8(pz.image.url), transformation: imageDimsFit(pz.image.w, pz.image.h, 560, 560) }) ] }));
     }catch(e){ /* skip unreadable image */ }
   }
   return out;
 }
-function buildPuzzleSection(ids, data, firstBreak){
-  if(firstBreak === undefined) firstBreak = true;
-  if(ids.length === 0) return [];
-  let out = [];
-  ids.forEach((id, idx) => { out = out.concat(buildPuzzlePage(data[id], idx===0 ? "PUZZLE OF THE MONTH" : null, idx===0 ? firstBreak : true)); });
-  return out;
-}
 
 /* ---------- Monthly newsletter ---------- */
+function sortedIds(data){
+  return Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
+}
 async function generateNewsletter(){
   const monthData = allEventsByMonth[currentMonth] || {};
-  const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+  const ids = sortedIds(monthData);
   const pubData = allPublicationsByMonth[currentMonth] || {};
-  const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
+  const pubIds = sortedIds(pubData);
   const confData = allConferencesByMonth[currentMonth] || {};
-  const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+  const confIds = sortedIds(confData);
   const blogInfo = findLatestBlogEntries(currentMonth);
-  const edData = allEditorialsByMonth[currentMonth] || {};
-  const edIds = Object.keys(edData).sort((a,b) => (edData[a].date||'').localeCompare(edData[b].date||''));
-  const pzData = allPuzzlesByMonth[currentMonth] || {};
-  const pzIds = Object.keys(pzData).sort((a,b) => (pzData[a].date||'').localeCompare(pzData[b].date||''));
+  const editorial = allEditorialsByMonth[currentMonth] || null;
+  const puzzle = allPuzzlesByMonth[currentMonth] || null;
 
-  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0 && edIds.length === 0 && pzIds.length === 0){
+  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0 && !editorial && !puzzle){
     alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.');
     return;
   }
@@ -2450,29 +2724,32 @@ async function generateNewsletter(){
   try{
     const { Document, Packer } = docx;
     const dateRange = issueDateRangeLabel(currentMonth);
+    const upConfs = getActiveUpcomingConferences();
+    const upcoming = getUpcomingEvents(6);
 
-    const cover = buildCoverPage({
-      issuePeriod: dateRange,
-      heroBytes: resolveHeroBytes(ids, monthData),
-      indexGroups: buildIndexGroups(ids, monthData, pubIds, pubData, confIds, confData),
-      upcoming: getUpcomingEvents(6)
-    });
-
+    resetRegistry();
+    // Body first, so every bookmark exists before the cover index links to it
     const body = [
-      ...buildEditorialSection(edIds, edData),
-      ...buildBrochureSections(ids, monthData),
+      ...buildEditorialSection(editorial),
+      ...buildEventsSection(ids, monthData),
       ...buildPublicationsSection(pubIds, pubData),
       ...buildConferencesSection(confIds, confData),
       ...buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== currentMonth ? monthLabel(blogInfo.month) : null),
-      ...buildUpcomingConferencesSection(getActiveUpcomingConferences()),
-      ...buildPuzzleSection(pzIds, pzData),
+      ...buildUpcomingConferencesSection(upConfs),
+      ...buildPuzzleSection(puzzle),
     ];
 
+    const cover = await buildCover({
+      issuePeriod: dateRange,
+      heroSrc: resolveHeroSource(ids, monthData),
+      indexSpec: buildIndexSpec({ ids, data:monthData, pubIds, pubData, confIds, confData, upConfs, upcoming })
+    });
+
     const doc = new Document({
-      styles: { default: { document: { run: { font:"Inter", size:22 } } } },
+      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } } },
       sections: [{
-        properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },
-        headers: { default: buildRunningHeader("SCHOOL OF PHYSICAL SCIENCES · DEPARTMENT NEWSLETTER", dateRange), first: blankHeader() },
+        properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
+        headers: { default: buildRunningHeader("SCHOOL OF PHYSICAL SCIENCES · NEWSLETTER", dateRange), first: blankHeader() },
         footers: { default: buildRunningFooter(), first: buildRunningFooter() },
         children: [ ...cover, ...body ]
       }]
@@ -2497,8 +2774,7 @@ async function generateAnnualNewsletter(){
     Object.keys(allPublicationsByMonth[m]||{}).length ||
     Object.keys(allConferencesByMonth[m]||{}).length ||
     Object.keys(allBlogsByMonth[m]||{}).length ||
-    Object.keys(allEditorialsByMonth[m]||{}).length ||
-    Object.keys(allPuzzlesByMonth[m]||{}).length
+    allEditorialsByMonth[m] || allPuzzlesByMonth[m]
   );
   if(totalIds === 0 && !hasOtherContent){ alert('No content found for ' + year + '.'); return; }
 
@@ -2508,27 +2784,18 @@ async function generateAnnualNewsletter(){
   try{
     const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
 
-    // Merge all months of the year into one id list + one combined data map for the cover index/hero
-    let allIds = [];
-    let allData = {};
-    let allPubIds = [];
-    let allPubData = {};
-    let allConfIds = [];
-    let allConfData = {};
+    let allIds = [], allData = {}, allPubIds = [], allPubData = {}, allConfIds = [], allConfData = {};
     months.forEach(m => {
-      Object.keys(allEventsByMonth[m]||{}).forEach(id => { allIds.push(id); allData[id] = allEventsByMonth[m][id]; });
-      Object.keys(allPublicationsByMonth[m]||{}).forEach(id => { allPubIds.push(id); allPubData[id] = allPublicationsByMonth[m][id]; });
-      Object.keys(allConferencesByMonth[m]||{}).forEach(id => { allConfIds.push(id); allConfData[id] = allConferencesByMonth[m][id]; });
+      sortedIds(allEventsByMonth[m]||{}).forEach(id => { allIds.push(id); allData[id] = allEventsByMonth[m][id]; });
+      sortedIds(allPublicationsByMonth[m]||{}).forEach(id => { allPubIds.push(id); allPubData[id] = allPublicationsByMonth[m][id]; });
+      sortedIds(allConferencesByMonth[m]||{}).forEach(id => { allConfIds.push(id); allConfData[id] = allConferencesByMonth[m][id]; });
     });
 
     const annualDateRange = issueDateRangeLabelYear(year);
-    const cover = buildCoverPage({
-      issuePeriod: `Annual Edition · ${annualDateRange}`,
-      heroBytes: resolveHeroBytes(allIds, allData),
-      indexGroups: buildIndexGroups(allIds, allData, allPubIds, allPubData, allConfIds, allConfData),
-      upcoming: getUpcomingEvents(6)
-    });
+    const upConfs = getActiveUpcomingConferences();
+    const upcoming = getUpcomingEvents(6);
 
+    resetRegistry();
     let body = [];
     months.forEach(m => {
       body.push(new Paragraph({ pageBreakBefore:true, alignment: AlignmentType.CENTER, spacing:{ before:120, after:120 },
@@ -2537,38 +2804,43 @@ async function generateAnnualNewsletter(){
         children:[ new TextRun({ text: monthLabel(m).split(' ')[1], color:"C6A34A", bold:true, size:28, font:"Inter" }) ] }));
 
       const monthData = allEventsByMonth[m] || {};
-      const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
+      const ids = sortedIds(monthData);
       const pubData = allPublicationsByMonth[m] || {};
-      const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
+      const pubIds = sortedIds(pubData);
       const confData = allConferencesByMonth[m] || {};
-      const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+      const confIds = sortedIds(confData);
       const blogInfo = findLatestBlogEntries(m);
-      const edData = allEditorialsByMonth[m] || {};
-      const edIds = Object.keys(edData).sort((a,b) => (edData[a].date||'').localeCompare(edData[b].date||''));
-      const pzData = allPuzzlesByMonth[m] || {};
-      const pzIds = Object.keys(pzData).sort((a,b) => (pzData[a].date||'').localeCompare(pzData[b].date||''));
+      const editorial = allEditorialsByMonth[m] || null;
+      const puzzle = allPuzzlesByMonth[m] || null;
 
       // Whichever content type comes first for this month flows directly below
-      // the month heading (no page break); everything after that starts fresh pages as usual.
+      // the month heading (no page break); everything after starts a fresh page.
       let firstUsed = false;
       const takeFirstBreak = () => { const f = !firstUsed; firstUsed = true; return !f; };
 
-      body = body.concat(buildEditorialSection(edIds, edData, edIds.length ? takeFirstBreak() : true));
-      body = body.concat(buildBrochureSections(ids, monthData, ids.length ? takeFirstBreak() : true));
+      const edSec = buildEditorialSection(editorial, editorial ? takeFirstBreak() : true);
+      body = body.concat(edSec);
+      body = body.concat(buildEventsSection(ids, monthData, ids.length ? takeFirstBreak() : true));
       body = body.concat(buildPublicationsSection(pubIds, pubData, pubIds.length ? takeFirstBreak() : true));
       body = body.concat(buildConferencesSection(confIds, confData, confIds.length ? takeFirstBreak() : true));
       body = body.concat(buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== m ? monthLabel(blogInfo.month) : null, blogInfo.ids.length ? takeFirstBreak() : true));
-      body = body.concat(buildPuzzleSection(pzIds, pzData, pzIds.length ? takeFirstBreak() : true));
+      body = body.concat(buildPuzzleSection(puzzle, puzzle ? takeFirstBreak() : true));
     });
 
     // Upcoming Conferences & Workshops is evergreen standing content, shown once
     // at the end of the annual edition rather than repeated inside every month.
-    body = body.concat(buildUpcomingConferencesSection(getActiveUpcomingConferences()));
+    body = body.concat(buildUpcomingConferencesSection(upConfs));
+
+    const cover = await buildCover({
+      issuePeriod: `Annual Edition · ${annualDateRange}`,
+      heroSrc: resolveHeroSource(allIds, allData),
+      indexSpec: buildIndexSpec({ ids:allIds, data:allData, pubIds:allPubIds, pubData:allPubData, confIds:allConfIds, confData:allConfData, upConfs, upcoming })
+    });
 
     const doc = new Document({
-      styles: { default: { document: { run: { font:"Inter", size:22 } } } },
+      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } } },
       sections: [{
-        properties: { page: { margin: { top:700, bottom:800, left:800, right:800 } }, titlePage:true },
+        properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
         headers: { default: buildRunningHeader(`SCHOOL OF PHYSICAL SCIENCES · ANNUAL NEWSLETTER ${year}`, annualDateRange), first: blankHeader() },
         footers: { default: buildRunningFooter(), first: buildRunningFooter() },
         children: [ ...cover, ...body ]
@@ -2630,6 +2902,7 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
   cols.push(
     { header:'Date', key:'date', width:14 },
     { header:'Paper Title', key:'paperTitle', width:34 },
+    { header:'Authors & Affiliations', key:'authors', width:44 },
     { header:'Conference Name', key:'confName', width:30 },
     { header:'Conference Details', key:'confDetails', width:36 },
     { header:'Presented By', key:'presenter', width:22 },
@@ -2644,10 +2917,13 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
   ws.getRow(1).height = 22;
   rows.forEach(({ month, c }) => {
     const row = ws.addRow({
-      month, date: formatDate(c.date), paperTitle: c.paperTitle, confName: c.confName,
+      month, date: formatDate(c.date), paperTitle: c.paperTitle,
+      authors: confAuthorsList(c).map(a => a.name + (a.affiliation ? ' (' + a.affiliation + ')' : '')).join('; '),
+      confName: c.confName,
       confDetails: c.confDetails || '', presenter: c.presenter, abstract: c.abstract, photos: (c.photos||[]).length,
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
+    row.getCell('authors').alignment = { wrapText:true, vertical:'top' };
     row.alignment = { vertical:'top' };
   });
 }
@@ -2854,6 +3130,7 @@ async function generateAnnualExcel(){
 /* ---------------- Init ---------------- */
 document.getElementById('topbarLogo').src = 'data:image/png;base64,' + AMITY_LOGO_BASE64;
 document.getElementById('f_date').valueAsDate = new Date();
+resetConfAuthors();
 if(sessionStorage.getItem('nl_admin') === 'yes' && location.hash === '#admin'){
   switchTab('admin');
 }

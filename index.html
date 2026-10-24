@@ -1978,7 +1978,7 @@ let CONTACT_SOCIAL = "[Replace with social media handle(s) — search for CONTAC
    the body is built, and the cover index then links to those bookmarks.
    --------------------------------------------------------------------- */
 let REG = null;
-function resetRegistry(){ REG = { seq:0, sections:{}, items:{} }; }
+function resetRegistry(){ REG = { seq:0, sections:{}, items:{}, tc:{} }; }
 function newAnchor(prefix){ REG.seq++; return `nl_${prefix}${REG.seq}`; }
 /* Anchor for a section heading; the index links to the FIRST one of each name */
 function sectionAnchor(name){
@@ -1994,7 +1994,23 @@ function itemAnchor(kind, id){
 }
 function bookmarked(anchor, runs){
   if(!anchor) return runs;
-  return [ new docx.Bookmark({ id: anchor, children: runs }) ];
+  const out = [ new docx.Bookmark({ id: anchor, children: runs }) ];
+  const tc = REG && REG.tc && REG.tc[anchor];   // annual edition: Table of Contents entry for this spot
+  return tc ? out.concat(tcEntryRuns(tc.text, tc.level)) : out;
+}
+
+/* ---- Word fields written as raw XML (the docx library has no TC/TOC-with-entries helper) ---- */
+function xmlEsc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rawRun(xml){ return docx.ImportedXmlComponent.fromXmlString(xml).root[0]; }
+const fieldBegin = () => rawRun('<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r>');
+const fieldSep   = () => rawRun('<w:r><w:fldChar w:fldCharType="separate"/></w:r>');
+const fieldEnd   = () => rawRun('<w:r><w:fldChar w:fldCharType="end"/></w:r>');
+const fieldCode  = code => rawRun(`<w:r><w:instrText xml:space="preserve"> ${xmlEsc(code)} </w:instrText></w:r>`);
+/* A hidden "TC" marker: Word's Table of Contents collects these, with the
+   real page each one sits on, when it builds the table */
+function tcEntryRuns(text, level){
+  const t = String(text).replace(/"/g, '\u201D').replace(/\s+/g, ' ').trim();
+  return [ rawRun('<w:r><w:fldChar w:fldCharType="begin"/></w:r>'), fieldCode(`TC "${t}" \\f a \\l ${level}`), fieldEnd() ];
 }
 
 /* Big centered section heading (e.g. "ACADEMIC", "PUBLICATIONS") with a bookmark */
@@ -2242,39 +2258,42 @@ function buildContentsPage(fullSpec, anchor){
 }
 /* Annual edition: a proper Table of Contents — every section, the months in it,
    and every item with its date, a linked title and its page number. */
+/* Annual edition: a real Word Table of Contents field. Word builds it from the
+   hidden TC markers placed at every section, month and item — after laying
+   out the pages — so every entry gets its correct page number and a link.
+   Until Word updates it, the list below (same entries, linked, no numbers)
+   shows as its placeholder. */
 function buildTableOfContents(toc, anchor){
-  const { Paragraph, TextRun, InternalHyperlink, PageReference, TabStopType, LeaderType } = docx;
-  const RIGHT = PAGE_CONTENT_TW - 20;
-  const shortDate = d => d ? formatDate(d).replace(/, \d{4}/,'') : '';
+  const { Paragraph, TextRun, InternalHyperlink } = docx;
+  const shortDate = d => d ? formatDate(d).replace(/, \d{4}/,'') + '  ·  ' : '';
   const out = [ sectionTitlePara("TABLE OF CONTENTS", true, anchor, 300) ];
+  out.push(new Paragraph({ spacing:{ before:0, after:0 }, children:[ fieldBegin(), fieldCode('TOC \\f a \\l "1-3" \\h \\z'), fieldSep() ] }));
   toc.forEach(sec => {
-    const secAnchor = REG.sections[sec.key];
-    out.push(new Paragraph({ keepNext:true, spacing:{ before:260, after:80 },
-      border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:6, color:"132340", space:2 } },
-      tabStops:[ { type:TabStopType.RIGHT, position:RIGHT } ],
-      children:[
-        new InternalHyperlink({ anchor:secAnchor, children:[ new TextRun({ text:sec.title.toUpperCase(), color:"132340", bold:true, size:23, font:"Inter" }) ] }),
-        new TextRun({ text:"\t", size:23 }),
-        new PageReference(secAnchor, { hyperlink:true }),
-      ] }));
+    out.push(new Paragraph({ style:'TOC1', children:[ new InternalHyperlink({ anchor:REG.sections[sec.key], children:[ new TextRun({ text:sec.title.toUpperCase() }) ] }) ] }));
     sec.months.forEach(mo => {
-      if(mo.label){
-        out.push(new Paragraph({ keepNext:true, spacing:{ before:120, after:50 }, indent:{ left:200 },
-          children:[ new TextRun({ text:mo.label.toUpperCase(), color:"A8842F", bold:true, size:17, characterSpacing:10, font:"Inter" }) ] }));
-      }
-      mo.items.forEach(it => {
-        out.push(new Paragraph({ spacing:{ after:50 }, indent:{ left:1500, hanging:1100 },
-          tabStops:[ { type:TabStopType.LEFT, position:1500 }, { type:TabStopType.RIGHT, position:RIGHT, leader:LeaderType.DOT } ],
-          children:[
-            new TextRun({ text: shortDate(it.date) + "\t", color:"736C5E", bold:true, size:19, font:"Inter" }),
-            new InternalHyperlink({ anchor:it.anchor, children:[ new TextRun({ text:it.title || '(untitled)', color:"1B1B18", size:20, font:"Inter" }) ] }),
-            new TextRun({ text:"\t", size:20 }),
-            new PageReference(it.anchor, { hyperlink:true }),
-          ] }));
-      });
+      if(mo.label) out.push(new Paragraph({ style:'TOC2', children:[ new TextRun({ text:mo.label.toUpperCase() }) ] }));
+      mo.items.forEach(it => out.push(new Paragraph({ style:'TOC3',
+        children:[ new InternalHyperlink({ anchor:it.anchor, children:[ new TextRun({ text: shortDate(it.date) + (it.title || '(untitled)') }) ] }) ] })));
     });
   });
+  out.push(new Paragraph({ spacing:{ before:0, after:0 }, children:[ fieldEnd() ] }));
   return out;
+}
+/* Look of the three Table of Contents levels (section / month / item) */
+function tocStyles(){
+  const { TabStopType, LeaderType } = docx;
+  const right = [ { type:TabStopType.RIGHT, position:PAGE_CONTENT_TW - 20, leader:LeaderType.DOT } ];
+  return [
+    { id:'TOC1', name:'toc 1', basedOn:'Normal', next:'Normal', uiPriority:39,
+      run:{ font:'Inter', size:23, bold:true, color:'132340' },
+      paragraph:{ spacing:{ before:260, after:80 }, keepNext:true, tabStops:right } },
+    { id:'TOC2', name:'toc 2', basedOn:'Normal', next:'Normal', uiPriority:39,
+      run:{ font:'Inter', size:17, bold:true, color:'A8842F' },
+      paragraph:{ spacing:{ before:120, after:40 }, indent:{ left:200 }, keepNext:true, tabStops:right } },
+    { id:'TOC3', name:'toc 3', basedOn:'Normal', next:'Normal', uiPriority:39,
+      run:{ font:'Inter', size:20, color:'1B1B18' },
+      paragraph:{ spacing:{ before:0, after:50 }, indent:{ left:600, right:500, hanging:0 }, tabStops:right } },
+  ];
 }
 async function buildCover({ issuePeriod, heroSrc, indexSpec, contentsPage }){
   const info = await loadHeroInfo(heroSrc);
@@ -2681,11 +2700,12 @@ function separatorPara(){
     border:{ top:{ style:docx.BorderStyle.SINGLE, size:6, color:"E4DAC3", space:1 } }, children:[] });
 }
 /* Gold month sub-heading used inside a section of the annual edition */
-function monthMarkerPara(label, pageBreak, extraSpace){
+function monthMarkerPara(label, pageBreak, extraSpace, tc){
   return new docx.Paragraph({ pageBreakBefore: !!pageBreak, keepNext:true,
     spacing:{ before: extraSpace ? 360 : 60, after:200 },
     border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:8, color:"C6A34A", space:3 } },
-    children:[ new docx.TextRun({ text:label.toUpperCase(), color:"A8842F", bold:true, size:24, characterSpacing:20, font:"Inter" }) ] });
+    children:[ new docx.TextRun({ text:label.toUpperCase(), color:"A8842F", bold:true, size:24, characterSpacing:20, font:"Inter" }),
+               ...(tc ? tcEntryRuns(label.toUpperCase(), 2) : []) ] });
 }
 /* Turns [{ month, builders:[...] }] into one item list with a month sub-heading before each month */
 function withMonthMarkers(perMonth){
@@ -2706,7 +2726,9 @@ function buildStackedSections(groups, firstBreak, firstStartY){
       brk = pageY + 30 + STACK.HEAD_PX + STACK.MIN_ROOM_PX > PAGE;
       if(brk) pageY = 0; else { out.push(new Paragraph({ spacing:{ after:300 }, children:[] })); pageY += 30; }
     }
-    out.push(sectionTitlePara(g.heading, brk, sectionAnchor(g.anchorKey), g.subtitle ? 60 : 200));
+    const secAnchor = sectionAnchor(g.anchorKey);
+    if(g.tc) REG.tc[secAnchor] = { text:g.tc, level:1 };
+    out.push(sectionTitlePara(g.heading, brk, secAnchor, g.subtitle ? 60 : 200));
     pageY += STACK.HEAD_PX;
     if(g.subtitle){
       out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:240},
@@ -2718,7 +2740,7 @@ function buildStackedSections(groups, firstBreak, firstStartY){
       if(item && item.marker){            // month sub-heading (annual edition)
         const pb = pageY + 50 + STACK.MIN_ROOM_PX > PAGE;
         if(pb) pageY = 0;
-        out.push(monthMarkerPara(item.marker, pb, !fresh && !pb));
+        out.push(monthMarkerPara(item.marker, pb, !fresh && !pb, item.tc));
         pageY += fresh || pb ? 44 : 64;
         fresh = true;
         return;
@@ -3067,14 +3089,20 @@ async function generateAnnualNewsletter(){
       const add = (label, entries) => {
         if(!entries.length) return;
         const mo = { label, items:[] };
-        if(label) items.push({ marker:label });
-        entries.forEach(it => { const anchor = newAnchor('toc'); mo.items.push({ date:it.date, title:it.title, anchor }); items.push(it.make(anchor)); });
+        if(label) items.push({ marker:label, tc:true });
+        entries.forEach(it => {
+          const anchor = newAnchor('toc');
+          mo.items.push({ date:it.date, title:it.title, anchor });
+          const d = it.date ? formatDate(it.date).replace(/, \d{4}/,'') + '  ·  ' : '';
+          REG.tc[anchor] = { text: d + (it.title || ''), level:3 };
+          items.push(it.make(anchor));
+        });
         tocSec.months.push(mo);
       };
       if(byMonth === false) add(null, list(null));
       else months.forEach(m => add(monthLabel(m), list(m)));
       if(items.length) toc.push(tocSec);
-      return { heading, anchorKey:key, items };
+      return { heading, anchorKey:key, items, tc: tocTitle.toUpperCase() };
     };
     const evDesk = m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { title: d.title || 'From the Editor\u2019s Desk', make: a => deskItem(d, a) } ] : []; };
     const evGuest = m => guestEditorialEntries(m).filter(hasText).map(g => ({ title: g.title || 'Guest Editorial', make: a => guestItem(g, a) }));
@@ -3117,8 +3145,8 @@ async function generateAnnualNewsletter(){
     });
 
     const doc = new Document({
-      features: { updateFields: true }, // so Word fills in the Table of Contents page numbers
-      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } } },
+      features: { updateFields: true }, // Word asks to update fields on open → builds the Table of Contents with real page numbers
+      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } }, paragraphStyles: tocStyles() },
       sections: [{
         properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
         headers: { default: buildRunningHeader(`SCHOOL OF PHYSICAL SCIENCES · ANNUAL NEWSLETTER ${year}`, annualDateRange), first: blankHeader() },

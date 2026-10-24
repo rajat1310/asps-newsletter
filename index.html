@@ -331,6 +331,8 @@
         <button class="subtab" onclick="switchSubtab('blog')">Research Blog</button>
         <button class="subtab" onclick="switchSubtab('upcoming')">Upcoming Event</button>
         <button class="subtab" onclick="switchSubtab('upcomingconf')">Upcoming Conference/Workshop</button>
+        <button class="subtab" onclick="switchSubtab('editorial')">Guest Editorial</button>
+        <button class="subtab" onclick="switchSubtab('puzzle')">Puzzle</button>
       </div>
     </div>
 
@@ -557,6 +559,66 @@
     </div>
 
     <!-- ---- Upcoming Conference/Workshop form ---- -->
+    <!-- ---- Editorial form ---- -->
+    <div class="card subview" id="subview-editorial">
+      <p class="section-desc" style="margin-top:0;">Write a guest editorial for the newsletter. It appears in the "Guest Editorials" section of the month you pick, with a link on the cover index.</p>
+      <form id="editorialForm" onsubmit="return false;">
+        <label class="first">Title *</label>
+        <input type="text" id="ed_title" placeholder="e.g. Why Curiosity Still Matters" />
+        <div class="row2">
+          <div>
+            <label>Written by *</label>
+            <input type="text" id="ed_author" placeholder="e.g. Dr. A. Sharma, Professor of Physics" />
+          </div>
+          <div>
+            <label>Newsletter Month *</label>
+            <input type="month" id="ed_month" />
+          </div>
+        </div>
+        <label>Editorial Text *</label>
+        <textarea id="ed_content" style="min-height:200px;" placeholder="Write the editorial here. Leave a blank line between paragraphs."></textarea>
+        <label>Photos</label>
+        <div class="photo-drop" onclick="document.getElementById('ed_photos').click()">
+          <input type="file" id="ed_photos" accept="image/*" multiple onchange="handlePhotoSelect('editorial', event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">JPG/PNG, up to 6. They're placed into the text newspaper-style.</div>
+        </div>
+        <div class="thumbs" id="thumbs-editorial"></div>
+        <button class="primary" id="submitBtn-editorial" onclick="submitEditorial()">Submit Guest Editorial</button>
+        <div class="msg" id="submitMsg-editorial"></div>
+      </form>
+    </div>
+
+    <!-- ---- Puzzle form ---- -->
+    <div class="card subview" id="subview-puzzle">
+      <p class="section-desc" style="margin-top:0;">Puzzles appear in the last section of the newsletter, with a link on the cover index. Add the puzzle as text, an image (e.g. a crossword grid), or both.</p>
+      <form id="puzzleForm" onsubmit="return false;">
+        <label class="first">Puzzle Title *</label>
+        <input type="text" id="pz_title" placeholder="e.g. Physics Crossword" />
+        <div class="row2">
+          <div>
+            <label>Contributed by</label>
+            <input type="text" id="pz_author" placeholder="Your name" />
+          </div>
+          <div>
+            <label>Newsletter Month *</label>
+            <input type="month" id="pz_month" />
+          </div>
+        </div>
+        <label>Puzzle Text</label>
+        <textarea id="pz_content" style="min-height:140px;" placeholder="Questions, clues, instructions, where to send answers..."></textarea>
+        <label>Puzzle Images</label>
+        <div class="photo-drop" onclick="document.getElementById('pz_photos').click()">
+          <input type="file" id="pz_photos" accept="image/*" multiple onchange="handlePhotoSelect('puzzle', event)" />
+          <div><strong>Click to add images</strong></div>
+          <div class="hint">JPG/PNG, up to 6. Shown large and centred.</div>
+        </div>
+        <div class="thumbs" id="thumbs-puzzle"></div>
+        <button class="primary" id="submitBtn-puzzle" onclick="submitPuzzle()">Submit Puzzle</button>
+        <div class="msg" id="submitMsg-puzzle"></div>
+      </form>
+    </div>
+
     <div class="card subview" id="subview-upcomingconf">
       <p class="section-desc" style="margin-top:0;">Know of a conference, workshop, or call for papers coming up? Add it here with a link and/or brochure. It'll appear in a dedicated section of every month's newsletter automatically, and drop off on its own once the date has passed.</p>
       <form id="upcomingConfForm" onsubmit="return false;">
@@ -723,43 +785,36 @@
     </div>
 
     <div class="card">
-      <h2 class="section-title" style="font-size:19px;">Editorial — <span class="epMonthLabel"></span></h2>
-      <p class="section-desc">Appears as the first section after the cover of this month's newsletter, with a link from the cover index. Saving again replaces it.</p>
+      <h2 class="section-title" style="font-size:19px;">From the Editor's Desk — <span id="deskMonthLabel"></span></h2>
+      <p class="section-desc">Admin only. Opens the newsletter for the month selected above, straight after the cover, with a link on the cover index. Saving again replaces it.</p>
       <label class="first">Title</label>
-      <input type="text" id="ed_title" placeholder="e.g. From the Editor's Desk" />
+      <input type="text" id="desk_title" placeholder="Optional, e.g. A Month of Firsts" />
       <label>Written by</label>
-      <input type="text" id="ed_author" placeholder="e.g. Dr. A. Sharma, Editor-in-Chief" />
-      <label>Editorial Text *</label>
-      <textarea id="ed_content" style="min-height:180px;" placeholder="Write the editorial here. Use blank lines between paragraphs."></textarea>
-      <label>Photo (optional)</label>
-      <div class="photo-drop" onclick="document.getElementById('ed_photo').click()">
-        <input type="file" id="ed_photo" accept="image/*" onchange="handleEPImage('editorial', event)" />
-        <div><strong>Click to add a photo</strong></div>
-        <div class="hint">Wrapped into the text, newspaper-style.</div>
+      <input type="text" id="desk_author" placeholder="e.g. Dr. A. Sharma, Editor-in-Chief" />
+      <label>Text *</label>
+      <textarea id="desk_content" style="min-height:200px;" placeholder="Write the Editor's Desk note here. Leave a blank line between paragraphs."></textarea>
+      <label>Photos</label>
+      <div class="photo-drop" onclick="document.getElementById('desk_photos').click()">
+        <input type="file" id="desk_photos" accept="image/*" multiple onchange="handlePhotoSelect('desk', event)" />
+        <div><strong>Click to add photos</strong></div>
+        <div class="hint">Up to 6. Placed into the text newspaper-style.</div>
       </div>
-      <div class="thumbs" id="thumb-editorial"></div>
-      <button class="primary" onclick="saveEP('editorial')">Save Editorial</button>
-      <button class="danger" style="margin-left:10px;" onclick="removeEP('editorial')">Remove</button>
-      <div class="msg" id="epMsg-editorial"></div>
+      <div class="thumbs" id="thumbs-desk"></div>
+      <button class="primary" onclick="saveEditorsDesk()">Save Editor's Desk</button>
+      <button class="danger" style="margin-left:10px;" onclick="removeEditorsDesk()">Remove</button>
+      <div class="msg" id="deskMsg"></div>
     </div>
 
     <div class="card">
-      <h2 class="section-title" style="font-size:19px;">Puzzle — <span class="epMonthLabel"></span></h2>
-      <p class="section-desc">Appears as the last section of this month's newsletter, with a link from the cover index. Saving again replaces it.</p>
-      <label class="first">Title</label>
-      <input type="text" id="pz_title" placeholder="e.g. Physics Crossword" />
-      <label>Puzzle Text</label>
-      <textarea id="pz_content" style="min-height:140px;" placeholder="Questions, clues, instructions, where to send answers..."></textarea>
-      <label>Puzzle Image (optional)</label>
-      <div class="photo-drop" onclick="document.getElementById('pz_image').click()">
-        <input type="file" id="pz_image" accept="image/*" onchange="handleEPImage('puzzle', event)" />
-        <div><strong>Click to add an image</strong></div>
-        <div class="hint">e.g. a crossword grid or diagram. Shown large and centred.</div>
-      </div>
-      <div class="thumbs" id="thumb-puzzle"></div>
-      <button class="primary" onclick="saveEP('puzzle')">Save Puzzle</button>
-      <button class="danger" style="margin-left:10px;" onclick="removeEP('puzzle')">Remove</button>
-      <div class="msg" id="epMsg-puzzle"></div>
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Guest Editorials This Month</h2>
+      <p class="section-desc" style="margin-top:-8px;">Submitted from the public "Guest Editorial" tab for the month selected above. All of them are printed in that month's "Guest Editorials" section.</p>
+      <div id="editorialList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Puzzles This Month</h2>
+      <p class="section-desc" style="margin-top:-8px;">Submitted from the public "Puzzle" tab for the month selected above. All of them are printed in the last section of that month's newsletter.</p>
+      <div id="puzzleList"></div>
     </div>
 
     <div class="card">
@@ -855,7 +910,7 @@ function switchTab(tab){
 }
 
 function switchSubtab(name){
-  ['event','publication','conference','blog','upcoming','upcomingconf'].forEach(n => {
+  ['event','publication','conference','blog','upcoming','upcomingconf','editorial','puzzle'].forEach(n => {
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
@@ -878,7 +933,7 @@ function adminLogin(){
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], conference: [], blog: [] };
+let photoState = { event: [], publication: [], conference: [], blog: [], editorial: [], puzzle: [], desk: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1126,6 +1181,50 @@ function submitBlog(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Blog'; });
 }
 
+/* ---------------- Submit: Editorial & Puzzle (open to anyone) ---------------- */
+function photoPayload(type){
+  return photoState[type].map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null }));
+}
+function submitEditorial(){
+  if(!firebaseReady){ showSubmitMsg('editorial', false, 'Firebase is not configured yet.'); return; }
+  const title = document.getElementById('ed_title').value.trim();
+  const author = document.getElementById('ed_author').value.trim();
+  const month = document.getElementById('ed_month').value;
+  const content = document.getElementById('ed_content').value.trim();
+  if(!title || !author || !month || !content){ showSubmitMsg('editorial', false, 'Please fill in the title, your name, the month and the editorial text.'); return; }
+  const btn = document.getElementById('submitBtn-editorial');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  db.ref('guestEditorials/' + month).push({ title, author, content, photos: photoPayload('editorial'), submittedAt: Date.now() })
+    .then(() => {
+      showSubmitMsg('editorial', true, 'Guest editorial submitted for ' + monthLabel(month) + '. Thank you!');
+      document.getElementById('editorialForm').reset();
+      document.getElementById('ed_month').value = month;
+      photoState.editorial = []; renderThumbs('editorial');
+    })
+    .catch(err => showSubmitMsg('editorial', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Guest Editorial'; });
+}
+function submitPuzzle(){
+  if(!firebaseReady){ showSubmitMsg('puzzle', false, 'Firebase is not configured yet.'); return; }
+  const title = document.getElementById('pz_title').value.trim();
+  const author = document.getElementById('pz_author').value.trim();
+  const month = document.getElementById('pz_month').value;
+  const content = document.getElementById('pz_content').value.trim();
+  if(!title || !month){ showSubmitMsg('puzzle', false, 'Please add a title and the month.'); return; }
+  if(!content && photoState.puzzle.length === 0){ showSubmitMsg('puzzle', false, 'Please add the puzzle text or at least one image.'); return; }
+  const btn = document.getElementById('submitBtn-puzzle');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  db.ref('puzzles/' + month).push({ title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() })
+    .then(() => {
+      showSubmitMsg('puzzle', true, 'Puzzle submitted for ' + monthLabel(month) + '. Thank you!');
+      document.getElementById('puzzleForm').reset();
+      document.getElementById('pz_month').value = month;
+      photoState.puzzle = []; renderThumbs('puzzle');
+    })
+    .catch(err => showSubmitMsg('puzzle', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Puzzle'; });
+}
+
 /* ---------------- Submit: Upcoming Event (open to anyone) ---------------- */
 function submitUpcomingEvent(){
   if(!firebaseReady){ showSubmitMsg('upcoming', false, 'Firebase is not configured yet.'); return; }
@@ -1205,9 +1304,10 @@ let allConferencesByMonth = {};
 let allBlogsByMonth = {};
 let allUpcomingEvents = {}; // flat: { pushId: {title, date, note} } — admin-curated, shown on every cover page
 let allUpcomingConferences = {}; // flat: { pushId: {title, date, link, brochure} } — shown in a body section until the date passes
-let allEditorialsByMonth = {};    // { "2026-07": { title, author, content, photo } } — one per month
-let allPuzzlesByMonth = {};       // { "2026-07": { title, content, image } } — one per month
-let epImages = { editorial: undefined, puzzle: undefined }; // undefined = unchanged, null = removed, {url,w,h} = new
+let allEditorialsByMonth = {};    // Editor's Desk (admin): { "2026-07": { title, author, content, photos } }
+                                  //   (older portal entries may also sit under it as { pushId: {...} } — read as guest editorials)
+let allGuestEditorialsByMonth = {};  // { "2026-07": { pushId: { title, author, content, photos } } }
+let allPuzzlesByMonth = {};       // { "2026-07": { pushId: { title, author, content, photos } } }
 let currentMonth = null;
 let dashboardInitialized = false;
 let CUSTOM_LOGO_BASE64 = null;       // full data URL, overrides AMITY_LOGO_BASE64 when set
@@ -1223,6 +1323,7 @@ function allMonthKeys(){
     ...Object.keys(allConferencesByMonth),
     ...Object.keys(allBlogsByMonth),
     ...Object.keys(allEditorialsByMonth),
+    ...Object.keys(allGuestEditorialsByMonth),
     ...Object.keys(allPuzzlesByMonth),
   ]));
 }
@@ -1236,11 +1337,15 @@ function initDashboard(){
   dashboardInitialized = true;
   db.ref('editorials').on('value', snap => {
     allEditorialsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); fillEPForms();
+    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth(); fillEditorsDesk();
+  });
+  db.ref('guestEditorials').on('value', snap => {
+    allGuestEditorialsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth();
   });
   db.ref('puzzles').on('value', snap => {
     allPuzzlesByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); fillEPForms();
+    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
   });
   db.ref('events').on('value', snap => {
     allEventsByMonth = snap.val() || {};
@@ -1434,80 +1539,116 @@ function onMonthChange(){
   renderPublicationsForMonth();
   renderConferencesForMonth();
   renderBlogsForMonth();
-  fillEPForms();
+  renderEditorialsForMonth();
+  renderPuzzlesForMonth();
+  fillEditorsDesk();
 }
 
-/* ---------------- Editorial & Puzzle (admin, one per month) ---------------- */
-function handleEPImage(type, evt){
-  const file = evt.target.files[0];
-  if(!file) return;
-  compressImage(file, type === 'puzzle' ? 1200 : 900, 0.85).then(result => {
-    epImages[type] = { url: result.dataUrl, w: result.width, h: result.height };
-    renderEPThumb(type, epImages[type].url);
+/* ---------------- Editorials & Puzzles (submitted from the portal) ----------------
+   Stored as editorials/<YYYY-MM>/<pushId>. An older single-entry format
+   (editorials/<YYYY-MM> = { content ... }) is still read correctly. */
+const LEGACY_EP_KEYS = ['title','author','content','photo','image','photos','updatedAt'];
+function monthEntries(byMonth, month){
+  const v = byMonth[month];
+  if(!v || typeof v !== 'object') return [];
+  const entries = [], legacy = {};
+  Object.entries(v).forEach(([k, x]) => {
+    if(x && typeof x === 'object' && !Array.isArray(x) && ('submittedAt' in x || 'content' in x || 'title' in x)) entries.push(Object.assign({ _id:k }, x));
+    else legacy[k] = x;
   });
-  evt.target.value = '';
+  entries.sort((a,b) => (a.submittedAt || 0) - (b.submittedAt || 0));
+  // an entry saved in the older one-per-month format sits directly on the month
+  if('content' in legacy || 'image' in legacy || 'photo' in legacy) entries.unshift(Object.assign({ _id:null }, legacy));
+  return entries;
 }
-function renderEPThumb(type, url){
-  const box = document.getElementById('thumb-' + type);
-  box.innerHTML = url ? `<div class="thumb"><img src="${url}"/><button type="button" class="rm" onclick="clearEPImage('${type}')">×</button></div>` : '';
+function entryPhotos(e){
+  const list = (e.photos || []).slice();
+  if(e.photo) list.unshift(e.photo);   // old format
+  if(e.image) list.unshift(e.image);   // old format
+  return list;
 }
-function clearEPImage(type){ epImages[type] = null; renderEPThumb(type, null); }
+function renderEPList(kind){
+  const isEd = kind === 'editorial';
+  const listEl = document.getElementById(isEd ? 'editorialList' : 'puzzleList');
+  if(!listEl || !currentMonth) return;
+  const items = isEd ? guestEditorialEntries(currentMonth) : monthEntries(allPuzzlesByMonth, currentMonth).map(e => Object.assign({ _src:'puzzles' }, e));
+  if(items.length === 0){
+    listEl.innerHTML = `<div class="empty-state">No ${isEd ? 'guest editorial' : 'puzzle'} submitted for ${monthLabel(currentMonth)}.</div>`;
+    return;
+  }
+  listEl.innerHTML = items.map(e => {
+    const text = e.content || '';
+    const snippet = text.slice(0,220) + (text.length > 220 ? '…' : '');
+    const photos = entryPhotos(e).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge ${isEd ? 'academic' : 'social'}">${isEd ? 'Guest Editorial' : 'Puzzle'}</span>
+          <h3>${escapeHtml(e.title || (isEd ? 'Guest Editorial' : 'Puzzle'))}</h3>
+          ${e.author ? `<div class="event-meta"><span>✍️ ${escapeHtml(e.author)}</span></div>` : ''}
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteEP('${e._src}','${currentMonth}',${e._id ? `'${e._id}'` : 'null'})">Delete</button></div>
+      </div>
+      ${snippet ? `<div class="event-desc">${escapeHtml(snippet)}</div>` : ''}
+      ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function renderEditorialsForMonth(){ renderEPList('editorial'); }
 
-function fillEPForms(){
-  if(!currentMonth) return;
-  document.querySelectorAll('.epMonthLabel').forEach(el => el.textContent = monthLabel(currentMonth));
-  const ed = allEditorialsByMonth[currentMonth] || {};
-  document.getElementById('ed_title').value = ed.title || '';
-  document.getElementById('ed_author').value = ed.author || '';
-  document.getElementById('ed_content').value = ed.content || '';
-  epImages.editorial = undefined;
-  renderEPThumb('editorial', ed.photo ? ed.photo.url : null);
-  const pz = allPuzzlesByMonth[currentMonth] || {};
-  document.getElementById('pz_title').value = pz.title || '';
-  document.getElementById('pz_content').value = pz.content || '';
-  epImages.puzzle = undefined;
-  renderEPThumb('puzzle', pz.image ? pz.image.url : null);
+/* Editor's Desk = the fields saved directly on editorials/<month> (admin only).
+   Guest editorials = guestEditorials/<month>/<id>, plus any older portal
+   entries that were saved as editorials/<month>/<id>. */
+function editorsDeskEntry(month){
+  return monthEntries(allEditorialsByMonth, month).find(e => e._id === null) || null;
 }
-function epMsg(type, ok, text){
-  const msg = document.getElementById('epMsg-' + type);
-  msg.className = 'msg ' + (ok ? 'ok' : 'err');
-  msg.textContent = text;
+function guestEditorialEntries(month){
+  const older = monthEntries(allEditorialsByMonth, month).filter(e => e._id !== null).map(e => Object.assign({ _src:'editorials' }, e));
+  const newer = monthEntries(allGuestEditorialsByMonth, month).map(e => Object.assign({ _src:'guestEditorials' }, e));
+  return older.concat(newer).sort((a,b) => (a.submittedAt || 0) - (b.submittedAt || 0));
+}
+function fillEditorsDesk(){
+  if(!currentMonth) return;
+  document.getElementById('deskMonthLabel').textContent = monthLabel(currentMonth);
+  const d = editorsDeskEntry(currentMonth) || {};
+  document.getElementById('desk_title').value = d.title || '';
+  document.getElementById('desk_author').value = d.author || '';
+  document.getElementById('desk_content').value = d.content || '';
+  photoState.desk = entryPhotos(d).map(ph => ({ name:'', dataUrl:photoUrl(ph), width:photoWH(ph).w, height:photoWH(ph).h }));
+  renderThumbs('desk');
+}
+function deskMsg(ok, text){
+  const msg = document.getElementById('deskMsg');
+  msg.className = 'msg ' + (ok ? 'ok' : 'err'); msg.textContent = text;
   if(ok) setTimeout(()=>{ msg.style.display='none'; }, 4000);
 }
-function saveEP(type){
+function saveEditorsDesk(){
   if(!firebaseReady || !currentMonth) return;
-  let rec, path;
-  if(type === 'editorial'){
-    const prev = allEditorialsByMonth[currentMonth] || {};
-    rec = {
-      title: document.getElementById('ed_title').value.trim(),
-      author: document.getElementById('ed_author').value.trim(),
-      content: document.getElementById('ed_content').value.trim(),
-      photo: epImages.editorial === undefined ? (prev.photo || null) : epImages.editorial,
-      updatedAt: Date.now()
-    };
-    if(!rec.content){ epMsg(type, false, 'Please write the editorial text first.'); return; }
-    path = 'editorials/' + currentMonth;
-  } else {
-    const prev = allPuzzlesByMonth[currentMonth] || {};
-    rec = {
-      title: document.getElementById('pz_title').value.trim(),
-      content: document.getElementById('pz_content').value.trim(),
-      image: epImages.puzzle === undefined ? (prev.image || null) : epImages.puzzle,
-      updatedAt: Date.now()
-    };
-    if(!rec.content && !rec.image){ epMsg(type, false, 'Add the puzzle text or an image first.'); return; }
-    path = 'puzzles/' + currentMonth;
-  }
-  db.ref(path).set(rec)
-    .then(() => epMsg(type, true, (type === 'editorial' ? 'Editorial' : 'Puzzle') + ' saved for ' + monthLabel(currentMonth) + '.'))
-    .catch(err => epMsg(type, false, 'Could not save: ' + err.message));
+  const content = document.getElementById('desk_content').value.trim();
+  if(!content){ deskMsg(false, 'Please write the Editor\'s Desk text first.'); return; }
+  db.ref('editorials/' + currentMonth).update({
+    title: document.getElementById('desk_title').value.trim(),
+    author: document.getElementById('desk_author').value.trim(),
+    content,
+    photos: photoPayload('desk'),
+    photo: null, image: null,
+    updatedAt: Date.now()
+  }).then(() => deskMsg(true, 'Editor\'s Desk saved for ' + monthLabel(currentMonth) + '.'))
+    .catch(err => deskMsg(false, 'Could not save: ' + err.message));
 }
-function removeEP(type){
+function removeEditorsDesk(){
   if(!firebaseReady || !currentMonth) return;
-  if(!confirm('Remove the ' + type + ' for ' + monthLabel(currentMonth) + '?')) return;
-  db.ref((type === 'editorial' ? 'editorials/' : 'puzzles/') + currentMonth).remove()
-    .then(() => epMsg(type, true, 'Removed.'));
+  if(!confirm('Remove the Editor\'s Desk for ' + monthLabel(currentMonth) + '?')) return;
+  const wipe = {}; LEGACY_EP_KEYS.forEach(k => wipe[k] = null);
+  db.ref('editorials/' + currentMonth).update(wipe).then(() => deskMsg(true, 'Removed.'));
+}
+function renderPuzzlesForMonth(){ renderEPList('puzzle'); }
+function deleteEP(src, month, id){
+  if(!confirm('Delete this ' + (src === 'puzzles' ? 'puzzle' : 'guest editorial') + '? This cannot be undone.')) return;
+  const base = src + '/' + month;
+  if(id) db.ref(base + '/' + id).remove();
+  else { const wipe = {}; LEGACY_EP_KEYS.forEach(k => wipe[k] = null); db.ref(base).update(wipe); } // old format: remove only its own fields
 }
 
 function monthLabel(m){
@@ -1878,12 +2019,7 @@ function loadImageEl(url){
   });
 }
 
-/* ---------------------------------------------------------------------
-   Cover photo — always stretched to the full text width (same width as the
-   logo + blue ribbon above it). Very tall photos are centre-cropped so the
-   cover still fits on one page.
-   --------------------------------------------------------------------- */
-const COVER_HERO_MAX_H = 330;
+/* Cover photo source: the admin-uploaded cover photo, else the month's first event photo */
 function resolveHeroSource(ids, data){
   if(CUSTOM_COVER_PHOTO_BASE64) return { url: CUSTOM_COVER_PHOTO_BASE64, w: CUSTOM_COVER_PHOTO_W, h: CUSTOM_COVER_PHOTO_H };
   for(const id of ids){
@@ -1894,27 +2030,6 @@ function resolveHeroSource(ids, data){
     }
   }
   return null;
-}
-async function prepareFullWidthHero(src, maxH){
-  if(!src) return null;
-  const W = PAGE_CONTENT_PX;
-  maxH = maxH || COVER_HERO_MAX_H;
-  try{
-    const img = await loadImageEl(src.url);
-    const nw = img.naturalWidth, nh = img.naturalHeight;
-    let sy = 0, sh = nh;
-    const maxRatio = maxH / W;
-    if(nh / nw > maxRatio){ sh = Math.round(nw * maxRatio); sy = Math.round((nh - sh) / 2); }
-    const c = document.createElement('canvas');
-    c.width = nw; c.height = sh;
-    c.getContext('2d').drawImage(img, 0, sy, nw, sh, 0, 0, nw, sh);
-    return { bytes: dataUrlToUint8(c.toDataURL('image/jpeg', 0.9)), w: W, h: Math.round(W * sh / nw) };
-  }catch(e){
-    try{
-      const d = (src.w && src.h) ? { width:W, height:Math.min(maxH, Math.round(W * src.h / src.w)) } : { width:W, height:maxH };
-      return { bytes: dataUrlToUint8(src.url), w: d.width, h: d.height };
-    }catch(e2){ return null; }
-  }
 }
 
 /* Admin-curated Upcoming Events (from the flat upcomingEvents collection),
@@ -1981,60 +2096,114 @@ function buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs
     spec.push({ kind:'list', title:'Upcoming Events', items: upcoming.map(u => ({ title:u.title, date:u.date })) });
   }
   // Section-name-only links go at the very bottom of the index
-  if(REG.sections['EDITORIAL']) spec.push({ kind:'link', title:'Editorial', anchor:REG.sections['EDITORIAL'] });
+  if(REG.sections['EDITORS DESK']) spec.push({ kind:'link', title:'From the Editor\u2019s Desk', anchor:REG.sections['EDITORS DESK'] });
+  if(REG.sections['GUEST EDITORIALS']) spec.push({ kind:'link', title:'Guest Editorials', anchor:REG.sections['GUEST EDITORIALS'] });
   if(REG.sections['RESEARCH BLOG']) spec.push({ kind:'link', title:'Research Blog', anchor:REG.sections['RESEARCH BLOG'] });
   if(REG.sections['PUZZLE']) spec.push({ kind:'link', title:'Puzzle', anchor:REG.sections['PUZZLE'] });
   return spec;
 }
 
 /* ---------------------------------------------------------------------
-   COVER PAGE — guaranteed to fit on ONE page.
-   The whole cover is a single table whose rows all have EXACT heights that
-   add up to less than the page, so Word can never push it onto page 2.
-   The index text size and the cover-photo height are chosen automatically
-   so the index fits in the space that's left (more entries → smaller text,
-   then a shorter photo).
+   COVER PAGE — fits on ONE page, sized to its content.
+   • The cover photo is shown in full, at full page width (no cropping),
+     whenever the page can hold it.
+   • The quote, the Mission/Vision column and the navy index panel all hug
+     their content — no fixed boxes, so no empty panel and nothing clipped.
+   • The index text is as large as possible while everything still fits.
+     Only if the page truly can't hold everything is the photo trimmed
+     (top/bottom), and for very full issues the cover lists sections only
+     with a full linked Contents page after it.
    --------------------------------------------------------------------- */
-const PAGE_BODY_TW = 16838 - 700 - 800;   // A4 height minus top/bottom margins
-const COVER_SAFETY_TW = 420;              // breathing room so rounding can't overflow
-const COVER_ROWS_TW = { strip:420, mast:1500, quote:760, contact:440 };
-const COVER_FLEX_PX = Math.floor((PAGE_BODY_TW - COVER_SAFETY_TW - COVER_ROWS_TW.strip - COVER_ROWS_TW.mast - COVER_ROWS_TW.quote - COVER_ROWS_TW.contact) / 15) - 4;
-// COVER_FLEX_PX = px shared by the photo row and the Mission/Vision + Index row
+const PAGE_BODY_PX = Math.floor((16838 - 700 - 800) / 15);  // usable A4 height in px
+const COVER_SAFETY_PX = 24;
+const COVER_STRIP_TW = 420, COVER_MAST_TW = 1500;
 const IDX_DATE_TW = 620;
 const IDX_PAD_TW = 260;
-function coverIndexWidths(){
-  const MV_TW = Math.round(PAGE_CONTENT_TW * 0.6);
+let COVER_SPLIT = 0.6; // share of the width for Mission/Vision (the index gets the rest)
+function coverIndexWidths(split){
+  const MV_TW = Math.round(PAGE_CONTENT_TW * (split || COVER_SPLIT));
   return { MV_TW, IDX_TW: PAGE_CONTENT_TW - MV_TW };
 }
-function estimateIndexHeightPx(indexSpec, size){
-  const { IDX_TW } = coverIndexWidths();
-  const pt = size / 2, linePx = pt * 1.333 * 1.3, charPx = pt * 1.333 * 0.6;
+function cleanQuote(q){ return (q || '').replace(/^[\s"“”'‘’]+|[\s"“”'‘’]+$/g, ''); }
+function estimateIndexHeightPx(indexSpec, size, split){
+  const { IDX_TW } = coverIndexWidths(split);
+  const pt = size / 2, linePx = pt * 1.333 * 1.22, charPx = pt * 1.333 * 0.52;
   const titleW = (IDX_TW - IDX_PAD_TW * 2 - IDX_DATE_TW) / 15;
   const headW = (IDX_TW - IDX_PAD_TW * 2) / 15;
   let h = 36 + linePx * 1.2 + 11; // cell padding + "IN THIS ISSUE"
   indexSpec.forEach(s => {
     h += 14 + Math.max(1, Math.ceil(s.title.length * charPx * 1.15 / headW)) * linePx;
-    (s.items || []).forEach(e => { h += 3.5 + Math.max(1, Math.ceil((e.title || '').length * charPx * 1.1 / titleW)) * linePx; });
+    (s.items || []).forEach(e => { h += 3.5 + Math.max(1, Math.ceil((e.title || '').length * charPx * 1.08 / titleW)) * linePx; });
   });
-  return Math.ceil(h * 1.12);
+  return Math.ceil(h * 0.9); // calibrated against Word's rendering
 }
-function estimateMissionVisionPx(){
-  const { MV_TW } = coverIndexWidths();
+function estimateMissionVisionPx(split){
+  const { MV_TW } = coverIndexWidths(split);
   const w = (MV_TW - 360) / 15, charPx = 6.4, linePx = 20;
   const lines = t => Math.max(1, Math.ceil((t || '').length * charPx * 1.08 / w));
   return 40 + 2 * 40 + 19 + (lines(MISSION_TEXT) + lines(VISION_TEXT)) * linePx;
 }
-function planCover(indexSpec){
-  const mv = estimateMissionVisionPx();
-  const sizes = [19, 18, 17, 16, 15, 14];
-  for(const size of sizes){
-    const need = Math.max(mv, estimateIndexHeightPx(indexSpec, size));
-    const heroMax = Math.min(COVER_HERO_MAX_H, COVER_FLEX_PX - need);
-    const minHero = size >= 15 ? 210 : 130;
-    if(heroMax >= minHero) return { idxSize:size, heroMaxH:heroMax, showHero:true };
-  }
-  return null; // doesn't fit legibly
+function estimateQuotePx(){
+  const chars = cleanQuote(QUOTE_TEXT).length + (QUOTE_ATTRIBUTION || '').length + 10;
+  const lines = Math.max(1, Math.ceil(chars * 7.6 / (PAGE_CONTENT_PX - 30)));
+  return 24 + lines * 21;
 }
+function estimateContactPx(){
+  const chars = (CONTACT_WEBSITE + CONTACT_EMAIL + CONTACT_SOCIAL).length + 30;
+  return 14 + Math.max(1, Math.ceil(chars * 6.2 / (PAGE_CONTENT_PX - 20))) * 18;
+}
+function coverAvailPx(){
+  return PAGE_BODY_PX - COVER_SAFETY_PX - COVER_STRIP_TW / 15 - COVER_MAST_TW / 15 - estimateQuotePx() - estimateContactPx();
+}
+/* fullH = height of the photo at full width, uncropped (0 if no photo) */
+function planCover(indexSpec, fullH){
+  const avail = coverAvailPx();
+  const SPLITS = [0.6, 0.55, 0.5];  // Mission/Vision share; a wider index wraps fewer titles
+  const body = (size, split) => Math.max(estimateMissionVisionPx(split), estimateIndexHeightPx(indexSpec, size, split));
+  // 1) whole photo, largest index text that fits (columns rebalanced if needed)
+  for(const size of [20, 19, 18, 17, 16, 15, 14]){
+    for(const split of SPLITS){
+      if(fullH + body(size, split) <= avail) return { idxSize:size, heroH:fullH, split };
+    }
+  }
+  // 2) still no room: trim the photo (top/bottom) as little as possible
+  let best = null;
+  for(const size of [16, 15, 14]){
+    for(const split of SPLITS){
+      const h = Math.floor(avail - body(size, split));
+      if(h >= Math.min(fullH, 220) && (!best || h > best.heroH)) best = { idxSize:size, heroH:Math.min(h, fullH), split };
+    }
+    if(best) return best;
+  }
+  return null; // index too long for a legible cover
+}
+
+/* Load the cover photo once to learn its real shape */
+async function loadHeroInfo(src){
+  if(!src) return null;
+  const W = PAGE_CONTENT_PX;
+  try{
+    const img = await loadImageEl(src.url);
+    return { src, img, nw:img.naturalWidth, nh:img.naturalHeight, fullH: Math.round(W * img.naturalHeight / img.naturalWidth) };
+  }catch(e){
+    if(src.w && src.h) return { src, img:null, nw:src.w, nh:src.h, fullH: Math.round(W * src.h / src.w) };
+    return null;
+  }
+}
+/* Full-width photo bytes at height h — untouched when h is its natural height,
+   otherwise the centre band is kept */
+function heroAtHeight(info, h){
+  const W = PAGE_CONTENT_PX;
+  try{
+    if(h >= info.fullH || !info.img) return { bytes: dataUrlToUint8(info.src.url), w:W, h:info.fullH };
+    const sh = Math.round(info.nw * h / W), sy = Math.round((info.nh - sh) / 2);
+    const c = document.createElement('canvas');
+    c.width = info.nw; c.height = sh;
+    c.getContext('2d').drawImage(info.img, 0, sy, info.nw, sh, 0, 0, info.nw, sh);
+    return { bytes: dataUrlToUint8(c.toDataURL('image/jpeg', 0.92)), w:W, h };
+  }catch(e){ return null; }
+}
+
 /* Too many entries for the cover? The cover then lists each section once
    (with a count, linked to the section), and a full linked Contents page
    follows the cover — so the cover still fits on one page and nothing is lost. */
@@ -2052,14 +2221,14 @@ function buildContentsPage(fullSpec, anchor){
   const out = [ sectionTitlePara("CONTENTS", true, anchor, 240) ];
   const shortDate = d => formatDate(d).replace(/, \d{4}/,'');
   fullSpec.forEach(s => {
-    const head = new TextRun({ text:s.title.toUpperCase(), color:"132340", bold:true, size:21, font:"Inter" });
     if(s.kind === 'link'){
       out.push(new Paragraph({ spacing:{ before:220, after:80 }, children:[ new InternalHyperlink({ anchor:s.anchor,
         children:[ new TextRun({ text:s.title.toUpperCase(), color:LINK, bold:true, underline:{}, size:21, font:"Inter" }) ] }) ] }));
       return;
     }
     out.push(new Paragraph({ spacing:{ before:220, after:80 }, keepNext:true,
-      border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:4, color:"E4DAC3", space:2 } }, children:[ head ] }));
+      border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:4, color:"E4DAC3", space:2 } },
+      children:[ new TextRun({ text:s.title.toUpperCase(), color:"132340", bold:true, size:21, font:"Inter" }) ] }));
     s.items.forEach(e => {
       const title = (s.kind === 'group' && e.anchor)
         ? new InternalHyperlink({ anchor:e.anchor, children:[ new TextRun({ text:e.title, color:LINK, underline:{}, size:BODY_SIZE - 1, font:"Inter" }) ] })
@@ -2071,21 +2240,63 @@ function buildContentsPage(fullSpec, anchor){
   });
   return out;
 }
-async function buildCover({ issuePeriod, heroSrc, indexSpec }){
-  let spec = indexSpec, contents = [];
-  let plan = planCover(indexSpec);
+/* Annual edition: a proper Table of Contents — every section, the months in it,
+   and every item with its date, a linked title and its page number. */
+function buildTableOfContents(toc, anchor){
+  const { Paragraph, TextRun, InternalHyperlink, PageReference, TabStopType, LeaderType } = docx;
+  const RIGHT = PAGE_CONTENT_TW - 20;
+  const shortDate = d => d ? formatDate(d).replace(/, \d{4}/,'') : '';
+  const out = [ sectionTitlePara("TABLE OF CONTENTS", true, anchor, 300) ];
+  toc.forEach(sec => {
+    const secAnchor = REG.sections[sec.key];
+    out.push(new Paragraph({ keepNext:true, spacing:{ before:260, after:80 },
+      border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:6, color:"132340", space:2 } },
+      tabStops:[ { type:TabStopType.RIGHT, position:RIGHT } ],
+      children:[
+        new InternalHyperlink({ anchor:secAnchor, children:[ new TextRun({ text:sec.title.toUpperCase(), color:"132340", bold:true, size:23, font:"Inter" }) ] }),
+        new TextRun({ text:"\t", size:23 }),
+        new PageReference(secAnchor, { hyperlink:true }),
+      ] }));
+    sec.months.forEach(mo => {
+      if(mo.label){
+        out.push(new Paragraph({ keepNext:true, spacing:{ before:120, after:50 }, indent:{ left:200 },
+          children:[ new TextRun({ text:mo.label.toUpperCase(), color:"A8842F", bold:true, size:17, characterSpacing:10, font:"Inter" }) ] }));
+      }
+      mo.items.forEach(it => {
+        out.push(new Paragraph({ spacing:{ after:50 }, indent:{ left:1500, hanging:1100 },
+          tabStops:[ { type:TabStopType.LEFT, position:1500 }, { type:TabStopType.RIGHT, position:RIGHT, leader:LeaderType.DOT } ],
+          children:[
+            new TextRun({ text: shortDate(it.date) + "\t", color:"736C5E", bold:true, size:19, font:"Inter" }),
+            new InternalHyperlink({ anchor:it.anchor, children:[ new TextRun({ text:it.title || '(untitled)', color:"1B1B18", size:20, font:"Inter" }) ] }),
+            new TextRun({ text:"\t", size:20 }),
+            new PageReference(it.anchor, { hyperlink:true }),
+          ] }));
+      });
+    });
+  });
+  return out;
+}
+async function buildCover({ issuePeriod, heroSrc, indexSpec, contentsPage }){
+  const info = await loadHeroInfo(heroSrc);
+  const fullH = info ? info.fullH : 0;
+  let spec = indexSpec, contents = contentsPage || [];
+  let plan = planCover(indexSpec, fullH);
+  if(!plan && contentsPage){
+    plan = { idxSize:14, split:0.5, heroH: Math.max(120, Math.min(fullH, coverAvailPx() - Math.max(estimateMissionVisionPx(0.5), estimateIndexHeightPx(spec, 14, 0.5)))) };
+  }
   if(!plan){
     const contentsAnchor = newAnchor('contents');
     spec = compactIndexSpec(indexSpec, contentsAnchor);
     contents = buildContentsPage(indexSpec, contentsAnchor);
-    plan = planCover(spec) || { idxSize:14, heroMaxH:130, showHero:true };
+    plan = planCover(spec, fullH) || { idxSize:14, split:0.5, heroH: Math.max(120, Math.min(fullH, coverAvailPx() - Math.max(estimateMissionVisionPx(0.5), estimateIndexHeightPx(spec, 14, 0.5)))) };
   }
-  const hero = plan.showHero ? await prepareFullWidthHero(heroSrc, plan.heroMaxH) : null;
-  const cover = buildCoverPage({ issuePeriod, hero, indexSpec:spec, idxSize: plan.idxSize, heroMaxH: plan.heroMaxH, showHero: plan.showHero });
+  COVER_SPLIT = plan.split || 0.6;
+  const hero = (info && plan.heroH > 0) ? heroAtHeight(info, plan.heroH) : null;
+  const cover = buildCoverPage({ issuePeriod, hero, indexSpec:spec, idxSize:plan.idxSize });
   return cover.concat(contents);
 }
 
-function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showHero }){
+function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize }){
   const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType,
           VerticalAlign, ExternalHyperlink, InternalHyperlink, HeightRule, TableLayoutType } = docx;
   const exact = tw => ({ value: Math.round(tw), rule: HeightRule.EXACT });
@@ -2093,24 +2304,22 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showH
 
   /* Column grid: [logo | rest of Mission/Vision width | index]. The ribbon
      spans the last two, Mission/Vision the first two, full-width rows all three. */
-  const MAST_H_PX = COVER_ROWS_TW.mast / 15;
+  const MAST_H_PX = COVER_MAST_TW / 15;
   const logoSize = logoDimsForHeight(MAST_H_PX - 4, Math.round(PAGE_CONTENT_PX * 0.35));
   const LOGO_PAD_TW = 180;
   const logoCellTw = logoSize.width * 15 + LOGO_PAD_TW;
   const { MV_TW, IDX_TW } = coverIndexWidths();
   const cols = [ logoCellTw, MV_TW - logoCellTw, IDX_TW ];
   const ribbonTw = cols[1] + cols[2];
+  const full = (children, opts) => new TableCell(Object.assign({ columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, children }, opts || {}));
 
   /* ---- 1. date strip ---- */
-  const stripRow = new TableRow({ height: exact(COVER_ROWS_TW.strip), children:[ new TableCell({
-    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
-    shading:{ fill:"C6A34A", type:ShadingType.CLEAR, color:"auto" },
-    margins:{ top:0, bottom:0, left:100, right:100 }, verticalAlign: VerticalAlign.CENTER,
-    children:[ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new TextRun({ text: issuePeriod.toUpperCase(), color:"132340", bold:true, size:19, font:"Inter" }) ] }) ]
-  }) ] });
+  const stripRow = new TableRow({ height: exact(COVER_STRIP_TW), children:[ full(
+    [ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new TextRun({ text: issuePeriod.toUpperCase(), color:"132340", bold:true, size:19, font:"Inter" }) ] }) ],
+    { shading:{ fill:"C6A34A", type:ShadingType.CLEAR, color:"auto" }, margins:{ top:0, bottom:0, left:100, right:100 }, verticalAlign: VerticalAlign.CENTER }) ] });
 
   /* ---- 2. logo + NEWSLETTER ribbon (same height) ---- */
-  const mastRow = new TableRow({ height: exact(COVER_ROWS_TW.mast), children:[
+  const mastRow = new TableRow({ height: exact(COVER_MAST_TW), children:[
     new TableCell({
       width:{ size:logoCellTw, type:WidthType.DXA },
       shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" },
@@ -2128,38 +2337,23 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showH
     })
   ] });
 
-  /* ---- 3. full-width cover photo ---- */
-  let heroH = 0, heroRow = null;
-  if(showHero){
-    if(hero && hero.bytes){
-      heroH = hero.h;
-      heroRow = new TableRow({ height: exact(heroH * 15 + 20), children:[ new TableCell({
-        columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:zero,
-        children:[ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ]
-      }) ] });
-    } else {
-      heroH = Math.min(200, heroMaxH || 200);
-      heroRow = new TableRow({ height: exact(heroH * 15), children:[ new TableCell({
-        columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:zero,
-        shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER,
-        children:[ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:logoBytes(), transformation: logoDims(80) }) ] }) ]
-      }) ] });
-    }
-  }
+  /* ---- 3. full-width cover photo, whole image ---- */
+  const heroRow = (hero && hero.bytes) ? new TableRow({ children:[ full(
+    [ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ],
+    { margins:zero }) ] }) : null;
 
-  /* ---- 4. quote ---- */
-  const quoteRow = new TableRow({ height: exact(COVER_ROWS_TW.quote), children:[ new TableCell({
-    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:200, right:200 }, verticalAlign: VerticalAlign.CENTER,
-    children:[ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
-      new TextRun({ text: `“${QUOTE_TEXT}”`, italics:true, color:"132340", size:24, font:"Cormorant Garamond" }),
+  /* ---- 4. quote (grows to as many lines as it needs) ---- */
+  const quoteRow = new TableRow({ children:[ full(
+    [ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
+      new TextRun({ text: `“${cleanQuote(QUOTE_TEXT)}”`, italics:true, color:"132340", size:24, font:"Cormorant Garamond" }),
       new TextRun({ text: `   —   ${QUOTE_ATTRIBUTION}`, color:"736C5E", size:17, font:"Inter" }),
-    ] }) ]
-  }) ] });
+    ] }) ],
+    { margins:{ top:170, bottom:170, left:200, right:200 }, verticalAlign: VerticalAlign.CENTER }) ] });
 
-  /* ---- 5. Mission / Vision  +  linked index ---- */
+  /* ---- 5. Mission / Vision  +  linked index (row hugs the taller of the two) ---- */
   const missionVisionCell = new TableCell({
     columnSpan:2, width:{ size:MV_TW, type:WidthType.DXA },
-    margins:{ top:240, bottom:0, left:0, right:360 },
+    margins:{ top:240, bottom:200, left:0, right:360 },
     children:[
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
       new Paragraph({ spacing:{after:280, line:290}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
@@ -2200,12 +2394,10 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showH
   const indexCell = new TableCell({
     width:{ size:IDX_TW, type:WidthType.DXA },
     shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
-    margins:{ top:280, bottom:200, left:IDX_PAD_TW, right:IDX_PAD_TW },
+    margins:{ top:280, bottom:220, left:IDX_PAD_TW, right:IDX_PAD_TW },
     children: indexChildren
   });
-  // This row takes whatever height is left, so the cover always ends exactly on page 1
-  const bodyPx = COVER_FLEX_PX - heroH - (heroRow && hero && hero.bytes ? 2 : 0);
-  const bodyRow = new TableRow({ height: exact(bodyPx * 15), children:[ missionVisionCell, indexCell ] });
+  const bodyRow = new TableRow({ children:[ missionVisionCell, indexCell ] });
 
   /* ---- 6. contacts ---- */
   function maybeUrl(str){
@@ -2221,30 +2413,27 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, heroMaxH, showH
   const websiteUrl = maybeUrl(CONTACT_WEBSITE);
   const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
   const socialUrl = maybeUrl(CONTACT_SOCIAL);
-  const contactRow = new TableRow({ height: exact(COVER_ROWS_TW.contact), children:[ new TableCell({
-    columnSpan:3, width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:100, right:100 },
-    shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER,
-    children:[ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
+  const contactRow = new TableRow({ children:[ full(
+    [ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
       linkRun(CONTACT_WEBSITE, websiteUrl, true),
       new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
       linkRun(CONTACT_EMAIL, emailUrl, false),
       new TextRun({ text: "     ·     ", color:"C6A34A", size:16 }),
       linkRun(CONTACT_SOCIAL, socialUrl, false),
-    ] }) ]
-  }) ] });
+    ] }) ],
+    { margins:{ top:90, bottom:90, left:100, right:100 }, shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER }) ] });
 
   const rows = [ stripRow, mastRow ];
   if(heroRow) rows.push(heroRow);
   rows.push(quoteRow, bodyRow, contactRow);
-  const coverTable = new Table({
+  return [ new Table({
     width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
     columnWidths: cols,
     layout: TableLayoutType.FIXED,
     indent:{ size:0, type:WidthType.DXA },
     borders: noBorders(),
     rows
-  });
-  return [ coverTable ];
+  }) ];
 }
 
 /* Running header shown on every page except the cover — logo + strapline on
@@ -2491,6 +2680,19 @@ function separatorPara(){
   return new docx.Paragraph({ spacing:{ before:240, after:260 },
     border:{ top:{ style:docx.BorderStyle.SINGLE, size:6, color:"E4DAC3", space:1 } }, children:[] });
 }
+/* Gold month sub-heading used inside a section of the annual edition */
+function monthMarkerPara(label, pageBreak, extraSpace){
+  return new docx.Paragraph({ pageBreakBefore: !!pageBreak, keepNext:true,
+    spacing:{ before: extraSpace ? 360 : 60, after:200 },
+    border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:8, color:"C6A34A", space:3 } },
+    children:[ new docx.TextRun({ text:label.toUpperCase(), color:"A8842F", bold:true, size:24, characterSpacing:20, font:"Inter" }) ] });
+}
+/* Turns [{ month, builders:[...] }] into one item list with a month sub-heading before each month */
+function withMonthMarkers(perMonth){
+  const out = [];
+  perMonth.filter(x => x.builders.length).forEach(x => { out.push({ marker: monthLabel(x.month) }); x.builders.forEach(b => out.push(b)); });
+  return out;
+}
 function buildStackedSections(groups, firstBreak, firstStartY){
   if(firstBreak === undefined) firstBreak = true;
   const { Paragraph, TextRun, AlignmentType } = docx;
@@ -2511,15 +2713,25 @@ function buildStackedSections(groups, firstBreak, firstStartY){
         children:[ new TextRun({ text:g.subtitle, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
       pageY += STACK.SUB_PX;
     }
-    g.items.forEach((build, i) => {
+    let fresh = true; // right after a heading or month sub-heading: no divider needed
+    g.items.forEach(item => {
+      if(item && item.marker){            // month sub-heading (annual edition)
+        const pb = pageY + 50 + STACK.MIN_ROOM_PX > PAGE;
+        if(pb) pageY = 0;
+        out.push(monthMarkerPara(item.marker, pb, !fresh && !pb));
+        pageY += fresh || pb ? 44 : 64;
+        fresh = true;
+        return;
+      }
       let pb = false;
-      if(i > 0){
+      if(!fresh){
         if(pageY + STACK.SEP_PX + STACK.MIN_ROOM_PX > PAGE){ pb = true; pageY = 0; }
         else { out.push(separatorPara()); pageY += STACK.SEP_PX; }
       }
-      const art = build(pb, pageY);
+      const art = item(pb, pageY);
       out = out.concat(art);
       pageY = (art.endY || pageY) % PAGE;
+      fresh = false;
     });
   });
   return out;
@@ -2652,50 +2864,92 @@ function findLatestBlogEntries(uptoMonthInclusive){
   }
   return { month:null, ids:[], data:{} };
 }
+function blogItem(b, id){
+  return (pb, sy) => buildFlowArticle({
+    kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor:itemAnchor('blog', id),
+    metaParas:[ metaLine(`By ${b.author}   ·   ${formatDate(b.date)}`) ],
+    text:b.content, images: allPhotos(b.photos), pageBreak:pb, startY:sy
+  });
+}
 function buildBlogSection(ids, data, sourceLabel, firstBreak){
   return buildStackedSections([{ heading:'RESEARCH BLOG', anchorKey:'RESEARCH BLOG',
     subtitle: sourceLabel ? `Featured from ${sourceLabel}` : null,
-    items: ids.map(id => (pb, sy) => {
-      const b = data[id];
-      return buildFlowArticle({
-        kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor:itemAnchor('blog', id),
-        metaParas:[ metaLine(`By ${b.author}   ·   ${formatDate(b.date)}`) ],
-        text:b.content, images: allPhotos(b.photos), pageBreak:pb, startY:sy
+    items: ids.map(id => blogItem(data[id], id)) }], firstBreak);
+}
+
+/* ---------- From the Editor's Desk (admin) & Guest Editorials (portal) ---------- */
+function deskItem(d, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:null, title: d.title || '', anchor: anchor || null,
+    metaParas: d.author ? [ metaLine(`— ${d.author}`) ] : [],
+    text: d.content, images: allPhotos(entryPhotos(d)), pageBreak:pb, startY:sy
+  });
+}
+function guestItem(g, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:{ text:"GUEST EDITORIAL", color:"A8842F" }, title: g.title || 'Guest Editorial', anchor: anchor || null,
+    metaParas: g.author ? [ metaLine(`— ${g.author}`) ] : [],
+    text: g.content, images: allPhotos(entryPhotos(g)), pageBreak:pb, startY:sy
+  });
+}
+const hasText = e => e && (e.content || '').trim();
+function buildEditorsDeskSection(entry, firstBreak){
+  if(!hasText(entry)) return [];
+  return buildStackedSections([{ heading:"FROM THE EDITOR’S DESK", anchorKey:'EDITORS DESK', items:[ deskItem(entry) ] }], firstBreak);
+}
+function buildGuestEditorialsSection(list, firstBreak){
+  list = (list || []).filter(hasText);
+  if(!list.length) return [];
+  return buildStackedSections([{ heading:'GUEST EDITORIALS', anchorKey:'GUEST EDITORIALS', items: list.map(g => guestItem(g)) }], firstBreak);
+}
+
+/* ---------- Puzzles: title, text, then large centred images ---------- */
+function puzzleItem(pz, anchor){
+  return (pb, sy) => {
+    const { Paragraph, TextRun, ImageRun, AlignmentType } = docx;
+    let out = [];
+    let first = true;
+    const brk = () => { const b = first && pb; first = false; return b; };
+    let y = sy;
+    if(pz.title){
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: pz.author ? 40 : 200 },
+        children: bookmarked(anchor, [ new TextRun({ text:pz.title, color:"132340", bold:true, size:30, font:"Playfair Display" }) ]) }));
+      y += 36;
+    }
+    if(pz.author){
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after:200 },
+        children:[ new TextRun({ text:'Contributed by ' + pz.author, italics:true, color:"736C5E", size:META_SIZE, font:"Inter" }) ] }));
+      y += 26;
+    }
+    const imgs = allPhotos(entryPhotos(pz));
+    (pz.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => {
+      // title + text stay on the same page as the puzzle's images
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext: imgs.length > 0, keepLines:true, spacing:{after:160, line:BODY_LINE}, children:[ new TextRun({ text:t, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] }));
+      y += Math.ceil(t.length * FLOW.CHAR_PX * 1.06 / PAGE_CONTENT_PX) * FLOW.LINE_PX + 11;
+    });
+    for(let k = 0; k < imgs.length; k += 2){
+      const pair = imgs.slice(k, k + 2);
+      const runs = []; let rowH = 0;
+      pair.forEach((im, j) => {
+        try{
+          const d = imageDimsFit(im.w, im.h, pair.length > 1 ? 330 : 560, pair.length > 1 ? 420 : 600);
+          rowH = Math.max(rowH, d.height);
+          runs.push(new ImageRun({ data:dataUrlToUint8(im.url), transformation:d }));
+          if(j < pair.length - 1) runs.push(new TextRun({ text:"   " }));
+        }catch(e){ /* skip unreadable image */ }
       });
-    }) }], firstBreak);
+      out.push(new Paragraph({ pageBreakBefore:brk(), alignment:AlignmentType.CENTER, spacing:{ before:120, after:120 }, children:runs }));
+      y += rowH + 18;
+    }
+    out.endY = y;
+    return out;
+  };
 }
-
-/* ---------- Editorial (admin-written, one per month) ---------- */
-function buildEditorialSection(ed, firstBreak){
-  if(!ed || !(ed.content || '').trim()) return [];
-  return buildStackedSections([{ heading:'EDITORIAL', anchorKey:'EDITORIAL',
-    items:[ (pb, sy) => buildFlowArticle({
-      kicker:null, title: ed.title || 'From the Editor’s Desk', anchor:null,
-      metaParas: ed.author ? [ metaLine(`— ${ed.author}`) ] : [],
-      text: ed.content,
-      images: ed.photo ? [ { url:ed.photo.url, w:ed.photo.w, h:ed.photo.h } ] : [],
-      pageBreak:pb, startY:sy
-    }) ] }], firstBreak);
-}
-
-/* ---------- Puzzle (admin-written, one per month) ---------- */
-function buildPuzzleSection(pz, firstBreak){
-  if(!pz || (!(pz.content || '').trim() && !pz.image)) return [];
-  if(firstBreak === undefined) firstBreak = true;
-  const { Paragraph, TextRun, ImageRun, AlignmentType } = docx;
-  let out = [ sectionTitlePara("PUZZLE", firstBreak, sectionAnchor("PUZZLE"), 200) ];
-  if(pz.title){
-    out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:200 },
-      children:[ new TextRun({ text:pz.title, color:"132340", bold:true, size:30, font:"Playfair Display" }) ] }));
-  }
-  out = out.concat(bodyParagraphs(pz.content));
-  if(pz.image && pz.image.url){
-    try{
-      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:120, after:120 },
-        children:[ new ImageRun({ data:dataUrlToUint8(pz.image.url), transformation: imageDimsFit(pz.image.w, pz.image.h, 560, 560) }) ] }));
-    }catch(e){ /* skip unreadable image */ }
-  }
-  return out;
+const hasPuzzle = pz => pz && ((pz.content || '').trim() || entryPhotos(pz).length);
+function buildPuzzleSection(list, firstBreak){
+  list = (list || []).filter(hasPuzzle);
+  if(!list.length) return [];
+  return buildStackedSections([{ heading:'PUZZLE', anchorKey:'PUZZLE', items: list.map(pz => puzzleItem(pz)) }], firstBreak);
 }
 
 /* ---------- Monthly newsletter ---------- */
@@ -2710,10 +2964,11 @@ async function generateNewsletter(){
   const confData = allConferencesByMonth[currentMonth] || {};
   const confIds = sortedIds(confData);
   const blogInfo = findLatestBlogEntries(currentMonth);
-  const editorial = allEditorialsByMonth[currentMonth] || null;
-  const puzzle = allPuzzlesByMonth[currentMonth] || null;
+  const desk = editorsDeskEntry(currentMonth);
+  const guests = guestEditorialEntries(currentMonth);
+  const puzzle = monthEntries(allPuzzlesByMonth, currentMonth);
 
-  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0 && !editorial && !puzzle){
+  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0 && !hasText(desk) && !guests.length && !puzzle.length){
     alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.');
     return;
   }
@@ -2730,7 +2985,8 @@ async function generateNewsletter(){
     resetRegistry();
     // Body first, so every bookmark exists before the cover index links to it
     const body = [
-      ...buildEditorialSection(editorial),
+      ...buildEditorsDeskSection(desk),
+      ...buildGuestEditorialsSection(guests),
       ...buildEventsSection(ids, monthData),
       ...buildPublicationsSection(pubIds, pubData),
       ...buildConferencesSection(confIds, confData),
@@ -2774,7 +3030,7 @@ async function generateAnnualNewsletter(){
     Object.keys(allPublicationsByMonth[m]||{}).length ||
     Object.keys(allConferencesByMonth[m]||{}).length ||
     Object.keys(allBlogsByMonth[m]||{}).length ||
-    allEditorialsByMonth[m] || allPuzzlesByMonth[m]
+    hasText(editorsDeskEntry(m)) || guestEditorialEntries(m).length || monthEntries(allPuzzlesByMonth, m).length
   );
   if(totalIds === 0 && !hasOtherContent){ alert('No content found for ' + year + '.'); return; }
 
@@ -2796,48 +3052,72 @@ async function generateAnnualNewsletter(){
     const upcoming = getUpcomingEvents(6);
 
     resetRegistry();
+    /* Annual edition: each section once (Editor's Desk, Guest Editorials, event
+       categories, Publications, Conferences, Research Blog, Upcoming
+       Conferences, Puzzle), and inside each section the content month by month
+       under a gold month sub-heading. Every item gets a bookmark so the Table
+       of Contents can link to it and show its page number. */
+    const CATS = ['Academic','Research','Cultural','Social','Other'];
+    const catOf = e => CATS.includes(e.category) ? e.category : 'Other';
+    const toc = [];   // [{ title, key, months:[{ label, items:[{ date, title, anchor }] }] }]
+    /* list(m) → [{ title, date, make(anchor) → builder }] */
+    const section = (heading, key, tocTitle, list, byMonth) => {
+      const tocSec = { title:tocTitle, key, months:[] };
+      const items = [];
+      const add = (label, entries) => {
+        if(!entries.length) return;
+        const mo = { label, items:[] };
+        if(label) items.push({ marker:label });
+        entries.forEach(it => { const anchor = newAnchor('toc'); mo.items.push({ date:it.date, title:it.title, anchor }); items.push(it.make(anchor)); });
+        tocSec.months.push(mo);
+      };
+      if(byMonth === false) add(null, list(null));
+      else months.forEach(m => add(monthLabel(m), list(m)));
+      if(items.length) toc.push(tocSec);
+      return { heading, anchorKey:key, items };
+    };
+    const evDesk = m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { title: d.title || 'From the Editor\u2019s Desk', make: a => deskItem(d, a) } ] : []; };
+    const evGuest = m => guestEditorialEntries(m).filter(hasText).map(g => ({ title: g.title || 'Guest Editorial', make: a => guestItem(g, a) }));
+    const evCat = cat => m => { const d = allEventsByMonth[m] || {};
+      return sortedIds(d).filter(id => catOf(d[id]) === cat).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildEventArticle(d[id], a, pb, sy) })); };
+    const evPub = m => { const d = allPublicationsByMonth[m] || {};
+      return sortedIds(d).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildPublicationArticle(d[id], a, pb, sy) })); };
+    const evConf = m => { const d = allConferencesByMonth[m] || {};
+      return sortedIds(d).map(id => ({ title:d[id].paperTitle, date:d[id].date, make: a => (pb, sy) => buildConferenceArticle(d[id], a, pb, sy) })); };
+    // the annual edition prints each blog once, in the month it was written (no carry-forward)
+    const evBlog = m => { const d = allBlogsByMonth[m] || {};
+      return sortedIds(d).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildFlowArticle({
+        kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:d[id].title, anchor:a,
+        metaParas:[ metaLine(`By ${d[id].author}   ·   ${formatDate(d[id].date)}`) ],
+        text:d[id].content, images: allPhotos(d[id].photos), pageBreak:pb, startY:sy }) })); };
+    const evUC = () => upConfs.map(u => ({ title:u.title, date:u.date, make: a => (pb, sy) => buildUpcomingConferenceArticle(u, a, pb, sy) }));
+    const evPuzzle = m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map(pz => ({ title: pz.title || 'Puzzle', make: a => puzzleItem(pz, a) }));
+
     let body = [];
-    months.forEach(m => {
-      body.push(new Paragraph({ pageBreakBefore:true, alignment: AlignmentType.CENTER, spacing:{ before:120, after:120 },
-        children:[ new TextRun({ text: monthLabel(m).split(' ')[0].toUpperCase(), color:"132340", bold:true, size:52, font:"Playfair Display" }) ] }));
-      body.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing:{after:280},
-        children:[ new TextRun({ text: monthLabel(m).split(' ')[1], color:"C6A34A", bold:true, size:28, font:"Inter" }) ] }));
+    body = body.concat(buildStackedSections([ section("FROM THE EDITOR\u2019S DESK", 'EDITORS DESK', 'From the Editor\u2019s Desk', evDesk) ]));
+    body = body.concat(buildStackedSections([ section('GUEST EDITORIALS', 'GUEST EDITORIALS', 'Guest Editorials', evGuest) ]));
+    body = body.concat(buildStackedSections(CATS.map(cat => section(cat.toUpperCase(), 'CAT ' + cat, cat, evCat(cat)))));
+    body = body.concat(buildStackedSections([ section('PUBLICATIONS', 'PUBLICATIONS', 'Publications', evPub) ]));
+    body = body.concat(buildStackedSections([ section('CONFERENCE PRESENTATIONS', 'CONFERENCE PRESENTATIONS', 'Conference Presentations', evConf) ]));
+    body = body.concat(buildStackedSections([ section('RESEARCH BLOG', 'RESEARCH BLOG', 'Research Blog', evBlog) ]));
+    body = body.concat(buildStackedSections([ section('UPCOMING CONFERENCES & WORKSHOPS', 'UPCOMING CONFERENCES & WORKSHOPS', 'Upcoming Conferences & Workshops', evUC, false) ]));
+    body = body.concat(buildStackedSections([ section('PUZZLE', 'PUZZLE', 'Puzzle', evPuzzle) ]));
 
-      const monthData = allEventsByMonth[m] || {};
-      const ids = sortedIds(monthData);
-      const pubData = allPublicationsByMonth[m] || {};
-      const pubIds = sortedIds(pubData);
-      const confData = allConferencesByMonth[m] || {};
-      const confIds = sortedIds(confData);
-      const blogInfo = findLatestBlogEntries(m);
-      const editorial = allEditorialsByMonth[m] || null;
-      const puzzle = allPuzzlesByMonth[m] || null;
-
-      // Whichever content type comes first for this month flows directly below
-      // the month heading (no page break); everything after starts a fresh page.
-      let firstUsed = false;
-      const takeFirstBreak = () => { const f = !firstUsed; firstUsed = true; return !f; };
-
-      const edSec = buildEditorialSection(editorial, editorial ? takeFirstBreak() : true);
-      body = body.concat(edSec);
-      body = body.concat(buildEventsSection(ids, monthData, ids.length ? takeFirstBreak() : true));
-      body = body.concat(buildPublicationsSection(pubIds, pubData, pubIds.length ? takeFirstBreak() : true));
-      body = body.concat(buildConferencesSection(confIds, confData, confIds.length ? takeFirstBreak() : true));
-      body = body.concat(buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== m ? monthLabel(blogInfo.month) : null, blogInfo.ids.length ? takeFirstBreak() : true));
-      body = body.concat(buildPuzzleSection(puzzle, puzzle ? takeFirstBreak() : true));
-    });
-
-    // Upcoming Conferences & Workshops is evergreen standing content, shown once
-    // at the end of the annual edition rather than repeated inside every month.
-    body = body.concat(buildUpcomingConferencesSection(upConfs));
+    /* Cover index: section names only, each linked to its section */
+    const tocAnchor = newAnchor('toc');
+    const coverIndex = [ { kind:'link', title:'Table of Contents', anchor:tocAnchor } ]
+      .concat(toc.map(sec => ({ kind:'link', title:sec.title, anchor:REG.sections[sec.key] })));
+    const contentsPage = buildTableOfContents(toc, tocAnchor);
 
     const cover = await buildCover({
       issuePeriod: `Annual Edition · ${annualDateRange}`,
       heroSrc: resolveHeroSource(allIds, allData),
-      indexSpec: buildIndexSpec({ ids:allIds, data:allData, pubIds:allPubIds, pubData:allPubData, confIds:allConfIds, confData:allConfData, upConfs, upcoming })
+      indexSpec: coverIndex,
+      contentsPage
     });
 
     const doc = new Document({
+      features: { updateFields: true }, // so Word fills in the Table of Contents page numbers
       styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } } },
       sections: [{
         properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
@@ -3130,6 +3410,8 @@ async function generateAnnualExcel(){
 /* ---------------- Init ---------------- */
 document.getElementById('topbarLogo').src = 'data:image/png;base64,' + AMITY_LOGO_BASE64;
 document.getElementById('f_date').valueAsDate = new Date();
+(function(){ const d = new Date(); const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; })();
 resetConfAuthors();
 if(sessionStorage.getItem('nl_admin') === 'yes' && location.hash === '#admin'){
   switchTab('admin');

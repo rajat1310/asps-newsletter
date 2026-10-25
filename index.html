@@ -176,6 +176,9 @@
   .author-row .rm-author:hover{ border-color:#D9534F; }
   @media(max-width:640px){ .author-row{ grid-template-columns:1fr auto; } .author-row .ca_aff{ grid-column:1 / 2; } }
   .field-hint{ font-size:12.5px; color:var(--muted); margin:-2px 0 8px; }
+  .submitter{ margin-top:10px; padding:7px 10px; background:#F3EDDE; border-radius:7px; font-size:12.5px; color:var(--ink, #1B1B18); }
+  .submitter.none{ color:#9A927F; }
+  .submitter a{ color:#1155CC; }
   .subview{ display:none; }
   .subview.active{ display:block; }
 
@@ -335,6 +338,40 @@
         <button class="subtab" onclick="switchSubtab('editorial')">Guest Editorial</button>
         <button class="subtab" onclick="switchSubtab('puzzle')">Puzzle</button>
       </div>
+    </div>
+
+    <!-- ---- Submitter details (shared by every form) ---- -->
+    <div class="card" id="submitterCard">
+      <h2 class="section-title" style="font-size:18px; margin-bottom:4px;">Your Details</h2>
+      <p class="section-desc" style="margin-top:0;">Required for every submission so the newsletter team knows who sent it and can contact you. These details are <b>not printed</b> in the newsletter, and this device remembers them for next time.</p>
+      <div class="row2">
+        <div>
+          <label class="first">Your Name *</label>
+          <input type="text" id="sb_name" placeholder="e.g. Ankit Sharma" autocomplete="name" />
+        </div>
+        <div>
+          <label class="first">Email *</label>
+          <input type="email" id="sb_email" placeholder="e.g. name@pb.amity.edu" autocomplete="email" />
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>You are *</label>
+          <select id="sb_role">
+            <option value="">Select…</option>
+            <option>Faculty</option>
+            <option>Research Scholar</option>
+            <option>Student</option>
+            <option>Staff</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Phone (optional)</label>
+          <input type="text" id="sb_phone" placeholder="e.g. 98xxxxxx10" autocomplete="tel" />
+        </div>
+      </div>
+      <div class="msg" id="submitterMsg"></div>
     </div>
 
     <!-- ---- Event Report form ---- -->
@@ -846,7 +883,7 @@
       <div class="toolbar" style="margin-bottom:0;">
         <div>
           <h2 class="section-title" style="font-size:19px; margin:0;">Annual &amp; Bi-Annual Editions</h2>
-          <p class="section-desc" style="margin:4px 0 0;">Combine the months of a full year, or of one half-year, into one newsletter (with the leadership messages and a Table of Contents) or one consolidated Excel workbook.</p>
+          <p class="section-desc" style="margin:4px 0 0;">Combine the months of a full year, or of one half-year, into one newsletter (with the leadership messages and a Table of Contents) or one consolidated Excel workbook. Upcoming events and conferences are left out of these editions — they appear in monthly issues only.</p>
         </div>
         <div class="month-picker" style="flex-wrap:wrap;">
           <select id="yearSelect"></select>
@@ -1068,6 +1105,8 @@ function showSubmitMsg(type, ok, text){
 /* ---------------- Submit: Event Report ---------------- */
 function submitEvent(){
   if(!firebaseReady){ showSubmitMsg('event', false, 'Firebase is not configured yet — see the yellow notice above.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const title = document.getElementById('f_title').value.trim();
   const category = document.getElementById('f_category').value;
@@ -1088,6 +1127,7 @@ function submitEvent(){
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   const eventData = {
+    submittedBy,
     title, category, organizer, role, date, dateEnd: dateEnd || null, desc,
     photos: photoState.event.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
@@ -1107,6 +1147,8 @@ function submitEvent(){
 /* ---------------- Submit: Publication ---------------- */
 function submitPublication(){
   if(!firebaseReady){ showSubmitMsg('publication', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const title = document.getElementById('p_title').value.trim();
   const journal = document.getElementById('p_journal').value.trim();
@@ -1128,6 +1170,7 @@ function submitPublication(){
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   const pubData = {
+    submittedBy,
     title, journal, indexing, volume, issue, authors, date, abstract,
     photos: photoState.publication.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
@@ -1147,6 +1190,8 @@ function submitPublication(){
 /* ---------------- Submit: Conference Presentation ---------------- */
 function submitConference(){
   if(!firebaseReady){ showSubmitMsg('conference', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const confName = document.getElementById('c_confName').value.trim();
   const confDetails = document.getElementById('c_confDetails').value.trim();
@@ -1175,6 +1220,7 @@ function submitConference(){
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   const confData = {
+    submittedBy,
     confName, confDetails, paperTitle, authors, presenter, date, abstract,
     photos: photoState.conference.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
@@ -1229,6 +1275,8 @@ function collectConfAuthors(){
 /* ---------------- Submit: Research Blog ---------------- */
 function submitBlog(){
   if(!firebaseReady){ showSubmitMsg('blog', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const title = document.getElementById('b_title').value.trim();
   const author = document.getElementById('b_author').value.trim();
@@ -1245,7 +1293,7 @@ function submitBlog(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  const blogData = { title, author, date, content,
+  const blogData = { submittedBy, title, author, date, content,
     photos: photoState.blog.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now() };
 
@@ -1260,12 +1308,58 @@ function submitBlog(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Blog'; });
 }
 
+/* ---------------- Submitter details ----------------
+   Every submission carries submittedBy = { name, email, role, phone? }.
+   Shown to the admin (dashboard + Excel), never printed in the newsletter. */
+const SUBMITTER_KEY = 'nl_submitter';
+function loadSubmitter(){
+  try{
+    const d = JSON.parse(localStorage.getItem(SUBMITTER_KEY) || 'null');
+    if(d){ ['name','email','role','phone'].forEach(k => { const el = document.getElementById('sb_' + k); if(el && d[k]) el.value = d[k]; }); }
+  }catch(e){ /* storage unavailable — fields just start empty */ }
+}
+/* Returns the submitter details, or null (with a message and a scroll to the box) if incomplete */
+function getSubmitter(){
+  const v = k => document.getElementById('sb_' + k).value.trim();
+  const d = { name: v('name'), email: v('email'), role: v('role'), phone: v('phone') };
+  const msg = document.getElementById('submitterMsg');
+  let err = '';
+  if(!d.name) err = 'Please enter your name.';
+  else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) err = 'Please enter a valid email address.';
+  else if(!d.role) err = 'Please choose who you are (faculty, student…).';
+  if(err){
+    msg.className = 'msg err'; msg.textContent = err;
+    document.getElementById('submitterCard').scrollIntoView({ behavior:'smooth', block:'center' });
+    return null;
+  }
+  msg.style.display = 'none';
+  try{ localStorage.setItem(SUBMITTER_KEY, JSON.stringify(d)); }catch(e){}
+  const out = { name: d.name.slice(0,200), email: d.email.slice(0,200), role: d.role };
+  if(d.phone) out.phone = d.phone.slice(0,40);
+  return out;
+}
+/* "Submitted by" line on the admin cards */
+function submitterHtml(x){
+  const sb = x && x.submittedBy;
+  const when = x && x.submittedAt ? new Date(x.submittedAt).toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+  if(!sb) return `<div class="submitter none">📨 Submitted by: <i>not recorded</i>${when ? ' · ' + when : ''}</div>`;
+  return `<div class="submitter">📨 Submitted by <b>${escapeHtml(sb.name)}</b> (${escapeHtml(sb.role || '')}) · ` +
+    `<a href="mailto:${escapeHtml(sb.email)}">${escapeHtml(sb.email)}</a>${sb.phone ? ' · ' + escapeHtml(sb.phone) : ''}${when ? ' · ' + when : ''}</div>`;
+}
+function submitterText(x){
+  const sb = x && x.submittedBy;
+  if(!sb) return 'Not recorded';
+  return `${sb.name} (${sb.role || ''}), ${sb.email}${sb.phone ? ', ' + sb.phone : ''}`;
+}
+
 /* ---------------- Submit: Editorial & Puzzle (open to anyone) ---------------- */
 function photoPayload(type){
   return photoState[type].map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null }));
 }
 function submitEditorial(){
   if(!firebaseReady){ showSubmitMsg('editorial', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
   const title = document.getElementById('ed_title').value.trim();
   const author = document.getElementById('ed_author').value.trim();
   const month = document.getElementById('ed_month').value;
@@ -1273,7 +1367,7 @@ function submitEditorial(){
   if(!title || !author || !month || !content){ showSubmitMsg('editorial', false, 'Please fill in the title, your name, the month and the editorial text.'); return; }
   const btn = document.getElementById('submitBtn-editorial');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('guestEditorials/' + month).push({ title, author, content, photos: photoPayload('editorial'), submittedAt: Date.now() })
+  db.ref('guestEditorials/' + month).push({ submittedBy, title, author, content, photos: photoPayload('editorial'), submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('editorial', true, 'Guest editorial submitted for ' + monthLabel(month) + '. Thank you!');
       document.getElementById('editorialForm').reset();
@@ -1285,6 +1379,8 @@ function submitEditorial(){
 }
 function submitPuzzle(){
   if(!firebaseReady){ showSubmitMsg('puzzle', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
   const title = document.getElementById('pz_title').value.trim();
   const author = document.getElementById('pz_author').value.trim();
   const month = document.getElementById('pz_month').value;
@@ -1293,7 +1389,7 @@ function submitPuzzle(){
   if(!content && photoState.puzzle.length === 0){ showSubmitMsg('puzzle', false, 'Please add the puzzle text or at least one image.'); return; }
   const btn = document.getElementById('submitBtn-puzzle');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('puzzles/' + month).push({ title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() })
+  db.ref('puzzles/' + month).push({ submittedBy, title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('puzzle', true, 'Puzzle submitted for ' + monthLabel(month) + '. Thank you!');
       document.getElementById('puzzleForm').reset();
@@ -1307,6 +1403,8 @@ function submitPuzzle(){
 /* ---------------- Submit: Upcoming Event (open to anyone) ---------------- */
 function submitUpcomingEvent(){
   if(!firebaseReady){ showSubmitMsg('upcoming', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const title = document.getElementById('u2_title').value.trim();
   const date = document.getElementById('u2_date').value;
@@ -1321,7 +1419,7 @@ function submitUpcomingEvent(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  db.ref('upcomingEvents').push({ title, date, note: note || null, submittedAt: Date.now() })
+  db.ref('upcomingEvents').push({ submittedBy, title, date, note: note || null, submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('upcoming', true, 'Added to Upcoming Events. Thank you!');
       document.getElementById('upcomingForm').reset();
@@ -1345,6 +1443,8 @@ function handleUpcomingConfBrochure(evt){
 
 function submitUpcomingConference(){
   if(!firebaseReady){ showSubmitMsg('upcomingconf', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
 
   const title = document.getElementById('uc_title').value.trim();
   const date = document.getElementById('uc_date').value;
@@ -1360,6 +1460,7 @@ function submitUpcomingConference(){
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
   db.ref('upcomingConferences').push({
+    submittedBy,
     title, date, link: link || null,
     brochure: upcomingConfBrochure ? upcomingConfBrochure.dataUrl : null,
     brochureW: upcomingConfBrochure ? upcomingConfBrochure.width : null,
@@ -1786,6 +1887,7 @@ function renderEPList(kind){
       </div>
       ${snippet ? `<div class="event-desc">${escapeHtml(snippet)}</div>` : ''}
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${submitterHtml(e)}
     </div>`;
   }).join('');
 }
@@ -1901,6 +2003,7 @@ function renderEventsForMonth(){
       </div>
       <div class="event-desc">${escapeHtml(e.desc)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${submitterHtml(e)}
     </div>`;
   }).join('');
 }
@@ -1956,6 +2059,7 @@ function renderPublicationsForMonth(){
       </div>
       <div class="event-desc">${escapeHtml(p.abstract)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${submitterHtml(p)}
     </div>`;
   }).join('');
 }
@@ -1994,6 +2098,7 @@ function renderConferencesForMonth(){
       ${c.confDetails ? `<div class="event-desc" style="font-style:italic;">${escapeHtml(c.confDetails)}</div>` : ''}
       <div class="event-desc">${escapeHtml(c.abstract)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${submitterHtml(c)}
     </div>`;
   }).join('');
 }
@@ -2029,6 +2134,7 @@ function renderBlogsForMonth(){
       </div>
       <div class="event-desc">${escapeHtml(snippet)}</div>
       ${(b.photos||[]).length ? `<div class="event-photos">${(b.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('')}</div>` : ''}
+      ${submitterHtml(b)}
     </div>`;
   }).join('');
 }
@@ -2057,6 +2163,7 @@ function renderUpcomingEvents(){
         </div>
         <div class="event-actions"><button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
       </div>
+      ${submitterHtml(u)}
     </div>`;
   }).join('');
 }
@@ -2089,6 +2196,7 @@ function renderUpcomingConferences(){
         <div class="event-actions"><button class="danger" onclick="deleteUpcomingConference('${id}')">Delete</button></div>
       </div>
       ${u.brochure ? `<div class="event-photos"><img src="${u.brochure}"/></div>` : ''}
+      ${submitterHtml(u)}
     </div>`;
   }).join('');
 }
@@ -3311,15 +3419,14 @@ function periodPlan(year, edKey){
   // each blog once, in the month it was written (no carry-forward in these editions)
   add([{ heading:'RESEARCH BLOG', key:'RESEARCH BLOG', tocTitle:'Research Blog',
     items: byMonth(m => { const d = allBlogsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'blog', data:d[id], key:'blog:' + id })); }) }]);
-  add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', tocTitle:'Upcoming Conferences & Workshops',
-    items: getActiveUpcomingConferences().map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
+  // Upcoming Conferences & Workshops and Upcoming Events are for monthly issues only
   add([{ heading:'PUZZLE', key:'PUZZLE', tocTitle:'Puzzle',
     items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))) }]);
 
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
   const range = ed.range(year);
-  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && g.key !== 'UPCOMING CONFERENCES & WORKSHOPS'));
+  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0));
   return {
     kind:'period', hasContent, stacks, withToc:true,
     issuePeriod: `${ed.name} · ${range}`, dateRange: range,
@@ -3889,6 +3996,7 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
     { header:'Authors', key:'authors', width:28 },
     { header:'Abstract', key:'abstract', width:60 },
     { header:'Figures', key:'photos', width:10 },
+    { header:'Submitted By', key:'submittedBy', width:44 },
   );
   ws.columns = cols;
   ws.getRow(1).eachCell(cell => {
@@ -3900,7 +4008,7 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
     const row = ws.addRow({
       month, date: formatDate(p.date), title: p.title, journal: p.journal,
       volume: p.volume || '', issue: p.issue || '', indexing: p.indexing || '',
-      authors: p.authors, abstract: p.abstract, photos: (p.photos||[]).length,
+      authors: p.authors, abstract: p.abstract, photos: (p.photos||[]).length, submittedBy: submitterText(p),
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
     row.alignment = { vertical:'top' };
@@ -3920,6 +4028,7 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
     { header:'Presented By', key:'presenter', width:22 },
     { header:'Abstract', key:'abstract', width:60 },
     { header:'Photos', key:'photos', width:10 },
+    { header:'Submitted By', key:'submittedBy', width:44 },
   );
   ws.columns = cols;
   ws.getRow(1).eachCell(cell => {
@@ -3932,7 +4041,7 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
       month, date: formatDate(c.date), paperTitle: c.paperTitle,
       authors: confAuthorsList(c).map(a => a.name + (a.affiliation ? ' (' + a.affiliation + ')' : '')).join('; '),
       confName: c.confName,
-      confDetails: c.confDetails || '', presenter: c.presenter, abstract: c.abstract, photos: (c.photos||[]).length,
+      confDetails: c.confDetails || '', presenter: c.presenter, abstract: c.abstract, photos: (c.photos||[]).length, submittedBy: submitterText(c),
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
     row.getCell('authors').alignment = { wrapText:true, vertical:'top' };
@@ -3974,6 +4083,7 @@ async function generateExcel(){
         { header:'Name', key:'organizer', width:24 },
         { header:'Role', key:'role', width:14 },
         { header:'Photos', key:'photos', width:10 },
+        { header:'Submitted By', key:'submittedBy', width:44 },
       ];
       ws.getRow(1).eachCell(cell => {
         cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
@@ -3993,6 +4103,7 @@ async function generateExcel(){
           organizer: e.organizer,
           role: e.role === 'Attended' ? 'Attended' : 'Organized',
           photos: (e.photos||[]).length,
+          submittedBy: submitterText(e),
         });
         row.getCell('category').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[e.category] || catFill.Other} };
         row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
@@ -4068,6 +4179,7 @@ async function generateAnnualExcel(){
         { header:'Name', key:'organizer', width:24 },
         { header:'Role', key:'role', width:14 },
         { header:'Photos', key:'photos', width:10 },
+        { header:'Submitted By', key:'submittedBy', width:44 },
       ];
       ws.getRow(1).eachCell(cell => {
         cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF132340'} };
@@ -4091,6 +4203,7 @@ async function generateAnnualExcel(){
             organizer: e.organizer,
             role: e.role === 'Attended' ? 'Attended' : 'Organized',
             photos: (e.photos||[]).length,
+            submittedBy: submitterText(e),
           });
           row.getCell('category').fill = { type:'pattern', pattern:'solid', fgColor:{argb: catFill[e.category] || catFill.Other} };
           row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
@@ -4147,7 +4260,7 @@ document.getElementById('f_date').valueAsDate = new Date();
 (function(){ const d = new Date(); const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; })();
 resetConfAuthors();
-
+loadSubmitter();
 </script>
 </body>
 </html>

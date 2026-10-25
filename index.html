@@ -12,6 +12,7 @@
 <!-- Firebase (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <!-- docx (Word generation) -->
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
@@ -146,7 +147,7 @@
     color:var(--navy); margin:18px 0 6px;
   }
   label.first{margin-top:0;}
-  input[type=text], input[type=date], textarea, select{
+  input[type=text], input[type=date], input[type=email], input[type=password], input[type=month], textarea, select{
     width:100%; padding:11px 13px; border:1px solid var(--line);
     border-radius:8px; font-family:'Inter',sans-serif; font-size:14.5px;
     color:var(--ink); background:var(--paper-dim);
@@ -313,7 +314,7 @@
   <div id="setupBanner" class="setup-banner" style="display:none;">
     <b>One-time setup needed:</b> open this file in a text editor and fill in your Firebase project config
     inside <code>const firebaseConfig = { ... }</code> near the bottom of the file (search for "FIREBASE CONFIG").
-    Create a free project at <code>console.firebase.google.com</code>, enable <b>Realtime Database</b> (start in test mode
+    Create a free project at <code>console.firebase.google.com</code>, enable <b>Realtime Database</b> and <b>Authentication (Email/Password)</b> (start in test mode
     for setup, then lock it down with rules), and paste the config values shown under Project Settings.
   </div>
 
@@ -655,10 +656,13 @@
     <div class="admin-login">
       <div class="card">
         <h2 class="section-title" style="font-size:20px;">Admin Login</h2>
-        <p class="section-desc">Enter the admin password to review submissions and generate the newsletter.</p>
-        <label class="first">Password</label>
-        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"/>
-        <button class="primary" onclick="adminLogin()">Log In</button>
+        <p class="section-desc">Sign in with the admin account to review submissions and generate the newsletter.</p>
+        <label class="first">Email</label>
+        <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="username" onkeydown="if(event.key==='Enter')adminLogin()"/>
+        <label>Password</label>
+        <input type="password" id="adminPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()"/>
+        <button class="primary" id="adminLoginBtn" onclick="adminLogin()">Log In</button>
+        <button class="ghost" style="margin-left:8px;" onclick="sendAdminReset()">Forgot password?</button>
         <div class="msg" id="adminMsg"></div>
       </div>
     </div>
@@ -728,8 +732,11 @@
     </div>
 
     <div class="card">
-      <h2 class="section-title" style="font-size:19px;">Change Admin Password</h2>
-      <p class="section-desc">Update the password used to log into this Admin dashboard. Remember it — there's no recovery option other than editing the file directly.</p>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <h2 class="section-title" style="font-size:19px;">Admin Account</h2>
+        <button class="ghost" onclick="adminLogout()">Log Out</button>
+      </div>
+      <p class="section-desc">Signed in as <b id="adminWho"></b>. Change the password of this admin account below. If it is ever forgotten, use "Forgot password?" on the login screen to get a reset email.</p>
 
       <label class="first">Current Password</label>
       <input type="password" id="pw_current" placeholder="••••••••" autocomplete="off" />
@@ -891,31 +898,95 @@ const firebaseConfig = {
   appId: "1:164610020830:web:d22769351548e871c5f94f"
 };
 
-/* Change this before deploying. This is a simple client-side gate, not real
-   authentication — good enough to keep casual visitors out of the admin
-   panel, but do not use it to protect sensitive data. It can also be
-   changed later from inside the Admin dashboard. */
-const ADMIN_PASSWORD = "physicalsciences2026";
-let ADMIN_PASSWORD_OVERRIDE = null; // loaded from Firebase if the admin has changed it
-
 let db = null;
+let auth = null;
 let firebaseReady = false;
+let isAdmin = false;     // true once a signed-in account is confirmed as an admin (see admins/ in the database)
 try{
   if(firebaseConfig.apiKey !== "YOUR_API_KEY"){
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
+    auth = firebase.auth();
+    // stay signed in only until this browser tab/window is closed (safer on shared lab computers)
+    auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
     firebaseReady = true;
   }
 }catch(e){ console.error("Firebase init failed:", e); }
 
 if(!firebaseReady){
   document.getElementById('setupBanner').style.display = 'block';
-} else {
-  // Loaded up front (not just after login) so the login screen itself can
-  // check against a changed password before the admin is let in.
-  db.ref('settings/security/adminPassword').on('value', snap => {
-    ADMIN_PASSWORD_OVERRIDE = snap.val() || null;
+}
+
+/* ---------------- Admin sign-in (Firebase Authentication) ----------------
+   Admins are Firebase Authentication users (email + password) whose UID is
+   listed in the database at admins/<uid> = true. The database rules only let
+   those accounts read submissions, delete anything or change settings. */
+function checkAdmin(user){
+  if(!user) return Promise.resolve(false);
+  return db.ref('admins/' + user.uid).once('value').then(snap => snap.val() === true).catch(() => false);
+}
+function showAdminState(){
+  const onAdminTab = document.getElementById('tabAdminBtn').classList.contains('active');
+  if(!onAdminTab) return;
+  document.getElementById('view-adminlogin').classList.toggle('active', !isAdmin);
+  document.getElementById('view-dashboard').classList.toggle('active', isAdmin);
+  if(isAdmin){
+    const who = document.getElementById('adminWho');
+    if(who && auth.currentUser) who.textContent = auth.currentUser.email || '';
+    initDashboard();
+  }
+}
+if(firebaseReady){
+  auth.onAuthStateChanged(user => {
+    checkAdmin(user).then(ok => {
+      isAdmin = ok;
+      if(ok && location.hash === '#admin' && !document.getElementById('tabAdminBtn').classList.contains('active')) switchTab('admin');
+      else showAdminState();
+    });
   });
+}
+function adminMsg(ok, text){
+  const msg = document.getElementById('adminMsg');
+  msg.className = 'msg ' + (ok ? 'ok' : 'err'); msg.textContent = text;
+}
+function adminLogin(){
+  if(!firebaseReady){ adminMsg(false, 'Firebase is not configured yet.'); return; }
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  if(!email || !pass){ adminMsg(false, 'Enter the admin email and password.'); return; }
+  const btn = document.getElementById('adminLoginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => checkAdmin(cred.user).then(ok => {
+      if(!ok){
+        adminMsg(false, 'This account is not an admin. Ask the admin to add it in Firebase (admins list).');
+        return auth.signOut();
+      }
+      isAdmin = true;
+      document.getElementById('adminPass').value = '';
+      document.getElementById('adminMsg').style.display = 'none';
+      showAdminState();
+    }))
+    .catch(err => {
+      const c = err && err.code || '';
+      adminMsg(false, /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c)
+        ? 'Incorrect email or password.'
+        : c === 'auth/too-many-requests' ? 'Too many attempts. Wait a few minutes and try again.'
+        : 'Could not sign in: ' + (err.message || c));
+    })
+    .finally(() => { btn.disabled = false; btn.textContent = 'Log In'; });
+}
+function sendAdminReset(){
+  if(!firebaseReady) return;
+  const email = document.getElementById('adminEmail').value.trim();
+  if(!email){ adminMsg(false, 'Type the admin email above first, then click "Forgot password?".'); return; }
+  auth.sendPasswordResetEmail(email)
+    .then(() => adminMsg(true, 'If that email belongs to an account, a password-reset link has been sent to it.'))
+    .catch(err => adminMsg(false, 'Could not send the reset email: ' + err.message));
+}
+function adminLogout(){
+  if(!firebaseReady) return;
+  auth.signOut().then(() => { location.hash = ''; location.reload(); });
 }
 
 /* ---------------- Tab switching ---------------- */
@@ -924,10 +995,7 @@ function switchTab(tab){
   document.getElementById('tabAdminBtn').classList.toggle('active', tab==='admin');
   document.getElementById('view-submit').classList.toggle('active', tab==='submit');
   if(tab==='admin'){
-    const loggedIn = sessionStorage.getItem('nl_admin') === 'yes';
-    document.getElementById('view-adminlogin').classList.toggle('active', !loggedIn);
-    document.getElementById('view-dashboard').classList.toggle('active', loggedIn);
-    if(loggedIn) initDashboard();
+    showAdminState();
   } else {
     document.getElementById('view-adminlogin').classList.remove('active');
     document.getElementById('view-dashboard').classList.remove('active');
@@ -941,20 +1009,6 @@ function switchSubtab(name){
   });
 }
 
-function adminLogin(){
-  const val = document.getElementById('adminPass').value;
-  const msg = document.getElementById('adminMsg');
-  const currentPassword = ADMIN_PASSWORD_OVERRIDE || ADMIN_PASSWORD;
-  if(val === currentPassword){
-    sessionStorage.setItem('nl_admin','yes');
-    document.getElementById('view-adminlogin').classList.remove('active');
-    document.getElementById('view-dashboard').classList.add('active');
-    initDashboard();
-  } else {
-    msg.className = 'msg err';
-    msg.textContent = 'Incorrect password.';
-  }
-}
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
@@ -1614,42 +1668,28 @@ function saveNewsletterSettings(){
 }
 
 function changeAdminPassword(){
-  if(!firebaseReady) return;
+  if(!firebaseReady || !auth.currentUser) return;
   const current = document.getElementById('pw_current').value;
   const next = document.getElementById('pw_new').value;
   const confirm = document.getElementById('pw_confirm').value;
   const msg = document.getElementById('pwMsg');
-  const currentPassword = ADMIN_PASSWORD_OVERRIDE || ADMIN_PASSWORD;
-
-  if(current !== currentPassword){
-    msg.className = 'msg err';
-    msg.textContent = 'Current password is incorrect.';
-    return;
-  }
-  if(!next || next.length < 4){
-    msg.className = 'msg err';
-    msg.textContent = 'New password must be at least 4 characters.';
-    return;
-  }
-  if(next !== confirm){
-    msg.className = 'msg err';
-    msg.textContent = 'New password and confirmation do not match.';
-    return;
-  }
-
-  db.ref('settings/security/adminPassword').set(next)
+  const fail = t => { msg.className = 'msg err'; msg.textContent = t; };
+  if(!current){ fail('Enter your current password.'); return; }
+  if(!next || next.length < 8){ fail('New password must be at least 8 characters.'); return; }
+  if(next !== confirm){ fail('New password and confirmation do not match.'); return; }
+  const user = auth.currentUser;
+  const cred = firebase.auth.EmailAuthProvider.credential(user.email, current);
+  user.reauthenticateWithCredential(cred)
+    .then(() => user.updatePassword(next))
     .then(() => {
-      ADMIN_PASSWORD_OVERRIDE = next;
-      document.getElementById('pw_current').value = '';
-      document.getElementById('pw_new').value = '';
-      document.getElementById('pw_confirm').value = '';
+      ['pw_current','pw_new','pw_confirm'].forEach(id => document.getElementById(id).value = '');
       msg.className = 'msg ok';
       msg.textContent = 'Password updated. Use the new password next time you log in.';
       setTimeout(()=>{ msg.style.display='none'; }, 4000);
     })
     .catch(err => {
-      msg.className = 'msg err';
-      msg.textContent = 'Could not update: ' + err.message;
+      const c = err && err.code || '';
+      fail(/invalid-credential|wrong-password/.test(c) ? 'Current password is incorrect.' : 'Could not update the password: ' + (err.message || c));
     });
 }
 
@@ -4107,9 +4147,7 @@ document.getElementById('f_date').valueAsDate = new Date();
 (function(){ const d = new Date(); const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; })();
 resetConfAuthors();
-if(sessionStorage.getItem('nl_admin') === 'yes' && location.hash === '#admin'){
-  switchTab('admin');
-}
+
 </script>
 </body>
 </html>

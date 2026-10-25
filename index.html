@@ -761,7 +761,7 @@
       <div class="toolbar" style="margin-bottom:10px;">
         <h2 class="section-title" style="font-size:19px; margin:0;">Events This Month</h2>
         <div class="export-bar">
-          <button class="gold" id="genWordBtn" onclick="generateNewsletter()">📄 Generate Newsletter (Word)</button>
+          <button class="gold" id="genWordBtn" onclick="generateNewsletter()">📄 Generate Newsletter (Word + PDF)</button>
           <button class="gold" id="genExcelBtn" onclick="generateExcel()">📊 Generate Excel Report</button>
         </div>
       </div>
@@ -830,17 +830,42 @@
     </div>
 
     <div class="card">
+      <h2 class="section-title" style="font-size:19px;">Messages (Annual &amp; Bi-Annual Editions)</h2>
+      <p class="section-desc">Optional. Each message you fill in is printed on its own page, in this order, at the start of the annual and bi-annual newsletters, and listed in their Table of Contents. Leave a message empty and it is simply left out. They are not used in monthly issues.</p>
+      <div id="messagesBox"></div>
+    </div>
+
+    <div class="card">
       <div class="toolbar" style="margin-bottom:0;">
         <div>
-          <h2 class="section-title" style="font-size:19px; margin:0;">Full-Year Edition</h2>
-          <p class="section-desc" style="margin:4px 0 0;">Combine every month's events for a year into one annual newsletter or one consolidated Excel workbook.</p>
+          <h2 class="section-title" style="font-size:19px; margin:0;">Annual &amp; Bi-Annual Editions</h2>
+          <p class="section-desc" style="margin:4px 0 0;">Combine the months of a full year, or of one half-year, into one newsletter (with the leadership messages and a Table of Contents) or one consolidated Excel workbook.</p>
         </div>
-        <div class="month-picker">
+        <div class="month-picker" style="flex-wrap:wrap;">
           <select id="yearSelect"></select>
-          <button class="ghost" id="genAnnualWordBtn" onclick="generateAnnualNewsletter()">📚 Annual Newsletter (Word)</button>
-          <button class="ghost" id="genAnnualExcelBtn" onclick="generateAnnualExcel()">📚 Annual Report (Excel)</button>
+          <select id="editionSelect" style="min-width:210px;">
+            <option value="full">Annual (January – December)</option>
+            <option value="h1">Bi-Annual (January – June)</option>
+            <option value="h2">Bi-Annual (July – December)</option>
+          </select>
+          <button class="ghost" id="genAnnualWordBtn" onclick="generateAnnualNewsletter()">📚 Newsletter (Word + PDF)</button>
+          <button class="ghost" id="genAnnualExcelBtn" onclick="generateAnnualExcel()">📚 Report (Excel)</button>
         </div>
       </div>
+    </div>
+
+    <div class="card" style="border-color:#F0C7C3;">
+      <h2 class="section-title" style="font-size:19px;">Start a New Year (Erase Data)</h2>
+      <p class="section-desc">Erases every submission — events, publications, conference presentations, blogs, editorials, guest editorials, puzzles and upcoming items — so the portal starts fresh. Your settings (mission, vision, quote, contacts, logo, cover photo) and the admin password are kept. <b>Generate your annual newsletter and Excel report first, and download a backup.</b> This cannot be undone.</p>
+      <button class="ghost" onclick="downloadBackup()">⬇️ Download Full Backup (JSON)</button>
+      <label style="margin-top:18px;">Also erase the leadership messages?</label>
+      <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; align-items:center; gap:8px; margin-top:4px;">
+        <input type="checkbox" id="eraseMessages" checked style="width:auto;" /> Yes, clear the messages too
+      </label>
+      <label>Type ERASE to confirm</label>
+      <input type="text" id="eraseConfirm" placeholder="ERASE" autocomplete="off" />
+      <button class="primary" style="background:#A5342C;" onclick="eraseAllData()">🗑️ Erase All Data</button>
+      <div class="msg" id="eraseMsg"></div>
     </div>
   </section>
 
@@ -1297,6 +1322,131 @@ function submitUpcomingConference(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Add to Upcoming Conferences & Workshops'; });
 }
 
+/* ---------------- Leadership messages (annual & bi-annual editions) ----------------
+   Stored at settings/messages/<key> = { heading, name, designation, message, photo } */
+const MESSAGE_ROLES = [
+  { key:'vc', label:'Vice Chancellor / Additional Pro Vice Chancellor',
+    headings:["Vice Chancellor's Message", "Additional Pro Vice Chancellor's Message", "Pro Vice Chancellor's Message"] },
+  { key:'registrar', label:'Registrar', headings:["Registrar's Message"] },
+  { key:'dean', label:'Dean', headings:["Dean's Message"] },
+  { key:'hos', label:'Head of School', headings:["Head of School's Message"] },
+  { key:'hod', label:'Head of Department', headings:["Head of Department's Message"] },
+  { key:'editor', label:'Editor', headings:["Editor's Message"] },
+  { key:'coeditor1', label:'Co-Editor 1', headings:["Co-Editor's Message"] },
+  { key:'coeditor2', label:'Co-Editor 2', headings:["Co-Editor's Message"] },
+  { key:'coeditor3', label:'Co-Editor 3', headings:["Co-Editor's Message"] },
+];
+let allMessages = {};
+let messagePhotos = {}; // key -> { url, w, h } | null (pending, not yet saved)
+function activeMessages(){
+  return MESSAGE_ROLES.map(r => Object.assign({ key:r.key, heading:r.headings[0] }, allMessages[r.key] || {}))
+    .filter(m => (m.message || '').trim());
+}
+function buildMessagesAdmin(){
+  const box = document.getElementById('messagesBox');
+  if(!box || box.dataset.built) return;
+  box.dataset.built = '1';
+  box.innerHTML = MESSAGE_ROLES.map(r => `
+    <details class="event-card" id="msgcard-${r.key}" style="padding:12px 16px;">
+      <summary style="cursor:pointer; font-weight:700; color:var(--navy);">${r.label} <span class="badge social" id="msgflag-${r.key}" style="display:none; margin-left:8px;">Added</span></summary>
+      ${r.headings.length > 1 ? `<label class="first" style="margin-top:12px;">Heading</label>
+        <select id="msg_heading_${r.key}">${r.headings.map(h => `<option>${h}</option>`).join('')}</select>` : ''}
+      <div class="row2">
+        <div><label>Name</label><input type="text" id="msg_name_${r.key}" placeholder="e.g. Prof. (Dr.) A. Kumar" /></div>
+        <div><label>Designation</label><input type="text" id="msg_desig_${r.key}" placeholder="e.g. ${r.label}, Amity University Punjab" /></div>
+      </div>
+      <label>Message</label>
+      <textarea id="msg_text_${r.key}" style="min-height:140px;" placeholder="Leave empty to leave this message out."></textarea>
+      <label>Photo</label>
+      <div class="photo-drop" onclick="document.getElementById('msg_photo_${r.key}').click()">
+        <input type="file" id="msg_photo_${r.key}" accept="image/*" onchange="handleMessagePhoto('${r.key}', event)" />
+        <div><strong>Click to add a photo</strong></div><div class="hint">A portrait photo works best.</div>
+      </div>
+      <div class="thumbs" id="msg_thumb_${r.key}"></div>
+      <button class="primary" onclick="saveMessage('${r.key}')">Save</button>
+      <button class="danger" style="margin-left:10px;" onclick="removeMessage('${r.key}')">Remove</button>
+      <div class="msg" id="msg_msg_${r.key}"></div>
+    </details>`).join('');
+}
+const filledMessages = {}; // what each form last showed, so a save elsewhere doesn't wipe one being typed
+function fillMessagesAdmin(){
+  buildMessagesAdmin();
+  MESSAGE_ROLES.forEach(r => {
+    const m = allMessages[r.key] || {};
+    const sig = JSON.stringify(m);
+    if(filledMessages[r.key] === sig) return;
+    filledMessages[r.key] = sig;
+    const sel = document.getElementById('msg_heading_' + r.key);
+    if(sel) sel.value = m.heading || r.headings[0];
+    document.getElementById('msg_name_' + r.key).value = m.name || '';
+    document.getElementById('msg_desig_' + r.key).value = m.designation || '';
+    document.getElementById('msg_text_' + r.key).value = m.message || '';
+    delete messagePhotos[r.key];
+    renderMessageThumb(r.key, m.photo && m.photo.url);
+    document.getElementById('msgflag-' + r.key).style.display = (m.message || '').trim() ? 'inline-block' : 'none';
+  });
+}
+function renderMessageThumb(key, url){
+  document.getElementById('msg_thumb_' + key).innerHTML = url
+    ? `<div class="thumb"><img src="${url}"/><button type="button" class="rm" onclick="messagePhotos['${key}']=null; renderMessageThumb('${key}', null)">×</button></div>` : '';
+}
+function handleMessagePhoto(key, evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  compressImage(file, 700, 0.85).then(r => { messagePhotos[key] = { url:r.dataUrl, w:r.width, h:r.height }; renderMessageThumb(key, r.dataUrl); });
+  evt.target.value = '';
+}
+function messageNote(key, ok, text){
+  const el = document.getElementById('msg_msg_' + key);
+  el.className = 'msg ' + (ok ? 'ok' : 'err'); el.textContent = text;
+  if(ok) setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+function saveMessage(key){
+  if(!firebaseReady) return;
+  const r = MESSAGE_ROLES.find(x => x.key === key);
+  const prev = allMessages[key] || {};
+  const sel = document.getElementById('msg_heading_' + key);
+  const rec = {
+    heading: sel ? sel.value : r.headings[0],
+    name: document.getElementById('msg_name_' + key).value.trim(),
+    designation: document.getElementById('msg_desig_' + key).value.trim(),
+    message: document.getElementById('msg_text_' + key).value.trim(),
+    photo: key in messagePhotos ? messagePhotos[key] : (prev.photo || null),
+    updatedAt: Date.now()
+  };
+  if(!rec.message){ messageNote(key, false, 'Write the message first (or use Remove to leave it out).'); return; }
+  db.ref('settings/messages/' + key).set(rec).then(() => messageNote(key, true, 'Saved.')).catch(err => messageNote(key, false, 'Could not save: ' + err.message));
+}
+function removeMessage(key){
+  if(!firebaseReady) return;
+  if(!confirm('Remove this message?')) return;
+  db.ref('settings/messages/' + key).remove().then(() => messageNote(key, true, 'Removed.'));
+}
+
+/* ---------------- Backup & erase (start of a new year) ---------------- */
+const ERASE_PATHS = ['events','publications','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles'];
+function downloadBackup(){
+  if(!firebaseReady) return;
+  db.ref('/').once('value').then(snap => {
+    const blob = new Blob([ JSON.stringify(snap.val() || {}, null, 1) ], { type:'application/json' });
+    saveAs(blob, 'newsletter_backup_' + new Date().toISOString().slice(0,10) + '.json');
+  }).catch(err => alert('Could not download the backup: ' + err.message));
+}
+function eraseAllData(){
+  if(!firebaseReady) return;
+  const msg = document.getElementById('eraseMsg');
+  if(document.getElementById('eraseConfirm').value.trim() !== 'ERASE'){
+    msg.className = 'msg err'; msg.textContent = 'Type ERASE (in capitals) in the box to confirm.'; return;
+  }
+  if(!confirm('Erase ALL newsletter data now? This cannot be undone.')) return;
+  const wipe = {};
+  ERASE_PATHS.forEach(p => wipe[p] = null);
+  if(document.getElementById('eraseMessages').checked) wipe['settings/messages'] = null;
+  db.ref('/').update(wipe)
+    .then(() => { msg.className = 'msg ok'; msg.textContent = 'All data erased. The portal is ready for the new year.'; document.getElementById('eraseConfirm').value = ''; })
+    .catch(err => { msg.className = 'msg err'; msg.textContent = 'Could not erase: ' + err.message; });
+}
+
 /* ---------------- Admin dashboard ---------------- */
 let allEventsByMonth = {};        // { "2026-07": { pushId: {...} } }
 let allPublicationsByMonth = {};
@@ -1338,6 +1488,10 @@ function initDashboard(){
   db.ref('editorials').on('value', snap => {
     allEditorialsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth(); fillEditorsDesk();
+  });
+  db.ref('settings/messages').on('value', snap => {
+    allMessages = snap.val() || {};
+    fillMessagesAdmin();
   });
   db.ref('guestEditorials').on('value', snap => {
     allGuestEditorialsByMonth = snap.val() || {};
@@ -1978,7 +2132,9 @@ let CONTACT_SOCIAL = "[Replace with social media handle(s) — search for CONTAC
    the body is built, and the cover index then links to those bookmarks.
    --------------------------------------------------------------------- */
 let REG = null;
-function resetRegistry(){ REG = { seq:0, sections:{}, items:{}, tc:{} }; }
+function resetRegistry(){ REG = { seq:0, sections:{}, items:{}, tc:{}, page:0, pages:{} }; }
+/* REG.page / REG.pages: the layout engine counts body pages as it goes, and records the
+   page every section, month and item starts on (used for the annual Table of Contents). */
 function newAnchor(prefix){ REG.seq++; return `nl_${prefix}${REG.seq}`; }
 /* Anchor for a section heading; the index links to the FIRST one of each name */
 function sectionAnchor(name){
@@ -2016,7 +2172,7 @@ function tcEntryRuns(text, level){
 /* Big centered section heading (e.g. "ACADEMIC", "PUBLICATIONS") with a bookmark */
 function sectionTitlePara(text, pageBreak, anchor, afterSpacing){
   const { Paragraph, TextRun, AlignmentType } = docx;
-  return new Paragraph({ pageBreakBefore: !!pageBreak, alignment:AlignmentType.CENTER, spacing:{ after: afterSpacing === undefined ? 280 : afterSpacing },
+  return new Paragraph({ pageBreakBefore: !!pageBreak, keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: afterSpacing === undefined ? 280 : afterSpacing },
     children: bookmarked(anchor, [ new TextRun({ text, color:"132340", bold:true, size:40, font:"Playfair Display" }) ]) });
 }
 
@@ -2258,41 +2414,75 @@ function buildContentsPage(fullSpec, anchor){
 }
 /* Annual edition: a proper Table of Contents — every section, the months in it,
    and every item with its date, a linked title and its page number. */
-/* Annual edition: a real Word Table of Contents field. Word builds it from the
-   hidden TC markers placed at every section, month and item — after laying
-   out the pages — so every entry gets its correct page number and a link.
-   Until Word updates it, the list below (same entries, linked, no numbers)
-   shows as its placeholder. */
-function buildTableOfContents(toc, anchor){
-  const { Paragraph, TextRun, InternalHyperlink } = docx;
-  const shortDate = d => d ? formatDate(d).replace(/, \d{4}/,'') + '  ·  ' : '';
-  const out = [ sectionTitlePara("TABLE OF CONTENTS", true, anchor, 300) ];
-  out.push(new Paragraph({ spacing:{ before:0, after:0 }, children:[ fieldBegin(), fieldCode('TOC \\f a \\l "1-3" \\h \\z'), fieldSep() ] }));
+/* Annual edition Table of Contents.
+   Page numbers are worked out by the app while it lays out the newsletter
+   (REG.pages) and written straight into the table, so they show as soon as
+   the file opens — Word's own automatic update runs before it has laid out
+   the pages and would turn them all into "1". The table is still a real Word
+   TOC built on hidden TC markers, so right-click → Update Field re-checks the
+   numbers against Word's own layout at any time. */
+/* Contents rows have fixed heights and never wrap, and the app places the page
+   breaks itself — so the contents always takes exactly the pages it expects
+   and the body page numbers stay correct. */
+const TOC_ROW_TW = { 1: 200 + 340 + 60, 2: 100 + 260 + 20, 3: 300 + 30 };
+const TOC_FIRST_CAP_TW = 11400, TOC_PAGE_CAP_TW = 12600;  // usable height with a safety margin (header + heading allowed for)
+const TOC_MAX_CHARS = 78;
+function tocRows(toc){
+  const rows = [];
   toc.forEach(sec => {
-    out.push(new Paragraph({ style:'TOC1', children:[ new InternalHyperlink({ anchor:REG.sections[sec.key], children:[ new TextRun({ text:sec.title.toUpperCase() }) ] }) ] }));
+    rows.push({ level:1, text: sec.title.toUpperCase(), anchor: REG.sections[sec.key] });
     sec.months.forEach(mo => {
-      if(mo.label) out.push(new Paragraph({ style:'TOC2', children:[ new TextRun({ text:mo.label.toUpperCase() }) ] }));
-      mo.items.forEach(it => out.push(new Paragraph({ style:'TOC3',
-        children:[ new InternalHyperlink({ anchor:it.anchor, children:[ new TextRun({ text: shortDate(it.date) + (it.title || '(untitled)') }) ] }) ] })));
+      if(mo.label) rows.push({ level:2, text: mo.label.toUpperCase(), anchor: (mo.anchor && REG.pages[mo.anchor] !== undefined) ? mo.anchor : REG.sections[sec.key] });
+      mo.items.forEach(it => {
+        const d = it.date ? formatDate(it.date).replace(/, \d{4}/,'') + '  ·  ' : '';
+        let t = d + (it.title || '(untitled)');
+        if(t.length > TOC_MAX_CHARS) t = t.slice(0, TOC_MAX_CHARS - 1).replace(/\s+\S*$/, '') + '…';
+        rows.push({ level:3, text:t, anchor: it.anchor });
+      });
     });
   });
-  out.push(new Paragraph({ spacing:{ before:0, after:0 }, children:[ fieldEnd() ] }));
+  // decide page breaks: a section or month line never sits alone at the bottom
+  let used = 0, cap = TOC_FIRST_CAP_TW, pages = 1;
+  rows.forEach((r, i) => {
+    const h = TOC_ROW_TW[r.level];
+    const next = rows[i + 1] ? TOC_ROW_TW[rows[i + 1].level] : 0;
+    const need = r.level < 3 ? h + next : h;
+    if(used + need > cap){ r.pageBreak = true; pages++; used = 0; cap = TOC_PAGE_CAP_TW; }
+    used += h;
+  });
+  rows.pages = pages;
+  return rows;
+}
+function buildTableOfContents(rows, anchor, pageOffset){
+  const { Paragraph, TextRun, InternalHyperlink } = docx;
+  const out = [ sectionTitlePara("TABLE OF CONTENTS", true, anchor, 300) ];
+  out.push(new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[
+    rawRun('<w:r><w:fldChar w:fldCharType="begin"/></w:r>'), fieldCode('TOC \\f a \\l "1-3" \\h \\z'), fieldSep() ] }));
+  rows.forEach(r => {
+    const num = String(pageOffset + (REG.pages[r.anchor] || 1));
+    out.push(new Paragraph({ style:'TOC' + r.level, pageBreakBefore: !!r.pageBreak, children:[
+      new InternalHyperlink({ anchor:r.anchor, children:[ new TextRun({ text:r.text }) ] }),
+      new TextRun({ text:"\t" }),
+      new InternalHyperlink({ anchor:r.anchor, children:[ new TextRun({ text:num }) ] }),
+    ] }));
+  });
+  out.push(new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[ fieldEnd() ] }));
   return out;
 }
-/* Look of the three Table of Contents levels (section / month / item) */
+/* Look of the three Table of Contents levels (section / month / item) — fixed line heights */
 function tocStyles(){
-  const { TabStopType, LeaderType } = docx;
+  const { TabStopType, LeaderType, LineRuleType } = docx;
   const right = [ { type:TabStopType.RIGHT, position:PAGE_CONTENT_TW - 20, leader:LeaderType.DOT } ];
   return [
     { id:'TOC1', name:'toc 1', basedOn:'Normal', next:'Normal', uiPriority:39,
       run:{ font:'Inter', size:23, bold:true, color:'132340' },
-      paragraph:{ spacing:{ before:260, after:80 }, keepNext:true, tabStops:right } },
+      paragraph:{ spacing:{ before:200, after:60, line:340, lineRule:LineRuleType.EXACT }, tabStops:right } },
     { id:'TOC2', name:'toc 2', basedOn:'Normal', next:'Normal', uiPriority:39,
       run:{ font:'Inter', size:17, bold:true, color:'A8842F' },
-      paragraph:{ spacing:{ before:120, after:40 }, indent:{ left:200 }, keepNext:true, tabStops:right } },
+      paragraph:{ spacing:{ before:100, after:20, line:260, lineRule:LineRuleType.EXACT }, indent:{ left:200 }, tabStops:right } },
     { id:'TOC3', name:'toc 3', basedOn:'Normal', next:'Normal', uiPriority:39,
       run:{ font:'Inter', size:20, color:'1B1B18' },
-      paragraph:{ spacing:{ before:0, after:50 }, indent:{ left:600, right:500, hanging:0 }, tabStops:right } },
+      paragraph:{ spacing:{ before:0, after:30, line:300, lineRule:LineRuleType.EXACT }, indent:{ left:600 }, tabStops:right } },
   ];
 }
 async function buildCover({ issuePeriod, heroSrc, indexSpec, contentsPage }){
@@ -2610,7 +2800,7 @@ function buildFlowArticle(opts){
          short write-up — a clearing break at the end keeps the next item below it). ---- */
   const firstFloat = (imgs.length && fitsPage(y, imgs[0].dh)) ? place() : null;
   if(opts.kicker){
-    out.push(new Paragraph({ pageBreakBefore: !!opts.pageBreak, spacing:{ after:60 },
+    out.push(new Paragraph({ pageBreakBefore: !!opts.pageBreak, keepNext:true, spacing:{ after:60 },
       children:[ ...(firstFloat ? [firstFloat] : []), new TextRun({ text:opts.kicker.text, color:opts.kicker.color || "132340", bold:true, size:18, font:"Inter" }) ] }));
     y += 22;
   }
@@ -2700,11 +2890,12 @@ function separatorPara(){
     border:{ top:{ style:docx.BorderStyle.SINGLE, size:6, color:"E4DAC3", space:1 } }, children:[] });
 }
 /* Gold month sub-heading used inside a section of the annual edition */
-function monthMarkerPara(label, pageBreak, extraSpace, tc){
+function monthMarkerPara(label, pageBreak, extraSpace, tc, anchor){
+  const run = new docx.TextRun({ text:label.toUpperCase(), color:"A8842F", bold:true, size:24, characterSpacing:20, font:"Inter" });
   return new docx.Paragraph({ pageBreakBefore: !!pageBreak, keepNext:true,
     spacing:{ before: extraSpace ? 360 : 60, after:200 },
     border:{ bottom:{ style:docx.BorderStyle.SINGLE, size:8, color:"C6A34A", space:3 } },
-    children:[ new docx.TextRun({ text:label.toUpperCase(), color:"A8842F", bold:true, size:24, characterSpacing:20, font:"Inter" }),
+    children:[ ...(anchor ? [ new docx.Bookmark({ id:anchor, children:[ run ] }) ] : [ run ]),
                ...(tc ? tcEntryRuns(label.toUpperCase(), 2) : []) ] });
 }
 /* Turns [{ month, builders:[...] }] into one item list with a month sub-heading before each month */
@@ -2726,12 +2917,14 @@ function buildStackedSections(groups, firstBreak, firstStartY){
       brk = pageY + 30 + STACK.HEAD_PX + STACK.MIN_ROOM_PX > PAGE;
       if(brk) pageY = 0; else { out.push(new Paragraph({ spacing:{ after:300 }, children:[] })); pageY += 30; }
     }
+    if(brk) REG.page++;
     const secAnchor = sectionAnchor(g.anchorKey);
+    REG.pages[secAnchor] = REG.page;
     if(g.tc) REG.tc[secAnchor] = { text:g.tc, level:1 };
     out.push(sectionTitlePara(g.heading, brk, secAnchor, g.subtitle ? 60 : 200));
     pageY += STACK.HEAD_PX;
     if(g.subtitle){
-      out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:240},
+      out.push(new Paragraph({ alignment:AlignmentType.CENTER, keepNext:true, spacing:{after:240},
         children:[ new TextRun({ text:g.subtitle, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
       pageY += STACK.SUB_PX;
     }
@@ -2739,20 +2932,24 @@ function buildStackedSections(groups, firstBreak, firstStartY){
     g.items.forEach(item => {
       if(item && item.marker){            // month sub-heading (annual edition)
         const pb = pageY + 50 + STACK.MIN_ROOM_PX > PAGE;
-        if(pb) pageY = 0;
-        out.push(monthMarkerPara(item.marker, pb, !fresh && !pb, item.tc));
+        if(pb){ pageY = 0; REG.page++; }
+        if(item.anchor) REG.pages[item.anchor] = REG.page;
+        out.push(monthMarkerPara(item.marker, pb, !fresh && !pb, item.tc, item.anchor));
         pageY += fresh || pb ? 44 : 64;
         fresh = true;
         return;
       }
       let pb = false;
       if(!fresh){
-        if(pageY + STACK.SEP_PX + STACK.MIN_ROOM_PX > PAGE){ pb = true; pageY = 0; }
+        if(pageY + STACK.SEP_PX + STACK.MIN_ROOM_PX > PAGE){ pb = true; pageY = 0; REG.page++; }
         else { out.push(separatorPara()); pageY += STACK.SEP_PX; }
       }
+      if(item.anchor) REG.pages[item.anchor] = REG.page;
       const art = item(pb, pageY);
       out = out.concat(art);
-      pageY = (art.endY || pageY) % PAGE;
+      const endY = art.endY || pageY;
+      REG.page += Math.floor(endY / PAGE);   // pages this item ran onto
+      pageY = endY % PAGE;
       fresh = false;
     });
   });
@@ -2886,9 +3083,9 @@ function findLatestBlogEntries(uptoMonthInclusive){
   }
   return { month:null, ids:[], data:{} };
 }
-function blogItem(b, id){
+function blogItem(b, anchor){
   return (pb, sy) => buildFlowArticle({
-    kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor:itemAnchor('blog', id),
+    kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor,
     metaParas:[ metaLine(`By ${b.author}   ·   ${formatDate(b.date)}`) ],
     text:b.content, images: allPhotos(b.photos), pageBreak:pb, startY:sy
   });
@@ -2896,7 +3093,7 @@ function blogItem(b, id){
 function buildBlogSection(ids, data, sourceLabel, firstBreak){
   return buildStackedSections([{ heading:'RESEARCH BLOG', anchorKey:'RESEARCH BLOG',
     subtitle: sourceLabel ? `Featured from ${sourceLabel}` : null,
-    items: ids.map(id => blogItem(data[id], id)) }], firstBreak);
+    items: ids.map(id => blogItem(data[id], itemAnchor('blog', id))) }], firstBreak);
 }
 
 /* ---------- From the Editor's Desk (admin) & Guest Editorials (portal) ---------- */
@@ -2974,194 +3171,661 @@ function buildPuzzleSection(list, firstBreak){
   return buildStackedSections([{ heading:'PUZZLE', anchorKey:'PUZZLE', items: list.map(pz => puzzleItem(pz)) }], firstBreak);
 }
 
-/* ---------- Monthly newsletter ---------- */
+/* =========================================================================
+   ISSUE PLAN — what goes into a newsletter and in what order, independent of
+   the output format. The Word renderer and the PDF renderer both read it, so
+   the two files always contain the same thing.
+     stacks: [ [ group, group, ... ], ... ]   each stack starts on a new page;
+             groups inside a stack (the event categories) follow one another.
+     group:  { heading, key, tocTitle, tocGroup, subtitle, items:[ item | { marker } ] }
+     item:   { type, data, key }   type = event | pub | conf | blog | uc | desk | guest | puzzle | message
+   ========================================================================= */
 function sortedIds(data){
   return Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
 }
-async function generateNewsletter(){
-  const monthData = allEventsByMonth[currentMonth] || {};
-  const ids = sortedIds(monthData);
-  const pubData = allPublicationsByMonth[currentMonth] || {};
-  const pubIds = sortedIds(pubData);
-  const confData = allConferencesByMonth[currentMonth] || {};
-  const confIds = sortedIds(confData);
-  const blogInfo = findLatestBlogEntries(currentMonth);
-  const desk = editorsDeskEntry(currentMonth);
-  const guests = guestEditorialEntries(currentMonth);
-  const puzzle = monthEntries(allPuzzlesByMonth, currentMonth);
+const CATS = ['Academic','Research','Cultural','Social','Other'];
+const catOf = e => CATS.includes(e.category) ? e.category : 'Other';
+const shortDateLabel = d => d ? formatDate(d).replace(/, \d{4}/,'') : '';
 
-  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && blogInfo.ids.length === 0 && !hasText(desk) && !guests.length && !puzzle.length){
-    alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.');
-    return;
+function itemTocInfo(it){
+  const d = it.data || {};
+  switch(it.type){
+    case 'conf':    return { title:d.paperTitle, date:d.date };
+    case 'desk':    return { title:d.title || 'From the Editor’s Desk' };
+    case 'guest':   return { title:d.title || 'Guest Editorial' };
+    case 'puzzle':  return { title:d.title || 'Puzzle' };
+    case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
+    default:        return { title:d.title, date:d.date };
   }
+}
 
-  const btn = document.getElementById('genWordBtn');
-  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+function monthlyPlan(month){
+  const data = allEventsByMonth[month] || {}, ids = sortedIds(data);
+  const pubData = allPublicationsByMonth[month] || {}, pubIds = sortedIds(pubData);
+  const confData = allConferencesByMonth[month] || {}, confIds = sortedIds(confData);
+  const blogInfo = findLatestBlogEntries(month);
+  const desk = editorsDeskEntry(month);
+  const guests = guestEditorialEntries(month).filter(hasText);
+  const puzzles = monthEntries(allPuzzlesByMonth, month).filter(hasPuzzle);
+  const upConfs = getActiveUpcomingConferences();
+  const upcoming = getUpcomingEvents(6);
 
+  const stacks = [];
+  const add = groups => { groups = groups.filter(g => g.items.length); if(groups.length) stacks.push(groups); };
+  add([{ heading:"FROM THE EDITOR’S DESK", key:'EDITORS DESK', items: hasText(desk) ? [ { type:'desk', data:desk, key:'desk:' + month } ] : [] }]);
+  add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', items: guests.map((g, i) => ({ type:'guest', data:g, key:'guest:' + (g._id || i) })) }]);
+  add(CATS.map(cat => ({ heading:cat.toUpperCase(), key:'CAT ' + cat,
+    items: ids.filter(id => catOf(data[id]) === cat).map(id => ({ type:'event', data:data[id], key:'ev:' + id })) })));
+  add([{ heading:'PUBLICATIONS', key:'PUBLICATIONS', items: pubIds.map(id => ({ type:'pub', data:pubData[id], key:'pub:' + id })) }]);
+  add([{ heading:'CONFERENCE PRESENTATIONS', key:'CONFERENCE PRESENTATIONS', items: confIds.map(id => ({ type:'conf', data:confData[id], key:'conf:' + id })) }]);
+  add([{ heading:'RESEARCH BLOG', key:'RESEARCH BLOG',
+    subtitle: blogInfo.month && blogInfo.month !== month ? `Featured from ${monthLabel(blogInfo.month)}` : null,
+    items: blogInfo.ids.map(id => ({ type:'blog', data:blogInfo.data[id], key:'blog:' + id })) }]);
+  add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
+  add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) })) }]);
+
+  const hasContent = ids.length || pubIds.length || confIds.length || blogInfo.ids.length || hasText(desk) || guests.length || puzzles.length;
+  const range = issueDateRangeLabel(month);
+  return {
+    kind:'monthly', hasContent, stacks, withToc:false,
+    issuePeriod: range, dateRange: range,
+    strapline: 'SCHOOL OF PHYSICAL SCIENCES · NEWSLETTER',
+    fileBase: `Newsletter_${month}`, label: monthLabel(month),
+    heroSrc: resolveHeroSource(ids, data),
+    index: () => buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs, upcoming })
+  };
+}
+
+/* Annual / bi-annual edition: leadership messages first, then every section
+   once, with that section's content month by month under month headings. */
+const EDITIONS = {
+  full: { from:1,  to:12, name:'Annual Edition',    short:'ANNUAL',     file:'Annual',      range: y => `1 January - 31 December ${y}` },
+  h1:   { from:1,  to:6,  name:'Bi-Annual Edition', short:'BI-ANNUAL (JAN–JUN)', file:'BiAnnual_Jan-Jun', range: y => `1 January - 30 June ${y}` },
+  h2:   { from:7,  to:12, name:'Bi-Annual Edition', short:'BI-ANNUAL (JUL–DEC)', file:'BiAnnual_Jul-Dec', range: y => `1 July - 31 December ${y}` },
+};
+function editionMonths(year, edKey){
+  const ed = EDITIONS[edKey] || EDITIONS.full;
+  return allMonthKeys().filter(m => m.startsWith(year + '-') && +m.slice(5,7) >= ed.from && +m.slice(5,7) <= ed.to).sort();
+}
+function periodPlan(year, edKey){
+  const ed = EDITIONS[edKey] || EDITIONS.full;
+  const months = editionMonths(year, edKey);
+  const byMonth = fn => { const out = []; months.forEach(m => { const list = fn(m); if(list.length){ out.push({ marker:monthLabel(m) }); out.push(...list); } }); return out; };
+  const stacks = [];
+  const add = groups => { groups = groups.filter(g => g.items.length); if(groups.length) stacks.push(groups); };
+
+  // leadership messages: each on its own page, listed together under "Messages" in the contents
+  activeMessages().forEach(msg => add([{ heading: msg.heading.toUpperCase(), key:'MSG ' + msg.key, tocTitle:'Messages', tocGroup:'MESSAGES',
+    items:[ { type:'message', data:msg, key:'msg:' + msg.key } ] }]));
+
+  add([{ heading:"FROM THE EDITOR’S DESK", key:'EDITORS DESK', tocTitle:'From the Editor’s Desk',
+    items: byMonth(m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { type:'desk', data:d, key:'desk:' + m } ] : []; }) }]);
+  add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', tocTitle:'Guest Editorials',
+    items: byMonth(m => guestEditorialEntries(m).filter(hasText).map((g, i) => ({ type:'guest', data:g, key:'guest:' + m + (g._id || i) }))) }]);
+  add(CATS.map(cat => ({ heading:cat.toUpperCase(), key:'CAT ' + cat, tocTitle:cat,
+    items: byMonth(m => { const d = allEventsByMonth[m] || {}; return sortedIds(d).filter(id => catOf(d[id]) === cat).map(id => ({ type:'event', data:d[id], key:'ev:' + id })); }) })));
+  add([{ heading:'PUBLICATIONS', key:'PUBLICATIONS', tocTitle:'Publications',
+    items: byMonth(m => { const d = allPublicationsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'pub', data:d[id], key:'pub:' + id })); }) }]);
+  add([{ heading:'CONFERENCE PRESENTATIONS', key:'CONFERENCE PRESENTATIONS', tocTitle:'Conference Presentations',
+    items: byMonth(m => { const d = allConferencesByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'conf', data:d[id], key:'conf:' + id })); }) }]);
+  // each blog once, in the month it was written (no carry-forward in these editions)
+  add([{ heading:'RESEARCH BLOG', key:'RESEARCH BLOG', tocTitle:'Research Blog',
+    items: byMonth(m => { const d = allBlogsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'blog', data:d[id], key:'blog:' + id })); }) }]);
+  add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', tocTitle:'Upcoming Conferences & Workshops',
+    items: getActiveUpcomingConferences().map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
+  add([{ heading:'PUZZLE', key:'PUZZLE', tocTitle:'Puzzle',
+    items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))) }]);
+
+  let heroIds = [], heroData = {};
+  months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
+  const range = ed.range(year);
+  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && g.key !== 'UPCOMING CONFERENCES & WORKSHOPS'));
+  return {
+    kind:'period', hasContent, stacks, withToc:true,
+    issuePeriod: `${ed.name} · ${range}`, dateRange: range,
+    strapline: `SCHOOL OF PHYSICAL SCIENCES · ${ed.short} NEWSLETTER ${year}`,
+    fileBase: `${ed.file}_Newsletter_${year}`, label: `${ed.name} ${year}` + (edKey === 'full' ? '' : (edKey === 'h1' ? ' (January–June)' : ' (July–December)')),
+    heroSrc: resolveHeroSource(heroIds, heroData)
+  };
+}
+
+/* Walks a plan in order, giving every section / month / item its bookmark,
+   and collecting the Table of Contents. Used by both renderers. */
+function walkPlan(plan, onGroup){
+  const toc = [], tocByGroup = {};
+  plan.stacks.forEach((stack, si) => {
+    const groups = stack.map(g => {
+      let tocSec = null, ownsTocLine = false;
+      if(plan.withToc){
+        const gid = g.tocGroup || g.key;
+        tocSec = tocByGroup[gid];
+        if(!tocSec){ tocSec = tocByGroup[gid] = { title: g.tocTitle || g.heading, key: g.key, months:[] }; toc.push(tocSec); ownsTocLine = true; }
+      }
+      let mo = null;
+      const entries = [];
+      g.items.forEach(it => {
+        if(it.marker){
+          mo = { label: it.marker, items:[], anchor: newAnchor('mo') };
+          if(tocSec) tocSec.months.push(mo);
+          entries.push({ marker: it.marker, anchor: mo.anchor });
+          return;
+        }
+        if(tocSec && !mo){ mo = { label:null, items:[] }; tocSec.months.push(mo); }
+        const anchor = newAnchor('it');
+        if(!REG.items[it.key]) REG.items[it.key] = anchor;
+        const info = itemTocInfo(it);
+        if(tocSec){
+          mo.items.push({ date: info.date, title: info.title, anchor });
+          REG.tc[anchor] = { text: (info.date ? shortDateLabel(info.date) + '  ·  ' : '') + (info.title || ''), level:3 };
+        }
+        entries.push({ item: it, anchor });
+      });
+      return { g, entries, tocTitle: ownsTocLine ? tocSec.title.toUpperCase() : null };
+    });
+    onGroup(groups, si);
+  });
+  return toc;
+}
+
+/* ---------- Word renderer ---------- */
+function messageItem(m, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:null, title: m.name || '', anchor,
+    metaParas: m.designation ? [ metaLine(m.designation, { italics:false, color:"736C5E", size:BODY_SIZE - 1 }) ] : [],
+    text: m.message, images: m.photo && m.photo.url ? [ { url:m.photo.url, w:m.photo.w, h:m.photo.h } ] : [],
+    floatMax:{ w:200, h:250 }, pageBreak:pb, startY:sy
+  });
+}
+function wordItemBuilder(it, anchor){
+  const d = it.data;
+  switch(it.type){
+    case 'event':   return (pb, sy) => buildEventArticle(d, anchor, pb, sy);
+    case 'pub':     return (pb, sy) => buildPublicationArticle(d, anchor, pb, sy);
+    case 'conf':    return (pb, sy) => buildConferenceArticle(d, anchor, pb, sy);
+    case 'blog':    return blogItem(d, anchor);
+    case 'uc':      return (pb, sy) => buildUpcomingConferenceArticle(d, anchor, pb, sy);
+    case 'desk':    return deskItem(d, anchor);
+    case 'guest':   return guestItem(d, anchor);
+    case 'puzzle':  return puzzleItem(d, anchor);
+    case 'message': return messageItem(d, anchor);
+  }
+}
+async function renderWordIssue(plan){
+  const { Document, Packer } = docx;
+  resetRegistry();
+  let body = [];
+  const toc = walkPlan(plan, groups => {
+    body = body.concat(buildStackedSections(groups.map(({ g, entries, tocTitle }) => ({
+      heading: g.heading, anchorKey: g.key, subtitle: g.subtitle, tc: tocTitle,
+      items: entries.map(e => {
+        if(e.marker) return { marker: e.marker, tc: plan.withToc, anchor: e.anchor };
+        const b = wordItemBuilder(e.item, e.anchor); b.anchor = e.anchor; return b;
+      })
+    }))));
+  });
+  let cover;
+  if(plan.withToc){
+    const tocAnchor = newAnchor('toc');
+    const coverIndex = [ { kind:'link', title:'Table of Contents', anchor:tocAnchor } ]
+      .concat(toc.map(sec => ({ kind:'link', title:sec.title, anchor:REG.sections[sec.key] })));
+    const rows = tocRows(toc);   // cover = page 1, then the contents, then the body
+    cover = await buildCover({ issuePeriod: plan.issuePeriod, heroSrc: plan.heroSrc, indexSpec: coverIndex,
+      contentsPage: buildTableOfContents(rows, tocAnchor, 1 + rows.pages) });
+  } else {
+    cover = await buildCover({ issuePeriod: plan.issuePeriod, heroSrc: plan.heroSrc, indexSpec: plan.index() });
+  }
+  const doc = new Document({
+    styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } }, paragraphStyles: tocStyles() },
+    sections: [{
+      properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
+      headers: { default: buildRunningHeader(plan.strapline, plan.dateRange), first: blankHeader() },
+      footers: { default: buildRunningFooter(), first: buildRunningFooter() },
+      children: [ ...cover, ...body ]
+    }]
+  });
+  return Packer.toBlob(doc);
+}
+
+/* ---------- Generate buttons: Word first, then the PDF ---------- */
+async function produceIssue(plan, btn){
+  const origText = btn.textContent;
+  btn.disabled = true;
   try{
-    const { Document, Packer } = docx;
-    const dateRange = issueDateRangeLabel(currentMonth);
-    const upConfs = getActiveUpcomingConferences();
-    const upcoming = getUpcomingEvents(6);
-
-    resetRegistry();
-    // Body first, so every bookmark exists before the cover index links to it
-    const body = [
-      ...buildEditorsDeskSection(desk),
-      ...buildGuestEditorialsSection(guests),
-      ...buildEventsSection(ids, monthData),
-      ...buildPublicationsSection(pubIds, pubData),
-      ...buildConferencesSection(confIds, confData),
-      ...buildBlogSection(blogInfo.ids, blogInfo.data, blogInfo.month && blogInfo.month !== currentMonth ? monthLabel(blogInfo.month) : null),
-      ...buildUpcomingConferencesSection(upConfs),
-      ...buildPuzzleSection(puzzle),
-    ];
-
-    const cover = await buildCover({
-      issuePeriod: dateRange,
-      heroSrc: resolveHeroSource(ids, monthData),
-      indexSpec: buildIndexSpec({ ids, data:monthData, pubIds, pubData, confIds, confData, upConfs, upcoming })
-    });
-
-    const doc = new Document({
-      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } } },
-      sections: [{
-        properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
-        headers: { default: buildRunningHeader("SCHOOL OF PHYSICAL SCIENCES · NEWSLETTER", dateRange), first: blankHeader() },
-        footers: { default: buildRunningFooter(), first: buildRunningFooter() },
-        children: [ ...cover, ...body ]
-      }]
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `Newsletter_${currentMonth}.docx`);
+    btn.textContent = 'Building Word file…';
+    const wordBlob = await renderWordIssue(plan);
+    saveAs(wordBlob, plan.fileBase + '.docx');
+    btn.textContent = 'Building PDF…';
+    const pdfBlob = await renderPdfIssue(plan, p => { btn.textContent = p; });
+    saveAs(pdfBlob, plan.fileBase + '.pdf');
   }catch(err){
     console.error(err);
-    alert('Could not generate the Word document: ' + err.message);
+    alert('Could not generate the newsletter: ' + err.message);
   }finally{
     btn.disabled = false; btn.textContent = origText;
   }
 }
-
-/* ---------- Annual newsletter ---------- */
+async function generateNewsletter(){
+  const plan = monthlyPlan(currentMonth);
+  if(!plan.hasContent){ alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.'); return; }
+  await produceIssue(plan, document.getElementById('genWordBtn'));
+}
 async function generateAnnualNewsletter(){
   const year = document.getElementById('yearSelect').value;
-  const months = allMonthKeys().filter(m => m.startsWith(year + '-')).sort();
-  const totalIds = months.reduce((sum,m) => sum + Object.keys(allEventsByMonth[m]||{}).length, 0);
-  const hasOtherContent = months.some(m =>
-    Object.keys(allPublicationsByMonth[m]||{}).length ||
-    Object.keys(allConferencesByMonth[m]||{}).length ||
-    Object.keys(allBlogsByMonth[m]||{}).length ||
-    hasText(editorsDeskEntry(m)) || guestEditorialEntries(m).length || monthEntries(allPuzzlesByMonth, m).length
-  );
-  if(totalIds === 0 && !hasOtherContent){ alert('No content found for ' + year + '.'); return; }
+  const edKey = document.getElementById('editionSelect').value;
+  const plan = periodPlan(year, edKey);
+  if(!plan.hasContent){ alert('No content found for the ' + plan.label + '.'); return; }
+  await produceIssue(plan, document.getElementById('genAnnualWordBtn'));
+}
 
-  const btn = document.getElementById('genAnnualWordBtn');
-  btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
+/* =========================================================================
+   PDF EDITION
+   The same issue plan is laid out as print-styled HTML (real text wrap around
+   photos), paginated with Paged.js (running header, "Page X of Y", Table of
+   Contents page numbers taken from the actual layout), then each page is
+   captured into a PDF with working internal and web links.
+   The three libraries are loaded only when a PDF is made.
+   ========================================================================= */
+const PDF_LIBS = [
+  'https://unpkg.com/pagedjs@0.4.3/dist/paged.js',
+  'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+  'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+];
+const loadedScripts = {};
+function loadScriptOnce(url){
+  if(!loadedScripts[url]) loadedScripts[url] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url; s.onload = resolve; s.onerror = () => reject(new Error('Could not load ' + url));
+    document.head.appendChild(s);
+  });
+  return loadedScripts[url];
+}
+async function loadPdfLibs(){ for(const u of PDF_LIBS) await loadScriptOnce(u); }
 
+const H = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const hx = c => '#' + c;
+
+/* ---- print stylesheet (everything scoped under .nlp) ---- */
+const PDF_PAGE = { firstTop:10, top:19, bottom:16, side:14 }; // mm
+function pdfCss(plan){
+  return `
+@page { size: A4; margin: ${PDF_PAGE.top}mm ${PDF_PAGE.side}mm ${PDF_PAGE.bottom}mm ${PDF_PAGE.side}mm;
+  @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: Inter, sans-serif; font-size: 7.5pt; color: #736C5E;
+    border-top: 0.6pt solid #E4DAC3; vertical-align: top; padding-top: 2mm; }
+}
+@page :first { margin-top: ${PDF_PAGE.firstTop}mm; }
+.nlp { font-family: Inter, Arial, sans-serif; font-size: 11pt; line-height: 1.42; color: #1B1B18; }
+.nlp * { box-sizing: border-box; }
+.nlp .rh { display: flex; align-items: center; gap: 12px; font-family: Inter, sans-serif;
+  border-bottom: 1pt solid #C6A34A; padding-bottom: 4px; font-size: 8.5pt; font-weight: 700; }
+.nlp .rh img { height: 30px; width: auto; }
+.nlp .rh .st { flex: 1; color: #736C5E; }
+.nlp .rh .dt { color: #C6A34A; text-align: right; }
+/* cover */
+.nlp .cover { break-after: page; width: 100%; }
+.nlp .strip { background: #C6A34A; color: #132340; font-weight: 700; font-size: 9.5pt; padding: 5px 7px; letter-spacing: .02em; }
+.nlp .mast { display: flex; height: 100px; }
+.nlp .mast .lg { background: #fff; display: flex; align-items: center; padding-right: 12px; }
+.nlp .mast .lg img { height: 96px; width: auto; display: block; }
+.nlp .mast .rib { flex: 1; background: #132340; display: flex; flex-direction: column; justify-content: center; padding: 0 20px; }
+.nlp .mast .eb { color: #C6A34A; font-weight: 700; font-size: 8pt; margin-bottom: 3px; }
+.nlp .mast .nw { color: #fff; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 28pt; letter-spacing: 2px; line-height: 1.1; }
+.nlp .hero { display: block; width: 100%; height: auto; }
+.nlp .quote { text-align: center; padding: 11px 14px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 12.5pt; color: #132340; line-height: 1.3; }
+.nlp .quote .qa { font-family: Inter, sans-serif; font-style: normal; font-size: 8.5pt; color: #736C5E; }
+.nlp .cbody { display: flex; align-items: flex-start; }
+.nlp .cbody .mv { padding: 16px 24px 12px 0; }
+.nlp .cbody .mv h3 { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 14pt; margin: 0 0 5px; }
+.nlp .cbody .mv p { font-style: italic; margin: 0 0 16px; font-size: 11pt; line-height: 1.4; }
+.nlp .idx { background: #132340; color: #E8E4D8; padding: 18px 17px 14px; }
+.nlp .idx .it { color: #C6A34A; font-weight: 700; margin-bottom: 8px; }
+.nlp .idx .gh { color: #fff; font-weight: 700; margin: 9px 0 3px; }
+.nlp .idx .gh.up { color: #C6A34A; }
+.nlp .idx .row { display: flex; gap: 8px; margin-bottom: 3px; }
+.nlp .idx .row .d { color: #fff; font-weight: 700; flex: 0 0 41px; }
+.nlp .idx a { color: #C6A34A; text-decoration: underline; }
+.nlp .idx a.sl { font-weight: 700; display: block; margin: 9px 0 3px; }
+.nlp .contact { background: #F3EDDE; text-align: center; font-size: 8pt; padding: 6px; }
+.nlp .contact a { color: #1155CC; }
+.nlp .contact .sp { color: #C6A34A; padding: 0 12px; }
+/* contents */
+.nlp .toc { break-before: page; }
+.nlp .toc a { display: flex; align-items: baseline; color: inherit; text-decoration: none; }
+.nlp .toc a .tt { flex: 0 1 auto; }
+.nlp .toc a .dots { flex: 1; border-bottom: 1px dotted #9a927f; margin: 0 4px; transform: translateY(-3px); min-width: 12px; }
+.nlp .toc a::after { content: target-counter(attr(href url), page); flex: 0 0 auto; }
+.nlp .toc .l1 { font-weight: 700; color: #132340; font-size: 11.5pt; margin: 13px 0 4px; break-after: avoid; }
+.nlp .toc .l2 { font-weight: 700; color: #A8842F; font-size: 8.5pt; margin: 7px 0 2px 10px; break-after: avoid; letter-spacing: .04em; }
+.nlp .toc .l3 { font-size: 10pt; margin: 0 0 2px 30px; }
+.nlp .toc .l3 .dd { color: #736C5E; font-weight: 700; margin-right: 6px; }
+/* body */
+.nlp .stack { break-before: page; }
+.nlp .sh { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 20pt; font-weight: 700; text-align: center; margin: 0 0 12px; break-after: avoid; }
+.nlp .gap { height: 24px; }
+.nlp .sub { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin: -6px 0 14px; break-after: avoid; }
+.nlp .mon { color: #A8842F; font-weight: 700; font-size: 12pt; letter-spacing: .08em; border-bottom: 1.2pt solid #C6A34A; padding-bottom: 3px; margin: 14px 0 12px; break-after: avoid; clear: both; }
+.nlp .sep { border: 0; border-top: 0.8pt solid #E4DAC3; margin: 14px 0 18px; clear: both; }
+.nlp .art { break-inside: auto; }
+.nlp .art::after { content: ""; display: block; clear: both; }
+.nlp .kick { font-weight: 700; font-size: 9pt; letter-spacing: .03em; margin-bottom: 2px; break-after: avoid; }
+.nlp .t { font-family: 'Playfair Display', Georgia, serif; font-size: 16pt; font-weight: 700; color: #132340; margin: 0 0 4px; line-height: 1.2; break-after: avoid; }
+.nlp .meta { color: #736C5E; font-size: 9.5pt; font-style: italic; margin: 0 0 2px; }
+.nlp .meta.plain { font-style: normal; }
+.nlp .meta b { color: #132340; font-style: normal; }
+.nlp .meta a { color: #1155CC; }
+.nlp .metaend { height: 8px; }
+.nlp .art p { margin: 0 0 9px; }
+.nlp img.fr { float: right; margin: 3px 0 8px 14px; }
+.nlp img.fl { float: left; margin: 3px 14px 8px 0; }
+.nlp .gal { clear: both; text-align: center; padding-top: 6px; }
+.nlp .gal img { margin: 0 6px 10px; }
+.nlp .pz { text-align: left; break-inside: avoid; }
+.nlp .pz .pt { font-family: 'Playfair Display', Georgia, serif; font-size: 15pt; font-weight: 700; color: #132340; text-align: center; margin: 0 0 2px; break-after: avoid; }
+.nlp .pz .pa { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin-bottom: 10px; }
+.nlp .pz .imgs { text-align: center; break-inside: avoid; }
+.nlp .pz .imgs img { margin: 6px; }
+.nlp sup { font-size: 70%; }
+`;
+}
+
+/* ---- article layout: first photo top-right, the rest alternate sides, spread through the text ---- */
+function flowHtml(o){
+  const fmax = o.floatMax || { w:FLOW.FLOAT_MAX_W, h:FLOW.FLOAT_MAX_H };
+  const imgs = (o.images || []).filter(i => i && i.url).map(i => ({ ...i, d: imageDimsFit(i.w, i.h, fmax.w, fmax.h) }));
+  const tag = (im, cls) => `<img class="${cls}" src="${im.url}" style="width:${im.d.width}px;height:${im.d.height}px">`;
+  const paras = (o.text || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
+  const total = paras.reduce((n, p) => n + p.length, 0);
+  let html = `<article class="art"${o.anchor ? ` id="${o.anchor}"` : ''}>`;
+  if(imgs[0]) html += tag(imgs[0], 'fr');
+  if(o.kicker) html += `<div class="kick" style="color:${hx(o.kicker.color || '132340')}">${H(o.kicker.text)}</div>`;
+  if(o.title) html += `<h2 class="t">${H(o.title)}</h2>`;
+  (o.meta || []).forEach(m => html += `<div class="meta${m.plain ? ' plain' : ''}">${m.html}</div>`);
+  html += `<div class="metaend"></div>`;
+  // where the remaining photos go: evenly through the text, at sentence ends
+  const rest = imgs.slice(1);
+  const slots = rest.length;
+  const marks = [];
+  for(let k = 1; k <= slots; k++){ const at = Math.round(total * k / (slots + 1)); if(total - at >= 260) marks.push(at); }
+  let next = 0, seen = 0, side = 'fl';
+  paras.forEach(p => {
+    let cur = '';
+    splitSentences(p).forEach(s => {
+      if(next < marks.length && seen >= marks[next] && cur){
+        html += `<p>${H(cur.trim())}</p>` + tag(rest[next], side);
+        side = side === 'fl' ? 'fr' : 'fl'; next++; cur = '';
+      }
+      cur += s; seen += s.length;
+    });
+    if(next < marks.length && seen >= marks[next]){
+      html += `<p>${H(cur.trim())}</p>` + tag(rest[next], side);
+      side = side === 'fl' ? 'fr' : 'fl'; next++;
+    } else if(cur.trim()) html += `<p>${H(cur.trim())}</p>`;
+  });
+  const left = rest.slice(next);
+  if(left.length){
+    html += `<div class="gal">` + left.map(im => {
+      const d = imageDimsFit(im.w, im.h, left.length > 1 ? 320 : 360, 240);
+      return `<img src="${im.url}" style="width:${d.width}px;height:${d.height}px">`;
+    }).join('') + `</div>`;
+  }
+  return html + `</article>`;
+}
+const metaH = (html, plain) => ({ html, plain });
+function confAuthorsHtml(c){
+  const authors = confAuthorsList(c);
+  if(!authors.length) return [];
+  const affs = [];
+  authors.forEach(a => { const af = (a.affiliation || '').trim(); if(af && !affs.includes(af)) affs.push(af); });
+  const numbered = affs.length > 1;
+  const names = authors.map(a => H(a.name.trim()) + (numbered && a.affiliation ? `<sup>${affs.indexOf(a.affiliation.trim()) + 1}</sup>` : '')).join(', ');
+  return [ metaH(`<b>Authors:</b> <span style="color:#1B1B18">${names}</span>`, true) ]
+    .concat(affs.map((af, i) => metaH((numbered ? `<sup>${i + 1}</sup>` : '') + H(af))));
+}
+function pdfItemHtml(it, anchor){
+  const d = it.data;
+  switch(it.type){
+    case 'event': return flowHtml({ kicker:{ text:(d.category || 'Other').toUpperCase(), color:categoryHex(d.category) }, title:d.title, anchor,
+      meta:[ metaH(H(eventMetaText(d))) ], text:d.desc, images:allPhotos(d.photos) });
+    case 'pub': {
+      const journal = d.journal + (d.volume ? '  ·  Vol ' + d.volume : '') + (d.issue ? ', Issue ' + d.issue : '');
+      return flowHtml({ kicker:{ text:'PUBLICATION' + (d.indexing ? '  ·  ' + d.indexing : ''), color:'6B4C9A' }, title:d.title, anchor,
+        meta:[ metaH(H(journal)), metaH(`<b>Authors:</b> <span style="color:#1B1B18">${H(d.authors)}</span>`, true), metaH(H(formatDate(d.date))) ],
+        text:d.abstract, images:allPhotos(d.photos) });
+    }
+    case 'conf': return flowHtml({ kicker:{ text:'CONFERENCE PRESENTATION', color:'2C5F8A' }, title:d.paperTitle, anchor,
+      meta:[ metaH(H(d.confName)) ].concat(d.confDetails ? [ metaH(H(d.confDetails), true) ] : []).concat(confAuthorsHtml(d))
+        .concat([ metaH(`<b>Presented by</b> <span style="color:#1B1B18">${H(d.presenter)}   ·   ${H(formatDate(d.date))}</span>`, true) ]),
+      text:d.abstract, images:allPhotos(d.photos) });
+    case 'blog': return flowHtml({ kicker:{ text:'RESEARCH BLOG', color:'3A8C64' }, title:d.title, anchor,
+      meta:[ metaH(H(`By ${d.author}   ·   ${formatDate(d.date)}`)) ], text:d.content, images:allPhotos(d.photos) });
+    case 'uc': {
+      const meta = [ metaH(`<b>${H(formatDate(d.date))}</b>`, true) ];
+      if(d.link){ const url = /^https?:\/\//i.test(d.link) ? d.link : 'https://' + d.link.replace(/^\/+/, '');
+        meta.push(metaH(`<b>Details &amp; registration:</b> <a href="${H(url)}">${H(d.link)}</a>`, true)); }
+      return flowHtml({ kicker:{ text:'UPCOMING', color:'C1722C' }, title:d.title, anchor, meta, text:d.note || '',
+        images: d.brochure ? [ { url:d.brochure, w:d.brochureW, h:d.brochureH } ] : [], floatMax:{ w:290, h:400 } });
+    }
+    case 'desk': return flowHtml({ title:d.title || '', anchor, meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
+    case 'guest': return flowHtml({ kicker:{ text:'GUEST EDITORIAL', color:'A8842F' }, title:d.title || 'Guest Editorial', anchor,
+      meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
+    case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
+      text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
+    case 'puzzle': {
+      let h = `<div class="pz"${anchor ? ` id="${anchor}"` : ''}>`;
+      if(d.title) h += `<div class="pt">${H(d.title)}</div>`;
+      if(d.author) h += `<div class="pa">Contributed by ${H(d.author)}</div>`;
+      (d.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => h += `<p>${H(t)}</p>`);
+      const ims = allPhotos(entryPhotos(d));
+      if(ims.length) h += `<div class="imgs">` + ims.map(im => { const z = imageDimsFit(im.w, im.h, ims.length > 1 ? 320 : 540, ims.length > 1 ? 420 : 600);
+        return `<img src="${im.url}" style="width:${z.width}px;height:${z.height}px">`; }).join('') + `</div>`;
+      return h + `</div>`;
+    }
+  }
+  return '';
+}
+
+/* ---- cover ---- */
+function logoDataUrl(){ return CUSTOM_LOGO_BASE64 || ('data:image/png;base64,' + AMITY_LOGO_BASE64); }
+function coverIndexHtml(spec, ptSize){
+  let h = `<div class="it" style="font-size:${ptSize + 1}pt">IN THIS ISSUE</div>`;
+  if(!spec.length) h += `<div style="font-style:italic">No content recorded yet.</div>`;
+  spec.forEach(s => {
+    if(s.kind === 'link'){ h += `<a class="sl" href="#${s.anchor}" style="font-size:${ptSize + 0.5}pt">${H(s.title.toUpperCase())}</a>`; return; }
+    h += `<div class="gh${s.kind === 'list' ? ' up' : ''}" style="font-size:${ptSize + 0.5}pt">${H(s.title.toUpperCase())}</div>`;
+    s.items.forEach(e => {
+      h += `<div class="row" style="font-size:${ptSize}pt"><span class="d">${H(shortDateLabel(e.date))}</span>` +
+        (s.kind === 'group' && e.anchor ? `<a href="#${e.anchor}">${H(e.title)}</a>` : `<span>${H(e.title)}</span>`) + `</div>`;
+    });
+  });
+  return h;
+}
+function coverHtml(plan, spec, ptSize, heroUrl, split){
+  const linkOrText = (text, url, bold) => url ? `<a href="${H(url)}"${bold ? ' style="font-weight:700"' : ''}>${H(text)}</a>` : `<span${bold ? ' style="font-weight:700"' : ''}>${H(text)}</span>`;
+  const maybeUrl = str => !str ? null : /^https?:\/\//i.test(str) ? str : (/\./.test(str) && !/\s/.test(str) && !/^\[/.test(str)) ? 'https://' + str.replace(/^\/+/, '') : null;
+  const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
+  const mvPct = Math.round((split || 0.6) * 100);
+  return `<section class="cover">
+    <div class="strip">${H(plan.issuePeriod.toUpperCase())}</div>
+    <div class="mast"><div class="lg"><img src="${logoDataUrl()}"></div>
+      <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES</div><div class="nw">NEWSLETTER</div></div></div>
+    ${heroUrl ? `<img class="hero" src="${heroUrl}">` : ''}
+    <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
+    <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3><p>${H(MISSION_TEXT)}</p><h3>Our Vision</h3><p style="margin:0">${H(VISION_TEXT)}</p></div>
+      <div class="idx" style="flex:1">${coverIndexHtml(spec, ptSize)}</div></div>
+    <div class="contact">${linkOrText(CONTACT_WEBSITE, maybeUrl(CONTACT_WEBSITE), true)}<span class="sp">·</span>${linkOrText(CONTACT_EMAIL, emailUrl)}<span class="sp">·</span>${linkOrText(CONTACT_SOCIAL, maybeUrl(CONTACT_SOCIAL))}</div>
+  </section>`;
+}
+/* Measure the cover off-screen and pick the largest index text / tallest photo
+   that keeps it on one page (same rules as the Word cover). */
+async function fitCoverHtml(plan, spec, measureBox){
+  const info = await loadHeroInfo(plan.heroSrc);
+  const limit = Math.floor((297 - PDF_PAGE.firstTop - PDF_PAGE.bottom) * 96 / 25.4) - 14;
+  const heights = (pt, heroUrl, split) => { measureBox.innerHTML = coverHtml(plan, spec, pt, heroUrl, split); return measureBox.firstElementChild.getBoundingClientRect().height; };
+  const waitImgs = () => Promise.all(Array.from(measureBox.querySelectorAll('img')).map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+  const fullUrl = info ? info.src.url : null;
+  for(const pt of [10, 9.5, 9, 8.5, 8, 7.5, 7]){
+    for(const split of [0.6, 0.55, 0.5]){
+      heights(pt, fullUrl, split); await waitImgs();
+      if(measureBox.firstElementChild.getBoundingClientRect().height <= limit) return { html: measureBox.innerHTML, fits:true };
+    }
+  }
+  if(info){
+    for(const pt of [8, 7.5, 7]){
+      const noHero = heights(pt, null, 0.5);
+      const h = Math.floor(limit - noHero - 2);
+      if(h >= 200){
+        const cropped = heroAtHeight(info, Math.min(h, info.fullH));
+        const url = cropped ? 'data:image/jpeg;base64,' + uint8ToBase64(cropped.bytes) : fullUrl;
+        heights(pt, url, 0.5); await waitImgs();
+        if(measureBox.firstElementChild.getBoundingClientRect().height <= limit) return { html: measureBox.innerHTML, fits:true };
+      }
+    }
+  }
+  return { html: measureBox.innerHTML, fits:false };
+}
+function uint8ToBase64(bytes){
+  let s = ''; const chunk = 0x8000;
+  for(let i = 0; i < bytes.length; i += chunk) s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  return btoa(s);
+}
+
+/* ---- contents page (annual / bi-annual; also the overflow list for a very full monthly issue) ---- */
+function tocHtml(toc, anchor){
+  let h = `<section class="toc"><h1 class="sh" id="${anchor}">TABLE OF CONTENTS</h1>`;
+  toc.forEach(sec => {
+    h += `<a class="l1" href="#${sec.anchor || REG.sections[sec.key]}"><span class="tt">${H(sec.title.toUpperCase())}</span><span class="dots"></span></a>`;
+    sec.months.forEach(mo => {
+      if(mo.label) h += `<a class="l2" href="#${mo.anchor}"><span class="tt">${H(mo.label.toUpperCase())}</span><span class="dots"></span></a>`;
+      mo.items.forEach(it => h += `<a class="l3" href="#${it.anchor}"><span class="tt">${it.date ? `<span class="dd">${H(shortDateLabel(it.date))}</span>` : ''}${H(it.title || '(untitled)')}</span><span class="dots"></span></a>`);
+    });
+  });
+  return h + `</section>`;
+}
+function contentsFromIndexSpec(spec){
+  // turns a monthly index spec into the same shape as the period TOC
+  return spec.filter(s => s.kind !== 'link' || s.title !== 'Full Contents').map(s => ({
+    title: s.title, anchor: s.anchor || REG.sections[s.sectionKey] || (s.items && s.items[0] && s.items[0].anchor),
+    months: s.items ? [ { label:null, items: s.items.filter(e => e.anchor).map(e => ({ date:e.date, title:e.title, anchor:e.anchor })) } ] : []
+  }));
+}
+
+/* ---- body ---- */
+function bodyHtml(plan){
+  let html = '';
+  const toc = walkPlan(plan, groups => {
+    html += `<section class="stack">`;
+    groups.forEach(({ g, entries }, gi) => {
+      if(gi > 0) html += `<div class="gap"></div>`;
+      html += `<h1 class="sh" id="${sectionAnchor(g.key)}">${H(g.heading)}</h1>`;
+      if(g.subtitle) html += `<div class="sub">${H(g.subtitle)}</div>`;
+      let fresh = true;
+      entries.forEach(e => {
+        if(e.marker){ html += `<div class="mon" id="${e.anchor}">${H(e.marker.toUpperCase())}</div>`; fresh = true; return; }
+        if(!fresh) html += `<hr class="sep">`;
+        html += pdfItemHtml(e.item, e.anchor);
+        fresh = false;
+      });
+    });
+    html += `</section>`;
+  });
+  return { html, toc };
+}
+
+async function renderPdfIssue(plan, progress){
+  progress = progress || (() => {});
+  progress('Loading PDF tools…');
+  await loadPdfLibs();
+  if(document.fonts && document.fonts.ready) await document.fonts.ready;
+
+  resetRegistry();
+  const { html: body, toc } = bodyHtml(plan);
+
+  // off-screen work area (must be laid out, so it is not display:none)
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-20000px;top:0;width:900px;z-index:-1;';
+  document.body.appendChild(host);
+  const measureStyle = document.createElement('style');
+  measureStyle.textContent = pdfCss().replace(/@page[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+  document.head.appendChild(measureStyle);
+  let previewer = null;
   try{
-    const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+    progress('Laying out the cover…');
+    const measure = document.createElement('div');
+    measure.className = 'nlp';
+    measure.style.width = Math.round((210 - 2 * PDF_PAGE.side) * 96 / 25.4) + 'px';
+    host.appendChild(measure);
+    let spec, contents = '';
+    if(plan.withToc){
+      const tocAnchor = newAnchor('toc');
+      spec = [ { kind:'link', title:'Table of Contents', anchor:tocAnchor } ].concat(toc.map(sec => ({ kind:'link', title:sec.title, anchor:REG.sections[sec.key] })));
+      contents = tocHtml(toc, tocAnchor);
+    } else {
+      spec = plan.index();
+    }
+    let cover = await fitCoverHtml(plan, spec, measure);
+    if(!cover.fits && !plan.withToc){
+      // very full monthly issue: sections only on the cover + a linked contents page
+      const contentsAnchor = newAnchor('contents');
+      const full = spec;
+      spec = compactIndexSpec(full, contentsAnchor);
+      contents = tocHtml(contentsFromIndexSpec(full), contentsAnchor);
+      cover = await fitCoverHtml(plan, spec, measure);
+    }
+    measure.remove();
+    measureStyle.remove();
 
-    let allIds = [], allData = {}, allPubIds = [], allPubData = {}, allConfIds = [], allConfData = {};
-    months.forEach(m => {
-      sortedIds(allEventsByMonth[m]||{}).forEach(id => { allIds.push(id); allData[id] = allEventsByMonth[m][id]; });
-      sortedIds(allPublicationsByMonth[m]||{}).forEach(id => { allPubIds.push(id); allPubData[id] = allPublicationsByMonth[m][id]; });
-      sortedIds(allConferencesByMonth[m]||{}).forEach(id => { allConfIds.push(id); allConfData[id] = allConferencesByMonth[m][id]; });
+    const source = document.createElement('div');
+    source.className = 'nlp';
+    source.innerHTML = cover.html + contents + body;
+    const target = document.createElement('div');
+    target.className = 'nlp';
+    host.appendChild(target);
+
+    progress('Paginating…');
+    previewer = new Paged.Previewer();
+    const frag = document.createDocumentFragment();
+    frag.appendChild(source);
+    await previewer.preview(frag, [ { 'newsletter.css': pdfCss(plan) } ], target);
+
+    const pages = Array.from(target.querySelectorAll('.pagedjs_page'));
+    // running header on every page except the cover: logo, strapline, date, gold rule
+    pages.forEach((page, i) => {
+      if(i === 0) return;
+      page.style.position = 'relative';
+      const hd = document.createElement('div');
+      hd.className = 'rh';
+      hd.style.cssText = `position:absolute; left:${PDF_PAGE.side}mm; right:${PDF_PAGE.side}mm; top:${PDF_PAGE.top - 12.5}mm; height:10mm;`;
+      hd.innerHTML = `<img src="${logoDataUrl()}"><span class="st">${H(plan.strapline)}</span><span class="dt">${H(plan.dateRange)}</span>`;
+      page.appendChild(hd);
     });
-
-    const annualDateRange = issueDateRangeLabelYear(year);
-    const upConfs = getActiveUpcomingConferences();
-    const upcoming = getUpcomingEvents(6);
-
-    resetRegistry();
-    /* Annual edition: each section once (Editor's Desk, Guest Editorials, event
-       categories, Publications, Conferences, Research Blog, Upcoming
-       Conferences, Puzzle), and inside each section the content month by month
-       under a gold month sub-heading. Every item gets a bookmark so the Table
-       of Contents can link to it and show its page number. */
-    const CATS = ['Academic','Research','Cultural','Social','Other'];
-    const catOf = e => CATS.includes(e.category) ? e.category : 'Other';
-    const toc = [];   // [{ title, key, months:[{ label, items:[{ date, title, anchor }] }] }]
-    /* list(m) → [{ title, date, make(anchor) → builder }] */
-    const section = (heading, key, tocTitle, list, byMonth) => {
-      const tocSec = { title:tocTitle, key, months:[] };
-      const items = [];
-      const add = (label, entries) => {
-        if(!entries.length) return;
-        const mo = { label, items:[] };
-        if(label) items.push({ marker:label, tc:true });
-        entries.forEach(it => {
-          const anchor = newAnchor('toc');
-          mo.items.push({ date:it.date, title:it.title, anchor });
-          const d = it.date ? formatDate(it.date).replace(/, \d{4}/,'') + '  ·  ' : '';
-          REG.tc[anchor] = { text: d + (it.title || ''), level:3 };
-          items.push(it.make(anchor));
-        });
-        tocSec.months.push(mo);
-      };
-      if(byMonth === false) add(null, list(null));
-      else months.forEach(m => add(monthLabel(m), list(m)));
-      if(items.length) toc.push(tocSec);
-      return { heading, anchorKey:key, items, tc: tocTitle.toUpperCase() };
-    };
-    const evDesk = m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { title: d.title || 'From the Editor\u2019s Desk', make: a => deskItem(d, a) } ] : []; };
-    const evGuest = m => guestEditorialEntries(m).filter(hasText).map(g => ({ title: g.title || 'Guest Editorial', make: a => guestItem(g, a) }));
-    const evCat = cat => m => { const d = allEventsByMonth[m] || {};
-      return sortedIds(d).filter(id => catOf(d[id]) === cat).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildEventArticle(d[id], a, pb, sy) })); };
-    const evPub = m => { const d = allPublicationsByMonth[m] || {};
-      return sortedIds(d).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildPublicationArticle(d[id], a, pb, sy) })); };
-    const evConf = m => { const d = allConferencesByMonth[m] || {};
-      return sortedIds(d).map(id => ({ title:d[id].paperTitle, date:d[id].date, make: a => (pb, sy) => buildConferenceArticle(d[id], a, pb, sy) })); };
-    // the annual edition prints each blog once, in the month it was written (no carry-forward)
-    const evBlog = m => { const d = allBlogsByMonth[m] || {};
-      return sortedIds(d).map(id => ({ title:d[id].title, date:d[id].date, make: a => (pb, sy) => buildFlowArticle({
-        kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:d[id].title, anchor:a,
-        metaParas:[ metaLine(`By ${d[id].author}   ·   ${formatDate(d[id].date)}`) ],
-        text:d[id].content, images: allPhotos(d[id].photos), pageBreak:pb, startY:sy }) })); };
-    const evUC = () => upConfs.map(u => ({ title:u.title, date:u.date, make: a => (pb, sy) => buildUpcomingConferenceArticle(u, a, pb, sy) }));
-    const evPuzzle = m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map(pz => ({ title: pz.title || 'Puzzle', make: a => puzzleItem(pz, a) }));
-
-    let body = [];
-    body = body.concat(buildStackedSections([ section("FROM THE EDITOR\u2019S DESK", 'EDITORS DESK', 'From the Editor\u2019s Desk', evDesk) ]));
-    body = body.concat(buildStackedSections([ section('GUEST EDITORIALS', 'GUEST EDITORIALS', 'Guest Editorials', evGuest) ]));
-    body = body.concat(buildStackedSections(CATS.map(cat => section(cat.toUpperCase(), 'CAT ' + cat, cat, evCat(cat)))));
-    body = body.concat(buildStackedSections([ section('PUBLICATIONS', 'PUBLICATIONS', 'Publications', evPub) ]));
-    body = body.concat(buildStackedSections([ section('CONFERENCE PRESENTATIONS', 'CONFERENCE PRESENTATIONS', 'Conference Presentations', evConf) ]));
-    body = body.concat(buildStackedSections([ section('RESEARCH BLOG', 'RESEARCH BLOG', 'Research Blog', evBlog) ]));
-    body = body.concat(buildStackedSections([ section('UPCOMING CONFERENCES & WORKSHOPS', 'UPCOMING CONFERENCES & WORKSHOPS', 'Upcoming Conferences & Workshops', evUC, false) ]));
-    body = body.concat(buildStackedSections([ section('PUZZLE', 'PUZZLE', 'Puzzle', evPuzzle) ]));
-
-    /* Cover index: section names only, each linked to its section */
-    const tocAnchor = newAnchor('toc');
-    const coverIndex = [ { kind:'link', title:'Table of Contents', anchor:tocAnchor } ]
-      .concat(toc.map(sec => ({ kind:'link', title:sec.title, anchor:REG.sections[sec.key] })));
-    const contentsPage = buildTableOfContents(toc, tocAnchor);
-
-    const cover = await buildCover({
-      issuePeriod: `Annual Edition · ${annualDateRange}`,
-      heroSrc: resolveHeroSource(allIds, allData),
-      indexSpec: coverIndex,
-      contentsPage
-    });
-
-    const doc = new Document({
-      features: { updateFields: true }, // Word asks to update fields on open → builds the Table of Contents with real page numbers
-      styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } }, paragraphStyles: tocStyles() },
-      sections: [{
-        properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
-        headers: { default: buildRunningHeader(`SCHOOL OF PHYSICAL SCIENCES · ANNUAL NEWSLETTER ${year}`, annualDateRange), first: blankHeader() },
-        footers: { default: buildRunningFooter(), first: buildRunningFooter() },
-        children: [ ...cover, ...body ]
-      }]
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `Annual_Newsletter_${year}.docx`);
-  }catch(err){
-    console.error(err);
-    alert('Could not generate the annual newsletter: ' + err.message);
-  }finally{
-    btn.disabled = false; btn.textContent = origText;
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'mm', format:'a4', compress:true });
+    for(let i = 0; i < pages.length; i++){
+      progress(`Creating PDF page ${i + 1} of ${pages.length}…`);
+      const page = pages[i];
+      const canvas = await html2canvas(page, { scale:2, useCORS:true, backgroundColor:'#ffffff', logging:false });
+      if(i > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      // keep the links clickable
+      const pr = page.getBoundingClientRect(), k = 210 / pr.width;
+      page.querySelectorAll('a[href]').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const r = a.getBoundingClientRect();
+        if(!r.width || !r.height) return;
+        const box = [ (r.left - pr.left) * k, (r.top - pr.top) * k, r.width * k, r.height * k ];
+        if(href.startsWith('#')){
+          const t = href.length > 1 ? target.querySelector('[id="' + href.slice(1) + '"]') : null;
+          const tp = t ? pages.indexOf(t.closest('.pagedjs_page')) : -1;
+          if(tp >= 0) pdf.link(box[0], box[1], box[2], box[3], { pageNumber: tp + 1 });
+        } else if(/^(https?:|mailto:)/i.test(href)){
+          pdf.link(box[0], box[1], box[2], box[3], { url: href });
+        }
+      });
+    }
+    return pdf.output('blob');
+  } finally {
+    if(previewer && previewer.polisher && previewer.polisher.destroy) previewer.polisher.destroy();
+    measureStyle.remove();
+    host.remove();
   }
 }
 
@@ -3334,7 +3998,9 @@ async function generateExcel(){
 
 async function generateAnnualExcel(){
   const year = document.getElementById('yearSelect').value;
-  const months = allMonthKeys().filter(m => m.startsWith(year + '-')).sort();
+  const edKey = document.getElementById('editionSelect').value;
+  const months = editionMonths(year, edKey);
+  const edFile = (EDITIONS[edKey] || EDITIONS.full).file;
   const totalIds = months.reduce((sum,m) => sum + Object.keys(allEventsByMonth[m]||{}).length, 0);
   const totalPubs = months.reduce((sum,m) => sum + Object.keys(allPublicationsByMonth[m]||{}).length, 0);
   const totalConfs = months.reduce((sum,m) => sum + Object.keys(allConferencesByMonth[m]||{}).length, 0);
@@ -3426,7 +4092,7 @@ async function generateAnnualExcel(){
     ws2.addRow({ cat:'Generated', n: new Date().toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'}) });
 
     const buf = await wb.xlsx.writeBuffer();
-    saveAs(new Blob([buf], { type:'application/octet-stream' }), `Annual_Events_${year}.xlsx`);
+    saveAs(new Blob([buf], { type:'application/octet-stream' }), `${edFile}_Report_${year}.xlsx`);
   }catch(err){
     console.error(err);
     alert('Could not generate the annual Excel report: ' + err.message);

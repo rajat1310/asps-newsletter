@@ -575,21 +575,16 @@
 
     <!-- ---- Upcoming Event form ---- -->
     <div class="card subview" id="subview-upcoming">
-      <p class="section-desc" style="margin-top:0;">Know about something happening soon? Add it here and it'll appear in the "Upcoming Events" block on the cover of the newsletter — even before the event itself takes place.</p>
+      <p class="section-desc" style="margin-top:0;">Know about something happening soon? Add it here and it appears, with its details, on the "Upcoming Events" page at the end of every monthly newsletter up to the month it takes place.</p>
       <form id="upcomingForm" onsubmit="return false;">
         <label class="first">Event Title *</label>
         <input type="text" id="u2_title" placeholder="e.g. National Science Day Celebration" required />
 
-        <div class="row2">
-          <div>
-            <label>Date *</label>
-            <input type="date" id="u2_date" required />
-          </div>
-          <div>
-            <label>Note (optional)</label>
-            <input type="text" id="u2_note" placeholder="Venue, time, or a short teaser line" />
-          </div>
-        </div>
+        <label>Date *</label>
+        <input type="date" id="u2_date" required />
+
+        <label>Details (optional)</label>
+        <textarea id="u2_note" maxlength="3000" style="min-height:120px;" placeholder="Agenda, venue, time, who should attend… Put each agenda point on its own line."></textarea>
 
         <button class="primary" id="submitBtn-upcoming" onclick="submitUpcomingEvent()">Add to Upcoming Events</button>
         <div class="msg" id="submitMsg-upcoming"></div>
@@ -1341,7 +1336,7 @@ function getSubmitter(){
 /* "Submitted by" line on the admin cards */
 function submitterHtml(x){
   const sb = x && x.submittedBy;
-  const when = x && x.submittedAt ? new Date(x.submittedAt).toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+  const when = x && x.submittedAt > 1e11 ? new Date(x.submittedAt).toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
   if(!sb) return `<div class="submitter none">📨 Submitted by: <i>not recorded</i>${when ? ' · ' + when : ''}</div>`;
   return `<div class="submitter">📨 Submitted by <b>${escapeHtml(sb.name)}</b> (${escapeHtml(sb.role || '')}) · ` +
     `<a href="mailto:${escapeHtml(sb.email)}">${escapeHtml(sb.email)}</a>${sb.phone ? ' · ' + escapeHtml(sb.phone) : ''}${when ? ' · ' + when : ''}</div>`;
@@ -2157,9 +2152,9 @@ function renderUpcomingEvents(){
     <div class="event-card">
       <div class="top">
         <div>
-          <h3 style="margin-top:0;">${escapeHtml(u.title)}</h3>
+          <h3 style="margin-top:0;">${escapeHtml(u.title)}${(u.date||'') < upcomingCutoff() ? ` <span class="badge other" style="margin-left:6px;">Past · printed only up to the ${monthLabel((u.date||'').slice(0,7))} issue</span>` : ''}</h3>
           <div class="event-meta"><span>📅 ${formatDate(u.date)}</span></div>
-          ${u.note ? `<div class="event-desc" style="margin-top:4px;">${escapeHtml(u.note)}</div>` : ''}
+          ${u.note ? `<div class="event-desc" style="margin-top:4px; white-space:pre-line;">${escapeHtml(u.note)}</div>` : ''}
         </div>
         <div class="event-actions"><button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
       </div>
@@ -2187,7 +2182,7 @@ function renderUpcomingConferences(){
     <div class="event-card">
       <div class="top">
         <div>
-          <h3 style="margin-top:0;">${escapeHtml(u.title)}</h3>
+          <h3 style="margin-top:0;">${escapeHtml(u.title)}${(u.date||'') < upcomingCutoff() ? ` <span class="badge other" style="margin-left:6px;">Past · printed only up to the ${monthLabel((u.date||'').slice(0,7))} issue</span>` : ''}</h3>
           <div class="event-meta">
             <span>📅 ${formatDate(u.date)}</span>
             ${u.link ? `<span>🔗 ${escapeHtml(u.link)}</span>` : ''}
@@ -2352,24 +2347,25 @@ function resolveHeroSource(ids, data){
   return null;
 }
 
-/* Admin-curated Upcoming Events (from the flat upcomingEvents collection),
-   filtered to today-or-later and sorted soonest first — for the cover block */
-function getUpcomingEvents(limit){
-  const todayStr = new Date().toISOString().slice(0,10);
-  const items = Object.values(allUpcomingEvents).filter(u => (u.date||'') >= todayStr);
-  items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-  return items.slice(0, limit);
-}
-
-/* Upcoming Conferences & Workshops still ahead of today, as [{ id, ...data }] —
-   shown in every issue until their date passes, then dropped automatically */
-function getActiveUpcomingConferences(){
-  const todayStr = new Date().toISOString().slice(0,10);
-  const items = Object.entries(allUpcomingConferences)
+/* Upcoming Events and Upcoming Conferences & Workshops for a monthly issue.
+   An item stays in the issues up to and including the month it happens in,
+   and drops out from the next month's issue onward. Based on the issue's
+   month (not today's date), so re-making an old issue shows what was
+   upcoming at that time. */
+function upcomingCutoff(monthKey){ return (monthKey || new Date().toISOString().slice(0,7)) + '-01'; }
+function getUpcomingEvents(monthKey){
+  const from = upcomingCutoff(monthKey);
+  return Object.entries(allUpcomingEvents)
     .map(([id, u]) => Object.assign({ id }, u))
-    .filter(u => (u.date||'') >= todayStr);
-  items.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-  return items;
+    .filter(u => (u.date||'') >= from)
+    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+}
+function getActiveUpcomingConferences(monthKey){
+  const from = upcomingCutoff(monthKey);
+  return Object.entries(allUpcomingConferences)
+    .map(([id, u]) => Object.assign({ id }, u))
+    .filter(u => (u.date||'') >= from)
+    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
 }
 
 /* "1-31 July 2026" style date range for a "YYYY-MM" month key */
@@ -2412,14 +2408,12 @@ function buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs
   if(upConfs && upConfs.length){
     spec.push({ kind:'group', title:'Upcoming Conferences & Workshops', sectionKey:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ title:u.title, date:u.date, anchor:REG.items['uc:' + u.id] })) });
   }
-  if(upcoming && upcoming.length){
-    spec.push({ kind:'list', title:'Upcoming Events', items: upcoming.map(u => ({ title:u.title, date:u.date })) });
-  }
   // Section-name-only links go at the very bottom of the index
   if(REG.sections['EDITORS DESK']) spec.push({ kind:'link', title:'From the Editor\u2019s Desk', anchor:REG.sections['EDITORS DESK'] });
   if(REG.sections['GUEST EDITORIALS']) spec.push({ kind:'link', title:'Guest Editorials', anchor:REG.sections['GUEST EDITORIALS'] });
   if(REG.sections['RESEARCH BLOG']) spec.push({ kind:'link', title:'Research Blog', anchor:REG.sections['RESEARCH BLOG'] });
   if(REG.sections['PUZZLE']) spec.push({ kind:'link', title:'Puzzle', anchor:REG.sections['PUZZLE'] });
+  if(REG.sections['UPCOMING EVENTS']) spec.push({ kind:'link', title:'Upcoming Events', anchor:REG.sections['UPCOMING EVENTS'] });
   return spec;
 }
 
@@ -3343,6 +3337,7 @@ function itemTocInfo(it){
     case 'guest':   return { title:d.title || 'Guest Editorial' };
     case 'puzzle':  return { title:d.title || 'Puzzle' };
     case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
+    case 'upevent': return { title:d.title, date:d.date };
     default:        return { title:d.title, date:d.date };
   }
 }
@@ -3355,8 +3350,8 @@ function monthlyPlan(month){
   const desk = editorsDeskEntry(month);
   const guests = guestEditorialEntries(month).filter(hasText);
   const puzzles = monthEntries(allPuzzlesByMonth, month).filter(hasPuzzle);
-  const upConfs = getActiveUpcomingConferences();
-  const upcoming = getUpcomingEvents(6);
+  const upConfs = getActiveUpcomingConferences(month);
+  const upcoming = getUpcomingEvents(month);
 
   const stacks = [];
   const add = groups => { groups = groups.filter(g => g.items.length); if(groups.length) stacks.push(groups); };
@@ -3371,6 +3366,8 @@ function monthlyPlan(month){
     items: blogInfo.ids.map(id => ({ type:'blog', data:blogInfo.data[id], key:'blog:' + id })) }]);
   add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
   add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) })) }]);
+  // last page: Upcoming Events with their notes (agenda, venue, details)
+  add([{ heading:'UPCOMING EVENTS', key:'UPCOMING EVENTS', items: upcoming.map(u => ({ type:'upevent', data:u, key:'ue:' + u.id })) }]);
 
   const hasContent = ids.length || pubIds.length || confIds.length || blogInfo.ids.length || hasText(desk) || guests.length || puzzles.length;
   const range = issueDateRangeLabel(month);
@@ -3475,6 +3472,13 @@ function walkPlan(plan, onGroup){
 }
 
 /* ---------- Word renderer ---------- */
+function upcomingEventItem(u, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:{ text:'UPCOMING EVENT', color:'C1722C' }, title: u.title, anchor,
+    metaParas:[ metaLine(formatDate(u.date), { italics:false, bold:true, color:'132340', size:BODY_SIZE - 1 }) ],
+    text: u.note || '', images:[], pageBreak:pb, startY:sy
+  });
+}
 function messageItem(m, anchor){
   return (pb, sy) => buildFlowArticle({
     kicker:null, title: m.name || '', anchor,
@@ -3495,6 +3499,7 @@ function wordItemBuilder(it, anchor){
     case 'guest':   return guestItem(d, anchor);
     case 'puzzle':  return puzzleItem(d, anchor);
     case 'message': return messageItem(d, anchor);
+    case 'upevent': return upcomingEventItem(d, anchor);
   }
 }
 async function renderWordIssue(plan){
@@ -3756,6 +3761,8 @@ function pdfItemHtml(it, anchor){
       meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
+    case 'upevent': return flowHtml({ kicker:{ text:'UPCOMING EVENT', color:'C1722C' }, title:d.title, anchor,
+      meta:[ metaH(`<b>${H(formatDate(d.date))}</b>`, true) ], text:d.note || '', images:[] });
     case 'puzzle': {
       let h = `<div class="pz"${anchor ? ` id="${anchor}"` : ''}>`;
       if(d.title) h += `<div class="pt">${H(d.title)}</div>`;

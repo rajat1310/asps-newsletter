@@ -331,6 +331,7 @@
       <div class="subtabs">
         <button class="subtab active" onclick="switchSubtab('event')">Event Report</button>
         <button class="subtab" onclick="switchSubtab('publication')">Publication</button>
+        <button class="subtab" onclick="switchSubtab('award')">Award / Achievement</button>
         <button class="subtab" onclick="switchSubtab('conference')">Conference Presentation</button>
         <button class="subtab" onclick="switchSubtab('blog')">Research Blog</button>
         <button class="subtab" onclick="switchSubtab('upcoming')">Upcoming Event</button>
@@ -436,6 +437,53 @@
     </div>
 
     <!-- ---- Publication form ---- -->
+    <!-- ---- Award / Achievement form ---- -->
+    <div class="card subview" id="subview-award">
+      <p class="section-desc" style="margin-top:0;">Received an award, honour, fellowship, grant, patent or other recognition? Share it here. It appears in the "Awards &amp; Achievements" section of the newsletter for the month of the date you give.</p>
+      <form id="awardForm" onsubmit="return false;">
+        <label class="first">Award / Achievement *</label>
+        <input type="text" id="a_title" placeholder="e.g. Best Paper Award at ICOP 2026" />
+
+        <div class="row2">
+          <div>
+            <label>Type *</label>
+            <select id="a_type">
+              <option>Award</option>
+              <option>Honour / Fellowship</option>
+              <option>Research Grant / Funding</option>
+              <option>Patent</option>
+              <option>Recognition / Appointment</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Date *</label>
+            <input type="date" id="a_date" />
+          </div>
+        </div>
+
+        <label>Recipient(s) *</label>
+        <input type="text" id="a_recipients" placeholder="e.g. Dr. A. Sharma; Ms. R. Kaur (Research Scholar)" />
+
+        <label>Conferred by / Awarding body *</label>
+        <input type="text" id="a_by" placeholder="e.g. Indian Physics Association, ICOP 2026, DST-SERB" />
+
+        <label>Details *</label>
+        <textarea id="a_desc" placeholder="What the award is for, its significance, amount of a grant, patent number, etc."></textarea>
+
+        <label>Photos (certificate, ceremony)</label>
+        <div class="photo-drop" onclick="document.getElementById('a_photos').click()">
+          <input type="file" id="a_photos" accept="image/*" multiple onchange="handlePhotoSelect('award', event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">JPG/PNG, up to 6 images.</div>
+        </div>
+        <div class="thumbs" id="thumbs-award"></div>
+
+        <button class="primary" id="submitBtn-award" onclick="submitAward()">Submit Award / Achievement</button>
+        <div class="msg" id="submitMsg-award"></div>
+      </form>
+    </div>
+
     <div class="card subview" id="subview-publication">
       <form id="pubForm" onsubmit="return false;">
         <label class="first">Paper Title *</label>
@@ -813,6 +861,11 @@
     </div>
 
     <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Awards &amp; Achievements This Month</h2>
+      <div id="awardList"></div>
+    </div>
+
+    <div class="card">
       <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Conference Presentations This Month</h2>
       <div id="confList"></div>
     </div>
@@ -1035,7 +1088,7 @@ function switchTab(tab){
 }
 
 function switchSubtab(name){
-  ['event','publication','conference','blog','upcoming','upcomingconf','editorial','puzzle'].forEach(n => {
+  ['event','publication','award','conference','blog','upcoming','upcomingconf','editorial','puzzle'].forEach(n => {
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
@@ -1044,7 +1097,7 @@ function switchSubtab(name){
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], conference: [], blog: [], editorial: [], puzzle: [], desk: [] };
+let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], desk: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1180,6 +1233,37 @@ function submitPublication(){
     })
     .catch(err => showSubmitMsg('publication', false, 'Could not submit: ' + err.message))
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Publication'; });
+}
+
+/* ---------------- Submit: Award / Achievement ---------------- */
+const AWARD_TYPES = ['Award','Honour / Fellowship','Research Grant / Funding','Patent','Recognition / Appointment','Other'];
+function submitAward(){
+  if(!firebaseReady){ showSubmitMsg('award', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
+  const v = id => document.getElementById(id).value.trim();
+  const title = v('a_title'), type = document.getElementById('a_type').value, recipients = v('a_recipients'),
+        awardedBy = v('a_by'), date = document.getElementById('a_date').value, desc = v('a_desc');
+  if(!title || !recipients || !awardedBy || !date || !desc){
+    showSubmitMsg('award', false, 'Please fill in all required fields.');
+    return;
+  }
+  const btn = document.getElementById('submitBtn-award');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  db.ref('awards/' + date.slice(0,7)).push({
+    submittedBy, title, type, recipients, awardedBy, date, desc,
+    photos: photoState.award.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
+    submittedAt: Date.now()
+  })
+    .then(() => {
+      showSubmitMsg('award', true, 'Award / achievement submitted successfully. Congratulations, and thank you!');
+      document.getElementById('awardForm').reset();
+      photoState.award = [];
+      renderThumbs('award');
+    })
+    .catch(err => showSubmitMsg('award', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Award / Achievement'; });
 }
 
 /* ---------------- Submit: Conference Presentation ---------------- */
@@ -1574,7 +1658,7 @@ function removeMessage(key){
 }
 
 /* ---------------- Backup & erase (start of a new year) ---------------- */
-const ERASE_PATHS = ['events','publications','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles'];
+const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles'];
 function downloadBackup(){
   if(!firebaseReady) return;
   db.ref('/').once('value').then(snap => {
@@ -1600,6 +1684,7 @@ function eraseAllData(){
 /* ---------------- Admin dashboard ---------------- */
 let allEventsByMonth = {};        // { "2026-07": { pushId: {...} } }
 let allPublicationsByMonth = {};
+let allAwardsByMonth = {};
 let allConferencesByMonth = {};
 let allBlogsByMonth = {};
 let allUpcomingEvents = {}; // flat: { pushId: {title, date, note} } — admin-curated, shown on every cover page
@@ -1620,6 +1705,7 @@ function allMonthKeys(){
   return Array.from(new Set([
     ...Object.keys(allEventsByMonth),
     ...Object.keys(allPublicationsByMonth),
+    ...Object.keys(allAwardsByMonth),
     ...Object.keys(allConferencesByMonth),
     ...Object.keys(allBlogsByMonth),
     ...Object.keys(allEditorialsByMonth),
@@ -1658,6 +1744,10 @@ function initDashboard(){
   db.ref('publications').on('value', snap => {
     allPublicationsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderPublicationsForMonth();
+  });
+  db.ref('awards').on('value', snap => {
+    allAwardsByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderAwardsForMonth();
   });
   db.ref('conferences').on('value', snap => {
     allConferencesByMonth = snap.val() || {};
@@ -1827,6 +1917,7 @@ function onMonthChange(){
   currentMonth = document.getElementById('monthSelect').value;
   renderEventsForMonth();
   renderPublicationsForMonth();
+  renderAwardsForMonth();
   renderConferencesForMonth();
   renderBlogsForMonth();
   renderEditorialsForMonth();
@@ -2057,6 +2148,42 @@ function renderPublicationsForMonth(){
       ${submitterHtml(p)}
     </div>`;
   }).join('');
+}
+function renderAwardsForMonth(){
+  const data = allAwardsByMonth[currentMonth] || {};
+  const ids = Object.keys(data).sort((a,b) => (data[a].date||'').localeCompare(data[b].date||''));
+  const listEl = document.getElementById('awardList');
+  if(!listEl) return;
+  if(ids.length === 0){
+    listEl.innerHTML = `<div class="empty-state">No awards or achievements submitted for ${monthLabel(currentMonth)} yet.</div>`;
+    return;
+  }
+  listEl.innerHTML = ids.map(id => {
+    const a = data[id];
+    const photos = (a.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
+    return `
+    <div class="event-card">
+      <div class="top">
+        <div>
+          <span class="badge cultural">${escapeHtml(a.type||'Award')}</span>
+          <h3>${escapeHtml(a.title)}</h3>
+          <div class="event-meta">
+            <span>📅 ${formatDate(a.date)}</span>
+            <span>🏛️ ${escapeHtml(a.awardedBy)}</span>
+          </div>
+          <div class="event-meta"><span>🏆 ${escapeHtml(a.recipients)}</span></div>
+        </div>
+        <div class="event-actions"><button class="danger" onclick="deleteAward('${currentMonth}','${id}')">Delete</button></div>
+      </div>
+      <div class="event-desc">${escapeHtml(a.desc)}</div>
+      ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${submitterHtml(a)}
+    </div>`;
+  }).join('');
+}
+function deleteAward(month, id){
+  if(!confirm('Delete this award / achievement? This cannot be undone.')) return;
+  db.ref('awards/' + month + '/' + id).remove();
 }
 function deletePublication(month, id){
   if(!confirm('Delete this publication? This cannot be undone.')) return;
@@ -2387,8 +2514,11 @@ function issueDateRangeLabelYear(year){
      { kind:'link',  title, anchor }                       — section name only (Editorial, Research Blog, Puzzle)
      { kind:'list',  title, items:[{date,title}] }         — listed, no page to link to (Upcoming Events)
    --------------------------------------------------------------------- */
-function buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs, upcoming }){
+function buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, confData, upConfs, upcoming }){
   const spec = [];
+  if(awIds && awIds.length){
+    spec.push({ kind:'group', title:'Awards & Achievements', sectionKey:'AWARDS', items: awIds.map(id => ({ title:awData[id].title, date:awData[id].date, anchor:REG.items['aw:' + id] })) });
+  }
 
   const order = ['Academic','Research','Cultural','Social','Other'];
   const groups = {};
@@ -3345,6 +3475,7 @@ function itemTocInfo(it){
 function monthlyPlan(month){
   const data = allEventsByMonth[month] || {}, ids = sortedIds(data);
   const pubData = allPublicationsByMonth[month] || {}, pubIds = sortedIds(pubData);
+  const awData = allAwardsByMonth[month] || {}, awIds = sortedIds(awData);
   const confData = allConferencesByMonth[month] || {}, confIds = sortedIds(confData);
   const blogInfo = findLatestBlogEntries(month);
   const desk = editorsDeskEntry(month);
@@ -3357,6 +3488,7 @@ function monthlyPlan(month){
   const add = groups => { groups = groups.filter(g => g.items.length); if(groups.length) stacks.push(groups); };
   add([{ heading:"FROM THE EDITOR’S DESK", key:'EDITORS DESK', items: hasText(desk) ? [ { type:'desk', data:desk, key:'desk:' + month } ] : [] }]);
   add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', items: guests.map((g, i) => ({ type:'guest', data:g, key:'guest:' + (g._id || i) })) }]);
+  add([{ heading:'AWARDS & ACHIEVEMENTS', key:'AWARDS', items: awIds.map(id => ({ type:'award', data:awData[id], key:'aw:' + id })) }]);
   add(CATS.map(cat => ({ heading:cat.toUpperCase(), key:'CAT ' + cat,
     items: ids.filter(id => catOf(data[id]) === cat).map(id => ({ type:'event', data:data[id], key:'ev:' + id })) })));
   add([{ heading:'PUBLICATIONS', key:'PUBLICATIONS', items: pubIds.map(id => ({ type:'pub', data:pubData[id], key:'pub:' + id })) }]);
@@ -3369,7 +3501,7 @@ function monthlyPlan(month){
   // last page: Upcoming Events with their notes (agenda, venue, details)
   add([{ heading:'UPCOMING EVENTS', key:'UPCOMING EVENTS', items: upcoming.map(u => ({ type:'upevent', data:u, key:'ue:' + u.id })) }]);
 
-  const hasContent = ids.length || pubIds.length || confIds.length || blogInfo.ids.length || hasText(desk) || guests.length || puzzles.length;
+  const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogInfo.ids.length || hasText(desk) || guests.length || puzzles.length;
   const range = issueDateRangeLabel(month);
   return {
     kind:'monthly', hasContent, stacks, withToc:false,
@@ -3377,7 +3509,7 @@ function monthlyPlan(month){
     strapline: 'SCHOOL OF PHYSICAL SCIENCES · NEWSLETTER',
     fileBase: `Newsletter_${month}`, label: monthLabel(month),
     heroSrc: resolveHeroSource(ids, data),
-    index: () => buildIndexSpec({ ids, data, pubIds, pubData, confIds, confData, upConfs, upcoming })
+    index: () => buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, confData, upConfs, upcoming })
   };
 }
 
@@ -3407,6 +3539,8 @@ function periodPlan(year, edKey){
     items: byMonth(m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { type:'desk', data:d, key:'desk:' + m } ] : []; }) }]);
   add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', tocTitle:'Guest Editorials',
     items: byMonth(m => guestEditorialEntries(m).filter(hasText).map((g, i) => ({ type:'guest', data:g, key:'guest:' + m + (g._id || i) }))) }]);
+  add([{ heading:'AWARDS & ACHIEVEMENTS', key:'AWARDS', tocTitle:'Awards & Achievements',
+    items: byMonth(m => { const d = allAwardsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'award', data:d[id], key:'aw:' + id })); }) }]);
   add(CATS.map(cat => ({ heading:cat.toUpperCase(), key:'CAT ' + cat, tocTitle:cat,
     items: byMonth(m => { const d = allEventsByMonth[m] || {}; return sortedIds(d).filter(id => catOf(d[id]) === cat).map(id => ({ type:'event', data:d[id], key:'ev:' + id })); }) })));
   add([{ heading:'PUBLICATIONS', key:'PUBLICATIONS', tocTitle:'Publications',
@@ -3472,6 +3606,16 @@ function walkPlan(plan, onGroup){
 }
 
 /* ---------- Word renderer ---------- */
+function awardItem(a, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:{ text:(a.type || 'Award').toUpperCase(), color:'A8842F' }, title: a.title, anchor,
+    metaParas:[
+      { runs:[ textRun('Recipient(s): ', { bold:true, color:'132340' }), textRun(a.recipients) ], chars:15 + (a.recipients || '').length },
+      metaLine(`${a.awardedBy}  ·  ${formatDate(a.date)}`),
+    ],
+    text: a.desc, images: allPhotos(a.photos), pageBreak:pb, startY:sy
+  });
+}
 function upcomingEventItem(u, anchor){
   return (pb, sy) => buildFlowArticle({
     kicker:{ text:'UPCOMING EVENT', color:'C1722C' }, title: u.title, anchor,
@@ -3500,6 +3644,7 @@ function wordItemBuilder(it, anchor){
     case 'puzzle':  return puzzleItem(d, anchor);
     case 'message': return messageItem(d, anchor);
     case 'upevent': return upcomingEventItem(d, anchor);
+    case 'award':   return awardItem(d, anchor);
   }
 }
 async function renderWordIssue(plan){
@@ -3729,7 +3874,7 @@ function confAuthorsHtml(c){
   authors.forEach(a => { const af = (a.affiliation || '').trim(); if(af && !affs.includes(af)) affs.push(af); });
   const numbered = affs.length > 1;
   const names = authors.map(a => H(a.name.trim()) + (numbered && a.affiliation ? `<sup>${affs.indexOf(a.affiliation.trim()) + 1}</sup>` : '')).join(', ');
-  return [ metaH(`<b>Authors:</b> <span style="color:#1B1B18">${names}</span>`, true) ]
+  return [ metaH(`<b>Authors:</b>&nbsp;<span style="color:#1B1B18">${names}</span>`, true) ]
     .concat(affs.map((af, i) => metaH((numbered ? `<sup>${i + 1}</sup>` : '') + H(af))));
 }
 function pdfItemHtml(it, anchor){
@@ -3740,12 +3885,12 @@ function pdfItemHtml(it, anchor){
     case 'pub': {
       const journal = d.journal + (d.volume ? '  ·  Vol ' + d.volume : '') + (d.issue ? ', Issue ' + d.issue : '');
       return flowHtml({ kicker:{ text:'PUBLICATION' + (d.indexing ? '  ·  ' + d.indexing : ''), color:'6B4C9A' }, title:d.title, anchor,
-        meta:[ metaH(H(journal)), metaH(`<b>Authors:</b> <span style="color:#1B1B18">${H(d.authors)}</span>`, true), metaH(H(formatDate(d.date))) ],
+        meta:[ metaH(H(journal)), metaH(`<b>Authors:</b>&nbsp;<span style="color:#1B1B18">${H(d.authors)}</span>`, true), metaH(H(formatDate(d.date))) ],
         text:d.abstract, images:allPhotos(d.photos) });
     }
     case 'conf': return flowHtml({ kicker:{ text:'CONFERENCE PRESENTATION', color:'2C5F8A' }, title:d.paperTitle, anchor,
       meta:[ metaH(H(d.confName)) ].concat(d.confDetails ? [ metaH(H(d.confDetails), true) ] : []).concat(confAuthorsHtml(d))
-        .concat([ metaH(`<b>Presented by</b> <span style="color:#1B1B18">${H(d.presenter)}   ·   ${H(formatDate(d.date))}</span>`, true) ]),
+        .concat([ metaH(`<b>Presented by</b>&nbsp;<span style="color:#1B1B18">${H(d.presenter)}   ·   ${H(formatDate(d.date))}</span>`, true) ]),
       text:d.abstract, images:allPhotos(d.photos) });
     case 'blog': return flowHtml({ kicker:{ text:'RESEARCH BLOG', color:'3A8C64' }, title:d.title, anchor,
       meta:[ metaH(H(`By ${d.author}   ·   ${formatDate(d.date)}`)) ], text:d.content, images:allPhotos(d.photos) });
@@ -3761,6 +3906,9 @@ function pdfItemHtml(it, anchor){
       meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
+    case 'award': return flowHtml({ kicker:{ text:(d.type || 'Award').toUpperCase(), color:'A8842F' }, title:d.title, anchor,
+      meta:[ metaH(`<b>Recipient(s):</b>&nbsp;<span style="color:#1B1B18">${H(d.recipients)}</span>`, true), metaH(H(`${d.awardedBy}  ·  ${formatDate(d.date)}`)) ],
+      text:d.desc, images:allPhotos(d.photos) });
     case 'upevent': return flowHtml({ kicker:{ text:'UPCOMING EVENT', color:'C1722C' }, title:d.title, anchor,
       meta:[ metaH(`<b>${H(formatDate(d.date))}</b>`, true) ], text:d.note || '', images:[] });
     case 'puzzle': {
@@ -4021,6 +4169,34 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
     row.alignment = { vertical:'top' };
   });
 }
+function addAwardsSheet(wb, sheetLabel, rows, includeMonth){
+  if(rows.length === 0) return;
+  const ws = wb.addWorksheet('Awards - ' + sheetLabel, { views:[{state:'frozen', ySplit:1}] });
+  const cols = [];
+  if(includeMonth) cols.push({ header:'Month', key:'month', width:16 });
+  cols.push(
+    { header:'Date', key:'date', width:14 },
+    { header:'Type', key:'type', width:22 },
+    { header:'Award / Achievement', key:'title', width:36 },
+    { header:'Recipient(s)', key:'recipients', width:30 },
+    { header:'Conferred By', key:'awardedBy', width:28 },
+    { header:'Details', key:'desc', width:60 },
+    { header:'Photos', key:'photos', width:10 },
+    { header:'Submitted By', key:'submittedBy', width:44 },
+  );
+  ws.columns = cols;
+  ws.getRow(1).eachCell(cell => {
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFA8842F'} };
+    cell.font = { bold:true, color:{argb:'FFFBF7EE'}, size:11 };
+  });
+  ws.getRow(1).height = 22;
+  rows.forEach(({ month, a }) => {
+    const row = ws.addRow({ month, date: formatDate(a.date), type: a.type || '', title: a.title, recipients: a.recipients,
+      awardedBy: a.awardedBy, desc: a.desc, photos: (a.photos||[]).length, submittedBy: submitterText(a) });
+    row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
+    row.alignment = { vertical:'top' };
+  });
+}
 function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
   if(rows.length === 0) return;
   const ws = wb.addWorksheet('Conferences - ' + sheetLabel, { views:[{state:'frozen', ySplit:1}] });
@@ -4063,8 +4239,10 @@ async function generateExcel(){
   const pubIds = Object.keys(pubData).sort((a,b) => (pubData[a].date||'').localeCompare(pubData[b].date||''));
   const confData = allConferencesByMonth[currentMonth] || {};
   const confIds = Object.keys(confData).sort((a,b) => (confData[a].date||'').localeCompare(confData[b].date||''));
+  const awData = allAwardsByMonth[currentMonth] || {};
+  const awIds = sortedIds(awData);
 
-  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0){
+  if(ids.length === 0 && pubIds.length === 0 && confIds.length === 0 && awIds.length === 0){
     alert('No content to include for ' + monthLabel(currentMonth) + '.');
     return;
   }
@@ -4121,6 +4299,7 @@ async function generateExcel(){
 
     /* ---- Sheets: Publications & Conference Presentations ---- */
     addPublicationsSheet(wb, monthLabel(currentMonth), pubIds.map(id => ({ month:null, p:pubData[id] })), false);
+    addAwardsSheet(wb, monthLabel(currentMonth), awIds.map(id => ({ month:null, a:awData[id] })), false);
     addConferencesSheet(wb, monthLabel(currentMonth), confIds.map(id => ({ month:null, c:confData[id] })), false);
 
     /* ---- Sheet: Summary ---- */
@@ -4162,7 +4341,8 @@ async function generateAnnualExcel(){
   const totalIds = months.reduce((sum,m) => sum + Object.keys(allEventsByMonth[m]||{}).length, 0);
   const totalPubs = months.reduce((sum,m) => sum + Object.keys(allPublicationsByMonth[m]||{}).length, 0);
   const totalConfs = months.reduce((sum,m) => sum + Object.keys(allConferencesByMonth[m]||{}).length, 0);
-  if(totalIds === 0 && totalPubs === 0 && totalConfs === 0){ alert('No content found for ' + year + '.'); return; }
+  const totalAwards = months.reduce((sum,m) => sum + Object.keys(allAwardsByMonth[m]||{}).length, 0);
+  if(totalIds === 0 && totalPubs === 0 && totalConfs === 0 && totalAwards === 0){ alert('No content found for ' + year + '.'); return; }
 
   const btn = document.getElementById('genAnnualExcelBtn');
   btn.disabled = true; const origText = btn.textContent; btn.textContent = 'Generating...';
@@ -4231,6 +4411,9 @@ async function generateAnnualExcel(){
     pubRows.sort((a,b) => (a.p.date||'').localeCompare(b.p.date||''));
     confRows.sort((a,b) => (a.c.date||'').localeCompare(b.c.date||''));
     addPublicationsSheet(wb, year, pubRows, true);
+    const awRows = [];
+    months.forEach(m => { const d = allAwardsByMonth[m] || {}; sortedIds(d).forEach(id => awRows.push({ month: monthLabel(m), a: d[id] })); });
+    addAwardsSheet(wb, year, awRows, true);
     addConferencesSheet(wb, year, confRows, true);
 
     const ws2 = wb.addWorksheet('Summary');

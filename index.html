@@ -608,6 +608,9 @@
         <label>Blog Content *</label>
         <textarea id="b_content" style="min-height:220px;" placeholder="Write your research blog here..." required></textarea>
 
+        <label>Reference links (optional)</label>
+        <textarea id="b_refs" style="min-height:70px;" placeholder="One link per line, up to 5 — e.g. https://doi.org/10.1103/PhysRevB.98.045108"></textarea>
+
         <label>Photos / Figures</label>
         <div class="photo-drop" onclick="document.getElementById('b_photos').click()">
           <input type="file" id="b_photos" accept="image/*" multiple onchange="handlePhotoSelect('blog', event)" />
@@ -658,6 +661,9 @@
         </div>
         <label>Editorial Text *</label>
         <textarea id="ed_content" style="min-height:200px;" placeholder="Write the editorial here. Leave a blank line between paragraphs."></textarea>
+
+        <label>Reference links (optional)</label>
+        <textarea id="ed_refs" style="min-height:70px;" placeholder="One link per line, up to 5 — e.g. https://doi.org/10.1103/PhysRevB.98.045108"></textarea>
         <label>Photos</label>
         <div class="photo-drop" onclick="document.getElementById('ed_photos').click()">
           <input type="file" id="ed_photos" accept="image/*" multiple onchange="handlePhotoSelect('editorial', event)" />
@@ -786,6 +792,25 @@
       <label>Social Media Handle</label>
       <input type="text" id="s_social" placeholder="@handle" />
 
+      <h3 style="font-family:'Playfair Display',serif; color:var(--navy); font-size:16px; margin:22px 0 2px;">Names on the Cover Footer</h3>
+      <p class="section-desc" style="margin-top:0;">Printed at the foot of the cover of every monthly, bi-annual and annual edition. Leave a row empty to leave that person out.</p>
+      <div class="row2">
+        <div><label>Head of School — Name</label><input type="text" id="s_hosName" placeholder="e.g. Prof. (Dr.) A. Kumar" /></div>
+        <div><label>Head of School — Designation</label><input type="text" id="s_hosDesig" placeholder="e.g. Director, Amity School of Physical Sciences" /></div>
+      </div>
+      <div class="row2">
+        <div><label>Head of Department — Name</label><input type="text" id="s_hodName" placeholder="e.g. Dr. Suchinder Sharma" /></div>
+        <div><label>Head of Department — Designation</label><input type="text" id="s_hodDesig" placeholder="e.g. Associate Professor &amp; Head" /></div>
+      </div>
+      <div class="row2">
+        <div><label>Editor — Name</label><input type="text" id="s_ed1Name" placeholder="e.g. Dr. Rajat Singla" /></div>
+        <div><label>Editor — Designation</label><input type="text" id="s_ed1Desig" placeholder="e.g. Assistant Professor" /></div>
+      </div>
+      <div class="row2">
+        <div><label>Co-Editor — Name</label><input type="text" id="s_ed2Name" placeholder="optional" /></div>
+        <div><label>Co-Editor — Designation</label><input type="text" id="s_ed2Desig" placeholder="optional" /></div>
+      </div>
+
       <div class="row2">
         <div>
           <label>Department / University Logo</label>
@@ -872,7 +897,7 @@
 
     <div class="card">
       <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Research Blogs This Month</h2>
-      <p class="section-desc" style="margin-top:-8px;">If no blog is written in a given month, the newsletter automatically carries forward the most recent month that has one.</p>
+      <p class="section-desc" style="margin-top:-8px;">Each blog is printed only in the newsletter of the month it was written for, and month-wise in the bi-annual and annual editions.</p>
       <div id="blogList"></div>
     </div>
 
@@ -1366,13 +1391,15 @@ function submitBlog(){
     showSubmitMsg('blog', false, 'Please fill in all required fields.');
     return;
   }
+  const refs = readRefLinks('b_refs', 'blog');
+  if(refs === null) return;
 
   const monthKey = date.slice(0,7);
   const btn = document.getElementById('submitBtn-blog');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  const blogData = { submittedBy, title, author, date, content,
+  const blogData = { submittedBy, title, author, date, content, refs,
     photos: photoState.blog.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now() };
 
@@ -1431,6 +1458,24 @@ function submitterText(x){
   return `${sb.name} (${sb.role || ''}), ${sb.email}${sb.phone ? ', ' + sb.phone : ''}`;
 }
 
+/* Optional reference links (Research Blog, Guest Editorial): one per line, up to 5.
+   Returns an array (possibly empty), or null after showing an error. */
+function readRefLinks(fieldId, type){
+  const lines = document.getElementById(fieldId).value.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  if(lines.length > 5){ showSubmitMsg(type, false, 'Please add at most 5 reference links.'); return null; }
+  const out = [];
+  for(const l of lines){
+    let u = l;
+    if(!/^https?:\/\//i.test(u) && /^[^\s]+\.[^\s]+$/.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+    if(!/^https?:\/\/[^\s]+$/i.test(u) || u.length > 1000){
+      showSubmitMsg(type, false, 'This reference link does not look like a web address: ' + l.slice(0, 80));
+      return null;
+    }
+    out.push(u);
+  }
+  return out;
+}
+
 /* ---------------- Submit: Editorial & Puzzle (open to anyone) ---------------- */
 function photoPayload(type){
   return photoState[type].map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null }));
@@ -1444,9 +1489,11 @@ function submitEditorial(){
   const month = document.getElementById('ed_month').value;
   const content = document.getElementById('ed_content').value.trim();
   if(!title || !author || !month || !content){ showSubmitMsg('editorial', false, 'Please fill in the title, your name, the month and the editorial text.'); return; }
+  const refs = readRefLinks('ed_refs', 'editorial');
+  if(refs === null) return;
   const btn = document.getElementById('submitBtn-editorial');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('guestEditorials/' + month).push({ submittedBy, title, author, content, photos: photoPayload('editorial'), submittedAt: Date.now() })
+  db.ref('guestEditorials/' + month).push({ submittedBy, title, author, content, refs, photos: photoPayload('editorial'), submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('editorial', true, 'Guest editorial submitted for ' + monthLabel(month) + '. Thank you!');
       document.getElementById('editorialForm').reset();
@@ -1774,14 +1821,29 @@ function initDashboard(){
     document.getElementById('s_website').value = s.website || '';
     document.getElementById('s_email').value = s.email || '';
     document.getElementById('s_social').value = s.social || '';
+    COVER_PEOPLE_FIELDS.forEach(k => document.getElementById('s_' + k).value = s[k] || '');
     if(s.logo) document.getElementById('thumb-logo').innerHTML = `<div class="thumb"><img src="${s.logo}"/></div>`;
     if(s.coverPhoto) document.getElementById('thumb-coverPhoto').innerHTML = `<div class="thumb"><img src="${s.coverPhoto}"/></div>`;
     applyNewsletterSettings(s);
   });
 }
 
+/* People printed on the cover footer (Head of School, Head of Department, Editor, Co-Editor) */
+const COVER_PEOPLE_FIELDS = ['hosName','hosDesig','hodName','hodDesig','ed1Name','ed1Desig','ed2Name','ed2Desig'];
+let COVER_PEOPLE_SETTINGS = {};
+function coverPeople(){
+  const s = COVER_PEOPLE_SETTINGS || {};
+  return [
+    { role:'Head of School', name:s.hosName, designation:s.hosDesig },
+    { role:'Head of Department', name:s.hodName, designation:s.hodDesig },
+    { role:'Editor', name:s.ed1Name, designation:s.ed1Desig },
+    { role:'Co-Editor', name:s.ed2Name, designation:s.ed2Desig },
+  ].filter(p => (p.name || '').trim());
+}
 /* Push saved settings into the globals the Word generator reads from */
 function applyNewsletterSettings(s){
+  COVER_PEOPLE_SETTINGS = {};
+  COVER_PEOPLE_FIELDS.forEach(k => COVER_PEOPLE_SETTINGS[k] = (s[k] || '').trim());
   if(s.mission) MISSION_TEXT = s.mission;
   if(s.vision) VISION_TEXT = s.vision;
   if(s.quoteText) QUOTE_TEXT = s.quoteText;
@@ -1831,6 +1893,7 @@ function saveNewsletterSettings(){
     email: document.getElementById('s_email').value.trim(),
     social: document.getElementById('s_social').value.trim(),
   };
+  COVER_PEOPLE_FIELDS.forEach(k => s[k] = document.getElementById('s_' + k).value.trim());
   if(settingsImages.logo){
     s.logo = settingsImages.logo;
     if(settingsImages.logoW){ s.logoW = settingsImages.logoW; s.logoH = settingsImages.logoH; }
@@ -1973,6 +2036,7 @@ function renderEPList(kind){
       </div>
       ${snippet ? `<div class="event-desc">${escapeHtml(snippet)}</div>` : ''}
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
+      ${(e.refs||[]).length ? `<div class="event-desc" style="margin-top:6px;"><b>References:</b> ${(e.refs||[]).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(u)}</a>`).join(' · ')}</div>` : ''}
       ${submitterHtml(e)}
     </div>`;
   }).join('');
@@ -2256,6 +2320,7 @@ function renderBlogsForMonth(){
       </div>
       <div class="event-desc">${escapeHtml(snippet)}</div>
       ${(b.photos||[]).length ? `<div class="event-photos">${(b.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('')}</div>` : ''}
+      ${(b.refs||[]).length ? `<div class="event-desc" style="margin-top:6px;"><b>References:</b> ${(b.refs||[]).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(u)}</a>`).join(' · ')}</div>` : ''}
       ${submitterHtml(b)}
     </div>`;
   }).join('');
@@ -2596,8 +2661,17 @@ function estimateContactPx(){
   const chars = (CONTACT_WEBSITE + CONTACT_EMAIL + CONTACT_SOCIAL).length + 30;
   return 14 + Math.max(1, Math.ceil(chars * 6.2 / (PAGE_CONTENT_PX - 20))) * 18;
 }
+function estimatePeoplePx(){
+  const people = coverPeople();
+  if(!people.length) return 0;
+  const colPx = PAGE_CONTENT_PX / people.length - 20;
+  const lines = t => Math.max(1, Math.ceil((t || '').length * 5.6 / colPx));
+  const nameL = Math.max(...people.map(p => lines(p.name) ));
+  const desL = Math.max(...people.map(p => (p.designation ? lines(p.designation) : 0)));
+  return 16 + 13 + nameL * 15 + desL * 13;
+}
 function coverAvailPx(){
-  return PAGE_BODY_PX - COVER_SAFETY_PX - COVER_STRIP_TW / 15 - COVER_MAST_TW / 15 - estimateQuotePx() - estimateContactPx();
+  return PAGE_BODY_PX - COVER_SAFETY_PX - COVER_STRIP_TW / 15 - COVER_MAST_TW / 15 - estimateQuotePx() - estimatePeoplePx() - estimateContactPx();
 }
 /* fullH = height of the photo at full width, uncropped (0 if no photo) */
 function planCover(indexSpec, fullH){
@@ -2904,9 +2978,32 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize }){
     ] }) ],
     { margins:{ top:90, bottom:90, left:100, right:100 }, shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, verticalAlign: VerticalAlign.CENTER }) ] });
 
+  /* ---- 6a. names on the cover footer (Head of School, Head of Department, Editors) ---- */
+  const people = coverPeople();
+  let peopleRow = null;
+  if(people.length){
+    const innerW = PAGE_CONTENT_TW - 200, colW = Math.floor(innerW / people.length);
+    const inner = new Table({
+      width:{ size:innerW, type:WidthType.DXA }, columnWidths: people.map(() => colW), layout: TableLayoutType.FIXED, borders: noBorders(),
+      rows:[ new TableRow({ children: people.map(pp => new TableCell({
+        width:{ size:colW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:60, right:60 },
+        children:[
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:10 }, children:[ new TextRun({ text:pp.role.toUpperCase(), color:"A8842F", bold:true, size:14, characterSpacing:10, font:"Inter" }) ] }),
+          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.name, color:"132340", bold:true, size:18, font:"Inter" }) ] }),
+          ...(pp.designation ? [ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.designation, color:"736C5E", size:15, font:"Inter" }) ] }) ] : []),
+        ]
+      })) }) ]
+    });
+    peopleRow = new TableRow({ children:[ full(
+      [ inner, new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ],
+      { margins:{ top:110, bottom:40, left:100, right:100 }, shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" } }) ] });
+  }
+
   const rows = [ stripRow, mastRow ];
   if(heroRow) rows.push(heroRow);
-  rows.push(quoteRow, bodyRow, contactRow);
+  rows.push(quoteRow, bodyRow);
+  if(peopleRow) rows.push(peopleRow);
+  rows.push(contactRow);
   return [ new Table({
     width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
     columnWidths: cols,
@@ -3142,6 +3239,21 @@ function buildFlowArticle(opts){
     }
     floatBottom = -1;
   }
+  /* ---- reference links (blogs, guest editorials) ---- */
+  const refs = (opts.refs || []).filter(Boolean);
+  if(refs.length){
+    const { ExternalHyperlink } = docx;
+    out.push(new Paragraph({ keepNext:true, spacing:{ before:120, after:40 },
+      children:[ new TextRun({ text:'References', bold:true, color:'132340', size:META_SIZE + 1, font:'Inter' }) ] }));
+    refs.forEach((u, i) => {
+      out.push(new Paragraph({ spacing:{ after:30 }, indent:{ left:360, hanging:360 }, children:[
+        new TextRun({ text:`[${i + 1}]\t`, color:'736C5E', size:META_SIZE, font:'Inter' }),
+        new ExternalHyperlink({ link:u, children:[ new TextRun({ text:u, color:'1155CC', underline:{}, size:META_SIZE, font:'Inter' }) ] }),
+      ], tabStops:[ { type: docx.TabStopType.LEFT, position:360 } ] }));
+      y += Math.ceil(u.length * 5.4 / (PAGE_CONTENT_PX - 30)) * 17 + 2;
+    });
+    y += 28;
+  }
   // nothing after this article may sit beside one of its floating photos
   out.push(clearFloatsPara());
   out.endY = Math.max(y, floatBottom);
@@ -3343,7 +3455,7 @@ function buildUpcomingConferencesSection(items, firstBreak){
     items: items.map(u => (pb, sy) => buildUpcomingConferenceArticle(u, itemAnchor('uc', u.id), pb, sy)) }], firstBreak);
 }
 
-/* ---------- Research blog: carries forward from the last month someone wrote one ---------- */
+/* ---------- Research blog (older carry-forward helper, no longer used by the monthly issue) ---------- */
 function findLatestBlogEntries(uptoMonthInclusive){
   const months = Object.keys(allBlogsByMonth).filter(m => m <= uptoMonthInclusive).sort().reverse();
   for(const m of months){
@@ -3359,7 +3471,7 @@ function blogItem(b, anchor){
   return (pb, sy) => buildFlowArticle({
     kicker:{ text:"RESEARCH BLOG", color:"3A8C64" }, title:b.title, anchor,
     metaParas:[ metaLine(`By ${b.author}   ·   ${formatDate(b.date)}`) ],
-    text:b.content, images: allPhotos(b.photos), pageBreak:pb, startY:sy
+    text:b.content, images: allPhotos(b.photos), refs: b.refs, pageBreak:pb, startY:sy
   });
 }
 function buildBlogSection(ids, data, sourceLabel, firstBreak){
@@ -3380,7 +3492,7 @@ function guestItem(g, anchor){
   return (pb, sy) => buildFlowArticle({
     kicker:{ text:"GUEST EDITORIAL", color:"A8842F" }, title: g.title || 'Guest Editorial', anchor: anchor || null,
     metaParas: g.author ? [ metaLine(`— ${g.author}`) ] : [],
-    text: g.content, images: allPhotos(entryPhotos(g)), pageBreak:pb, startY:sy
+    text: g.content, images: allPhotos(entryPhotos(g)), refs: g.refs, pageBreak:pb, startY:sy
   });
 }
 const hasText = e => e && (e.content || '').trim();
@@ -3477,7 +3589,8 @@ function monthlyPlan(month){
   const pubData = allPublicationsByMonth[month] || {}, pubIds = sortedIds(pubData);
   const awData = allAwardsByMonth[month] || {}, awIds = sortedIds(awData);
   const confData = allConferencesByMonth[month] || {}, confIds = sortedIds(confData);
-  const blogInfo = findLatestBlogEntries(month);
+  // only blogs written for this month (no carry-forward from earlier months)
+  const blogData = allBlogsByMonth[month] || {}, blogIds = sortedIds(blogData);
   const desk = editorsDeskEntry(month);
   const guests = guestEditorialEntries(month).filter(hasText);
   const puzzles = monthEntries(allPuzzlesByMonth, month).filter(hasPuzzle);
@@ -3494,14 +3607,13 @@ function monthlyPlan(month){
   add([{ heading:'PUBLICATIONS', key:'PUBLICATIONS', items: pubIds.map(id => ({ type:'pub', data:pubData[id], key:'pub:' + id })) }]);
   add([{ heading:'CONFERENCE PRESENTATIONS', key:'CONFERENCE PRESENTATIONS', items: confIds.map(id => ({ type:'conf', data:confData[id], key:'conf:' + id })) }]);
   add([{ heading:'RESEARCH BLOG', key:'RESEARCH BLOG',
-    subtitle: blogInfo.month && blogInfo.month !== month ? `Featured from ${monthLabel(blogInfo.month)}` : null,
-    items: blogInfo.ids.map(id => ({ type:'blog', data:blogInfo.data[id], key:'blog:' + id })) }]);
+    items: blogIds.map(id => ({ type:'blog', data:blogData[id], key:'blog:' + id })) }]);
   add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
   add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) })) }]);
   // last page: Upcoming Events with their notes (agenda, venue, details)
   add([{ heading:'UPCOMING EVENTS', key:'UPCOMING EVENTS', items: upcoming.map(u => ({ type:'upevent', data:u, key:'ue:' + u.id })) }]);
 
-  const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogInfo.ids.length || hasText(desk) || guests.length || puzzles.length;
+  const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogIds.length || hasText(desk) || guests.length || puzzles.length;
   const range = issueDateRangeLabel(month);
   return {
     kind:'monthly', hasContent, stacks, withToc:false,
@@ -3781,6 +3893,11 @@ function pdfCss(plan){
 .nlp .idx .row .d { color: #fff; font-weight: 700; flex: 0 0 41px; }
 .nlp .idx a { color: #C6A34A; text-decoration: underline; }
 .nlp .idx a.sl { font-weight: 700; display: block; margin: 9px 0 3px; }
+.nlp .people { background: #F3EDDE; display: flex; justify-content: space-around; gap: 10px; padding: 9px 8px 3px; text-align: center; }
+.nlp .people .pp { flex: 1 1 0; min-width: 0; }
+.nlp .people .rl { color: #A8842F; font-weight: 700; font-size: 7pt; letter-spacing: .06em; }
+.nlp .people .nm { color: #132340; font-weight: 700; font-size: 9pt; line-height: 1.25; }
+.nlp .people .dg { color: #736C5E; font-size: 7.5pt; line-height: 1.25; }
 .nlp .contact { background: #F3EDDE; text-align: center; font-size: 8pt; padding: 6px; }
 .nlp .contact a { color: #1155CC; }
 .nlp .contact .sp { color: #C6A34A; padding: 0 12px; }
@@ -3811,6 +3928,11 @@ function pdfCss(plan){
 .nlp .meta a { color: #1155CC; }
 .nlp .metaend { height: 8px; }
 .nlp .art p { margin: 0 0 9px; }
+.nlp .refs { font-size: 9pt; margin: 6px 0 2px; break-inside: avoid; }
+.nlp .refs .rh2 { font-weight: 700; color: #132340; margin-bottom: 2px; }
+.nlp .refs .rf { display: flex; gap: 6px; margin: 0 0 2px; }
+.nlp .refs .rn { color: #736C5E; flex: 0 0 auto; }
+.nlp .refs a { color: #1155CC; word-break: break-all; }
 .nlp img.fr { float: right; margin: 3px 0 8px 14px; }
 .nlp img.fl { float: left; margin: 3px 14px 8px 0; }
 .nlp .gal { clear: both; text-align: center; padding-top: 6px; }
@@ -3864,6 +3986,11 @@ function flowHtml(o){
       return `<img src="${im.url}" style="width:${d.width}px;height:${d.height}px">`;
     }).join('') + `</div>`;
   }
+  const refs = (o.refs || []).filter(Boolean);
+  if(refs.length){
+    html += `<div class="refs"><div class="rh2">References</div>` +
+      refs.map((u, i) => `<div class="rf"><span class="rn">[${i + 1}]</span><a href="${H(u)}">${H(u)}</a></div>`).join('') + `</div>`;
+  }
   return html + `</article>`;
 }
 const metaH = (html, plain) => ({ html, plain });
@@ -3893,7 +4020,7 @@ function pdfItemHtml(it, anchor){
         .concat([ metaH(`<b>Presented by</b>&nbsp;<span style="color:#1B1B18">${H(d.presenter)}   ·   ${H(formatDate(d.date))}</span>`, true) ]),
       text:d.abstract, images:allPhotos(d.photos) });
     case 'blog': return flowHtml({ kicker:{ text:'RESEARCH BLOG', color:'3A8C64' }, title:d.title, anchor,
-      meta:[ metaH(H(`By ${d.author}   ·   ${formatDate(d.date)}`)) ], text:d.content, images:allPhotos(d.photos) });
+      meta:[ metaH(H(`By ${d.author}   ·   ${formatDate(d.date)}`)) ], text:d.content, images:allPhotos(d.photos), refs:d.refs });
     case 'uc': {
       const meta = [ metaH(`<b>${H(formatDate(d.date))}</b>`, true) ];
       if(d.link){ const url = /^https?:\/\//i.test(d.link) ? d.link : 'https://' + d.link.replace(/^\/+/, '');
@@ -3903,7 +4030,7 @@ function pdfItemHtml(it, anchor){
     }
     case 'desk': return flowHtml({ title:d.title || '', anchor, meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
     case 'guest': return flowHtml({ kicker:{ text:'GUEST EDITORIAL', color:'A8842F' }, title:d.title || 'Guest Editorial', anchor,
-      meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
+      meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)), refs:d.refs });
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
     case 'award': return flowHtml({ kicker:{ text:(d.type || 'Award').toUpperCase(), color:'A8842F' }, title:d.title, anchor,
@@ -3953,6 +4080,7 @@ function coverHtml(plan, spec, ptSize, heroUrl, split){
     <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
     <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3><p>${H(MISSION_TEXT)}</p><h3>Our Vision</h3><p style="margin:0">${H(VISION_TEXT)}</p></div>
       <div class="idx" style="flex:1">${coverIndexHtml(spec, ptSize)}</div></div>
+    ${coverPeople().length ? `<div class="people">${coverPeople().map(pp => `<div class="pp"><div class="rl">${H(pp.role.toUpperCase())}</div><div class="nm">${H(pp.name)}</div>${pp.designation ? `<div class="dg">${H(pp.designation)}</div>` : ''}</div>`).join('')}</div>` : ''}
     <div class="contact">${linkOrText(CONTACT_WEBSITE, maybeUrl(CONTACT_WEBSITE), true)}<span class="sp">·</span>${linkOrText(CONTACT_EMAIL, emailUrl)}<span class="sp">·</span>${linkOrText(CONTACT_SOCIAL, maybeUrl(CONTACT_SOCIAL))}</div>
   </section>`;
 }

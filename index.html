@@ -158,6 +158,17 @@
     box-shadow:0 0 0 3px rgba(198,163,74,0.18);
   }
   textarea{resize:vertical; min-height:100px; line-height:1.5;}
+  /* rich text box: toolbar + editable area (stored as text with [b] [i] [u] markers and • / 1. list lines) */
+  .rte{ border:1px solid var(--line); border-radius:8px; background:var(--paper-dim); overflow:hidden; transition:.15s; }
+  .rte:focus-within{ border-color:var(--gold); background:var(--white); box-shadow:0 0 0 3px rgba(198,163,74,0.18); }
+  .rte-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:2px; padding:5px 6px; border-bottom:1px solid var(--line); background:rgba(255,255,255,0.6); }
+  .rte-bar button{ font:600 13px 'Inter',sans-serif; color:var(--navy); background:transparent; border:1px solid transparent; border-radius:6px; padding:4px 10px; cursor:pointer; min-width:34px; }
+  .rte-bar button:hover{ background:var(--white); border-color:var(--line); }
+  .rte-sep{ width:1px; height:20px; background:var(--line); margin:0 4px; }
+  .rte-area{ padding:11px 13px; font:14.5px/1.55 'Inter',sans-serif; color:var(--ink); outline:none; overflow-y:auto; max-height:560px; resize:vertical; }
+  .rte-area:empty:before{ content:attr(data-placeholder); color:#9a927f; pointer-events:none; }
+  .rte-area ul, .rte-area ol{ margin:4px 0 4px 22px; padding:0; }
+  .rte-area div{ min-height:1.55em; }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
   @media(max-width:640px){.row2{grid-template-columns:1fr;}}
 
@@ -792,8 +803,8 @@
       <label>Social Media Handle</label>
       <input type="text" id="s_social" placeholder="@handle" />
 
-      <h3 style="font-family:'Playfair Display',serif; color:var(--navy); font-size:16px; margin:22px 0 2px;">Names on the Cover Footer</h3>
-      <p class="section-desc" style="margin-top:0;">Printed at the foot of the cover of every monthly, bi-annual and annual edition. Leave a row empty to leave that person out.</p>
+      <h3 style="font-family:'Playfair Display',serif; color:var(--navy); font-size:16px; margin:22px 0 2px;">Names in the Newsletter</h3>
+      <p class="section-desc" style="margin-top:0;">Head of School and Head of Department are printed at the foot of the cover; Editor and Co-Editor in an "Editorial Team" box at the end of the last page. This applies to every monthly, bi-annual and annual edition. Leave a row empty to leave that person out.</p>
       <div class="row2">
         <div><label>Head of School — Name</label><input type="text" id="s_hosName" placeholder="e.g. Prof. (Dr.) A. Kumar" /></div>
         <div><label>Head of School — Designation</label><input type="text" id="s_hosDesig" placeholder="e.g. Director, Amity School of Physical Sciences" /></div>
@@ -1414,6 +1425,183 @@ function submitBlog(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Blog'; });
 }
 
+/* ---------------- Rich text boxes (bold, italic, underline, bullet and numbered points) ----------------
+   Long text boxes show a small toolbar. What people type is stored as plain
+   text with a few markers that the Word, PDF and admin views understand:
+     [b]bold[/b]   [i]italic[/i]   [u]underline[/u]
+     a line starting "• " is a bullet point, "1. " a numbered point.
+   Old plain-text entries need no change. */
+const RICH_FIELDS = ['f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','desk_content'];
+const RICH_TAG_RE = /\[(\/?)(b|i|u)\]/g;
+const LIST_RE = /^(?:([•\-*])|(\d{1,3})[.)])\s+/;
+function stripRich(t){ return String(t || '').replace(RICH_TAG_RE, ''); }
+function listInfo(line){
+  const m = LIST_RE.exec(line || '');
+  return m ? { marker: m[1] ? '•' : m[2] + '.', rest: line.slice(m[0].length) } : null;
+}
+/* Makes one piece of text self-contained: re-opens tags left open by the
+   previous piece and closes whatever is still open at its end. */
+function balanceRich(text, open){
+  const st = open.slice(); let m;
+  const re = new RegExp(RICH_TAG_RE.source, 'g');
+  while((m = re.exec(text))){ const t = m[2]; if(m[1]){ const i = st.lastIndexOf(t); if(i >= 0) st.splice(i, 1); } else st.push(t); }
+  return { text: open.map(t => `[${t}]`).join('') + text + st.slice().reverse().map(t => `[/${t}]`).join(''), open: st };
+}
+function richSegments(text){
+  const out = [], on = { b:0, i:0, u:0 }; let last = 0, m;
+  const re = new RegExp(RICH_TAG_RE.source, 'g');
+  const push = t => { if(t) out.push({ text:t, b:on.b > 0, i:on.i > 0, u:on.u > 0 }); };
+  while((m = re.exec(text))){ push(text.slice(last, m.index)); on[m[2]] = Math.max(0, on[m[2]] + (m[1] ? -1 : 1)); last = re.lastIndex; }
+  push(text.slice(last));
+  return out;
+}
+function richToHtml(text, esc){
+  return richSegments(text).map(g => { let h = esc(g.text); if(g.u) h = `<u>${h}</u>`; if(g.i) h = `<i>${h}</i>`; if(g.b) h = `<b>${h}</b>`; return h; }).join('');
+}
+/* Admin cards: formatted preview, one line per line */
+function richPreview(text){
+  return String(text || '').split('\n').map(line => {
+    const li = listInfo(line.trim());
+    return li ? `&nbsp;&nbsp;${escapeHtml(li.marker)} ${richToHtml(li.rest, escapeHtml)}` : richToHtml(line, escapeHtml);
+  }).join('<br>');
+}
+/* Word: runs for a piece of formatted text */
+function richRuns(text, base){
+  return richSegments(text).map(g => new docx.TextRun(Object.assign({}, base, { text:g.text },
+    g.b ? { bold:true } : {}, g.i ? { italics:true } : {}, g.u ? { underline:{} } : {})));
+}
+/* Word: one body paragraph — justified text, or an indented bullet / numbered point */
+function richParagraph(text, o){
+  o = o || {};
+  const { Paragraph, TextRun, AlignmentType, TabStopType } = docx;
+  const base = { color:"1B1B18", size:BODY_SIZE, font:"Inter" };
+  const pre = o.floatRun ? [ o.floatRun ] : [];
+  const li = listInfo(text);
+  const common = { spacing:{ after: li ? 50 : (o.after === undefined ? 160 : o.after), line:BODY_LINE },
+    keepNext: !!o.keepNext, keepLines: !!o.keepLines, pageBreakBefore: !!o.pageBreakBefore };
+  if(li) return new Paragraph(Object.assign(common, { indent:{ left:440, hanging:300 }, tabStops:[ { type:TabStopType.LEFT, position:440 } ],
+    children:[ ...pre, new TextRun(Object.assign({}, base, { text: li.marker + '\t' })), ...richRuns(li.rest, base) ] }));
+  return new Paragraph(Object.assign(common, { alignment: AlignmentType.JUSTIFIED, children:[ ...pre, ...richRuns(text, base) ] }));
+}
+
+/* ---- the editor ---- */
+function richInline(n){
+  if(n.nodeType === 3) return n.nodeValue.replace(/ /g, ' ');
+  if(n.nodeType !== 1) return '';
+  if(n.tagName === 'BR') return '\n';
+  let inner = Array.from(n.childNodes).map(richInline).join('');
+  if(!inner.trim()) return inner;
+  const st = n.style || {}, tag = n.tagName;
+  const b = tag === 'B' || tag === 'STRONG' || /^(bold|[6-9]00)$/.test(st.fontWeight || '');
+  const i = tag === 'I' || tag === 'EM' || st.fontStyle === 'italic';
+  const u = tag === 'U' || /underline/.test((st.textDecoration || '') + ' ' + (st.textDecorationLine || ''));
+  if(u) inner = `[u]${inner}[/u]`;
+  if(i) inner = `[i]${inner}[/i]`;
+  if(b) inner = `[b]${inner}[/b]`;
+  return inner;
+}
+function editorToText(root){
+  const lines = []; let cur = '';
+  const flush = () => { lines.push(cur); cur = ''; };
+  const isBlock = n => n.nodeType === 1 && /^(DIV|P|UL|OL|LI|H[1-6]|BLOCKQUOTE)$/.test(n.tagName);
+  const walk = parent => Array.from(parent.childNodes).forEach(n => {
+    if(n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL')){
+      if(cur.trim()) flush(); else cur = '';
+      let k = 0;
+      Array.from(n.children).forEach(li => {
+        if(li.tagName !== 'LI') return;
+        k++;
+        const t = richInline(li).replace(/\n+/g, ' ').trim();
+        if(stripRich(t).trim()) lines.push((n.tagName === 'UL' ? '• ' : k + '. ') + t);
+      });
+      return;
+    }
+    if(isBlock(n)){
+      if(cur.trim()) flush(); else cur = '';
+      if(Array.from(n.childNodes).some(isBlock)) walk(n); else { cur = richInline(n); flush(); }
+      return;
+    }
+    cur += richInline(n);
+  });
+  walk(root); if(cur) flush();
+  // every line self-contained, so the newsletter can treat each line as a paragraph
+  let open = [];
+  const out = lines.join('\n').split('\n').map(l => l.replace(/[ \t]+/g, ' ').trim()).map(l => {
+    if(!l) return l;
+    const li = /^(• |\d{1,3}\. )/.exec(l);
+    const body = li ? l.slice(li[0].length) : l;
+    const r = balanceRich(body, open); open = r.open;
+    return (li ? li[0] : '') + r.text;
+  });
+  return out.join('\n').replace(/\[(b|i|u)\]\s*\[\/\1\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+function textToEditorHtml(text){
+  let html = '', list = null;
+  const close = () => { if(list){ html += `</${list}>`; list = null; } };
+  String(text || '').split('\n').forEach(line => {
+    const t = line.trim(), li = listInfo(t);
+    const kind = li ? (li.marker === '•' ? 'ul' : 'ol') : null;
+    if(kind){ if(list !== kind){ close(); html += `<${kind}>`; list = kind; } html += `<li>${richToHtml(li.rest, escapeHtml)}</li>`; }
+    else { close(); if(t) html += `<div>${richToHtml(t, escapeHtml)}</div>`; }
+  });
+  close();
+  return html;
+}
+function makeRich(ta){
+  if(!ta || ta._richArea) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'rte';
+  wrap.innerHTML = `<div class="rte-bar">
+      <button type="button" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button type="button" data-cmd="italic" title="Italic (Ctrl+I)"><i style="font-family:Georgia,serif;">I</i></button>
+      <button type="button" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+      <span class="rte-sep"></span>
+      <button type="button" data-cmd="insertUnorderedList" title="Bullet points">&bull; Bullets</button>
+      <button type="button" data-cmd="insertOrderedList" title="Numbered points">1. Numbering</button>
+      <span class="rte-sep"></span>
+      <button type="button" data-cmd="removeFormat" title="Remove bold, italic and underline from the selected text">Clear</button>
+    </div><div class="rte-area" contenteditable="true"></div>`;
+  const area = wrap.querySelector('.rte-area');
+  area.dataset.placeholder = ta.getAttribute('placeholder') || '';
+  area.style.minHeight = ta.style.minHeight || '110px';
+  ta.style.display = 'none';
+  ta.removeAttribute('required');
+  ta.insertAdjacentElement('afterend', wrap);
+  const sync = () => {
+    if(!area.textContent.trim() && !area.querySelector('li')) area.innerHTML = '';
+    ta.value = editorToText(area);
+  };
+  area.addEventListener('input', sync);
+  area.addEventListener('blur', sync);
+  // pasted text comes in plain (no stray fonts or colours from Word / web pages)
+  area.addEventListener('paste', e => {
+    e.preventDefault();
+    const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, t);
+  });
+  wrap.querySelectorAll('[data-cmd]').forEach(btn => btn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    area.focus();
+    try{ document.execCommand('styleWithCSS', false, false); }catch(err){}
+    document.execCommand(btn.dataset.cmd, false, null);
+    sync();
+  }));
+  ta._richArea = area;
+  area.innerHTML = textToEditorHtml(ta.value);
+}
+function setRich(id, value){
+  const ta = document.getElementById(id);
+  if(!ta) return;
+  ta.value = value || '';
+  if(ta._richArea) ta._richArea.innerHTML = textToEditorHtml(ta.value);
+}
+function initRichEditors(){
+  RICH_FIELDS.forEach(id => makeRich(document.getElementById(id)));
+  // a form reset empties the hidden text; show that in the editors too
+  document.querySelectorAll('form').forEach(f => f.addEventListener('reset', () => setTimeout(() =>
+    f.querySelectorAll('textarea').forEach(ta => { if(ta._richArea) ta._richArea.innerHTML = textToEditorHtml(ta.value); }), 0)));
+}
+
 /* ---------------- Submitter details ----------------
    Every submission carries submittedBy = { name, email, role, phone? }.
    Shown to the admin (dashboard + Excel), never printed in the newsletter. */
@@ -1535,6 +1723,7 @@ function submitUpcomingEvent(){
   const title = document.getElementById('u2_title').value.trim();
   const date = document.getElementById('u2_date').value;
   const note = document.getElementById('u2_note').value.trim();
+  if(note.length > 3000){ showSubmitMsg('upcoming', false, 'The details are too long; please keep them under about 3,000 characters.'); return; }
 
   if(!title || !date){
     showSubmitMsg('upcoming', false, 'Please add both a title and a date.');
@@ -1648,6 +1837,7 @@ function buildMessagesAdmin(){
       <button class="danger" style="margin-left:10px;" onclick="removeMessage('${r.key}')">Remove</button>
       <div class="msg" id="msg_msg_${r.key}"></div>
     </details>`).join('');
+  MESSAGE_ROLES.forEach(r => makeRich(document.getElementById('msg_text_' + r.key)));
 }
 const filledMessages = {}; // what each form last showed, so a save elsewhere doesn't wipe one being typed
 function fillMessagesAdmin(){
@@ -1661,7 +1851,7 @@ function fillMessagesAdmin(){
     if(sel) sel.value = m.heading || r.headings[0];
     document.getElementById('msg_name_' + r.key).value = m.name || '';
     document.getElementById('msg_desig_' + r.key).value = m.designation || '';
-    document.getElementById('msg_text_' + r.key).value = m.message || '';
+    setRich('msg_text_' + r.key, m.message || '');
     delete messagePhotos[r.key];
     renderMessageThumb(r.key, m.photo && m.photo.url);
     document.getElementById('msgflag-' + r.key).style.display = (m.message || '').trim() ? 'inline-block' : 'none';
@@ -1831,14 +2021,60 @@ function initDashboard(){
 /* People printed on the cover footer (Head of School, Head of Department, Editor, Co-Editor) */
 const COVER_PEOPLE_FIELDS = ['hosName','hosDesig','hodName','hodDesig','ed1Name','ed1Desig','ed2Name','ed2Desig'];
 let COVER_PEOPLE_SETTINGS = {};
+/* On the cover: Head of School and Head of Department */
 function coverPeople(){
   const s = COVER_PEOPLE_SETTINGS || {};
   return [
     { role:'Head of School', name:s.hosName, designation:s.hosDesig },
     { role:'Head of Department', name:s.hodName, designation:s.hodDesig },
+  ].filter(p => (p.name || '').trim());
+}
+/* On the last page, in the Editorial Team box: Editor and Co-Editor */
+function teamPeople(){
+  const s = COVER_PEOPLE_SETTINGS || {};
+  return [
     { role:'Editor', name:s.ed1Name, designation:s.ed1Desig },
     { role:'Co-Editor', name:s.ed2Name, designation:s.ed2Desig },
   ].filter(p => (p.name || '').trim());
+}
+/* Word: the Editorial Team box closing the last page */
+function buildTeamBox(){
+  const team = teamPeople();
+  if(!team.length) return [];
+  const { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, TableLayoutType, BorderStyle, ExternalHyperlink } = docx;
+  const innerW = PAGE_CONTENT_TW - 400;
+  const colW = Math.floor(innerW / team.length);
+  const gold = { style:BorderStyle.SINGLE, size:12, color:"C6A34A" }, none = { style:BorderStyle.NONE, size:0, color:"FFFFFF" };
+  const people = new Table({ width:{ size:colW * team.length, type:WidthType.DXA }, columnWidths: team.map(() => colW), layout:TableLayoutType.FIXED, borders:noBorders(),
+    rows:[ new TableRow({ cantSplit:true, children: team.map(pp => new TableCell({ width:{ size:colW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:80, right:80 },
+      children:[
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:20 }, children:[ new TextRun({ text:pp.role.toUpperCase(), color:"A8842F", bold:true, size:15, characterSpacing:10, font:"Inter" }) ] }),
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:0 }, children:[ new TextRun({ text:pp.name, color:"132340", bold:true, size:21, font:"Inter" }) ] }),
+        ...(pp.designation ? [ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:0 }, children:[ new TextRun({ text:pp.designation, color:"736C5E", size:17, font:"Inter" }) ] }) ] : []),
+      ] })) }) ] });
+  const emailOk = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL);
+  const box = new Table({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, columnWidths:[ PAGE_CONTENT_TW ], layout:TableLayoutType.FIXED,
+    borders:{ top:gold, bottom:none, left:none, right:none, insideHorizontal:none, insideVertical:none },
+    rows:[ new TableRow({ cantSplit:true, children:[ new TableCell({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
+      shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" }, margins:{ top:200, bottom:160, left:200, right:200 },
+      children:[
+        new Paragraph({ alignment:AlignmentType.CENTER, keepNext:true, spacing:{ after:140 }, children:[ new TextRun({ text:"EDITORIAL TEAM", color:"132340", bold:true, size:22, characterSpacing:40, font:"Playfair Display" }) ] }),
+        people,
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:140, after:0 }, children: emailOk
+          ? [ new TextRun({ text:"Suggestions and contributions: ", color:"736C5E", size:16, font:"Inter" }),
+              new ExternalHyperlink({ link:'mailto:' + CONTACT_EMAIL, children:[ new TextRun({ text:CONTACT_EMAIL, color:"1155CC", underline:{}, size:16, font:"Inter" }) ] }) ]
+          : [] }),
+      ] }) ] }) ] });
+  return [ new Paragraph({ keepNext:true, spacing:{ before:360, after:0 }, children:[] }), box ];
+}
+/* PDF: the same box */
+function teamBoxHtml(){
+  const team = teamPeople();
+  if(!team.length) return '';
+  const emailOk = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL);
+  return `<section class="team"><div class="tt">EDITORIAL TEAM</div><div class="tp">` +
+    team.map(pp => `<div class="pp"><div class="rl">${H(pp.role.toUpperCase())}</div><div class="nm">${H(pp.name)}</div>${pp.designation ? `<div class="dg">${H(pp.designation)}</div>` : ''}</div>`).join('') +
+    `</div>${emailOk ? `<div class="tc">Suggestions and contributions: <a href="mailto:${H(CONTACT_EMAIL)}">${H(CONTACT_EMAIL)}</a></div>` : ''}</section>`;
 }
 /* Push saved settings into the globals the Word generator reads from */
 function applyNewsletterSettings(s){
@@ -2022,7 +2258,8 @@ function renderEPList(kind){
   }
   listEl.innerHTML = items.map(e => {
     const text = e.content || '';
-    const snippet = text.slice(0,220) + (text.length > 220 ? '…' : '');
+    const plain = stripRich(text);
+    const snippet = plain.slice(0,220) + (plain.length > 220 ? '…' : '');
     const photos = entryPhotos(e).map(ph => `<img src="${photoUrl(ph)}"/>`).join('');
     return `
     <div class="event-card">
@@ -2060,7 +2297,7 @@ function fillEditorsDesk(){
   const d = editorsDeskEntry(currentMonth) || {};
   document.getElementById('desk_title').value = d.title || '';
   document.getElementById('desk_author').value = d.author || '';
-  document.getElementById('desk_content').value = d.content || '';
+  setRich('desk_content', d.content || '');
   photoState.desk = entryPhotos(d).map(ph => ({ name:'', dataUrl:photoUrl(ph), width:photoWH(ph).w, height:photoWH(ph).h }));
   renderThumbs('desk');
 }
@@ -2151,7 +2388,7 @@ function renderEventsForMonth(){
           <button class="danger" onclick="deleteEvent('${currentMonth}','${id}')">Delete</button>
         </div>
       </div>
-      <div class="event-desc">${escapeHtml(e.desc)}</div>
+      <div class="event-desc">${richPreview(e.desc)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
       ${submitterHtml(e)}
     </div>`;
@@ -2207,7 +2444,7 @@ function renderPublicationsForMonth(){
         </div>
         <div class="event-actions"><button class="danger" onclick="deletePublication('${currentMonth}','${id}')">Delete</button></div>
       </div>
-      <div class="event-desc">${escapeHtml(p.abstract)}</div>
+      <div class="event-desc">${richPreview(p.abstract)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
       ${submitterHtml(p)}
     </div>`;
@@ -2239,7 +2476,7 @@ function renderAwardsForMonth(){
         </div>
         <div class="event-actions"><button class="danger" onclick="deleteAward('${currentMonth}','${id}')">Delete</button></div>
       </div>
-      <div class="event-desc">${escapeHtml(a.desc)}</div>
+      <div class="event-desc">${richPreview(a.desc)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
       ${submitterHtml(a)}
     </div>`;
@@ -2282,7 +2519,7 @@ function renderConferencesForMonth(){
         <div class="event-actions"><button class="danger" onclick="deleteConference('${currentMonth}','${id}')">Delete</button></div>
       </div>
       ${c.confDetails ? `<div class="event-desc" style="font-style:italic;">${escapeHtml(c.confDetails)}</div>` : ''}
-      <div class="event-desc">${escapeHtml(c.abstract)}</div>
+      <div class="event-desc">${richPreview(c.abstract)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
       ${submitterHtml(c)}
     </div>`;
@@ -2304,7 +2541,8 @@ function renderBlogsForMonth(){
   }
   listEl.innerHTML = ids.map(id => {
     const b = data[id];
-    const snippet = (b.content||'').slice(0,220) + ((b.content||'').length>220 ? '…' : '');
+    const plain = stripRich(b.content);
+    const snippet = plain.slice(0,220) + (plain.length>220 ? '…' : '');
     return `
     <div class="event-card">
       <div class="top">
@@ -2346,7 +2584,7 @@ function renderUpcomingEvents(){
         <div>
           <h3 style="margin-top:0;">${escapeHtml(u.title)}${(u.date||'') < upcomingCutoff() ? ` <span class="badge other" style="margin-left:6px;">Past · printed only up to the ${monthLabel((u.date||'').slice(0,7))} issue</span>` : ''}</h3>
           <div class="event-meta"><span>📅 ${formatDate(u.date)}</span></div>
-          ${u.note ? `<div class="event-desc" style="margin-top:4px; white-space:pre-line;">${escapeHtml(u.note)}</div>` : ''}
+          ${u.note ? `<div class="event-desc" style="margin-top:4px;">${richPreview(u.note)}</div>` : ''}
         </div>
         <div class="event-actions"><button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
       </div>
@@ -2911,9 +3149,9 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize }){
     margins:{ top:240, bottom:200, left:0, right:360 },
     children:[
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
-      new Paragraph({ spacing:{after:280, line:290}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
+      new Paragraph({ alignment:AlignmentType.JUSTIFIED, spacing:{after:280, line:290}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Vision", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
-      new Paragraph({ spacing:{after:0, line:290}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
+      new Paragraph({ alignment:AlignmentType.JUSTIFIED, spacing:{after:0, line:290}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
     ]
   });
 
@@ -3138,7 +3376,7 @@ function buildFlowArticle(opts){
     return { url:i.url, dw:d.width, dh:d.height };
   });
   const paras = (opts.text || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
-  let remaining = paras.reduce((n, p) => n + p.length, 0);
+  let remaining = paras.reduce((n, p) => n + stripRich(p).length, 0);
 
   let y = opts.startY || 0;
   let floatBottom = -1, floatW = 0;
@@ -3186,35 +3424,37 @@ function buildFlowArticle(opts){
   });
 
   /* ---- body paragraphs, broken at sentence ends where a new photo should start ---- */
-  const bodyPara = (text, floatRun) => new Paragraph({ spacing:{ after:Math.round(FLOW.PARA_GAP_PX * 15), line:BODY_LINE },
-    children:[ ...(floatRun ? [floatRun] : []), new TextRun({ text, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] });
+  const bodyPara = (text, floatRun) => richParagraph(text, { floatRun, after: Math.round(FLOW.PARA_GAP_PX * 15) });
 
   paras.forEach(p => {
-    const sents = splitSentences(p);
-    let cur = '';
+    const isList = !!listInfo(p);
+    const sents = isList ? [ p ] : splitSentences(p);   // a bullet point is never split for a photo
+    let cur = '', open = [];
+    const emit = (t, fr) => { const r = balanceRich(t, open); open = r.open; out.push(bodyPara(r.text, fr)); };
     let curFloat = canPlace() ? place() : null;
     let col = 0;
-    let paraLeft = p.length;
+    let paraLeft = stripRich(p).length;
     sents.forEach(s => {
+      const sl = stripRich(s).length;
       // a photo is due and this paragraph still has plenty of text: break here
       if(cur && paraLeft >= FLOW.MIN_SPLIT_CHARS && canPlace()){
         if(col > 0){ y += FLOW.LINE_PX; col = 0; }
         y += FLOW.PARA_GAP_PX;
-        out.push(bodyPara(cur.trim(), curFloat));
+        emit(cur.trim(), curFloat);
         cur = ''; curFloat = place();
       }
       cur += s;
-      paraLeft -= s.length; remaining -= s.length;
+      paraLeft -= sl; remaining -= sl;
       // advance the line model through this sentence
-      let n = Math.ceil(s.length * 1.06);
+      let n = Math.ceil(sl * 1.06);
       while(n > 0){
         const cap = charsPerLine(y) - col;
         if(n < cap){ col += n; n = 0; } else { n -= cap; col = 0; y += FLOW.LINE_PX; }
       }
     });
     if(col > 0){ y += FLOW.LINE_PX; }
-    y += FLOW.PARA_GAP_PX;
-    if(cur.trim()) out.push(bodyPara(cur.trim(), curFloat));
+    y += isList ? 3 : FLOW.PARA_GAP_PX;
+    if(cur.trim()) emit(cur.trim(), curFloat);
   });
 
   /* ---- photos that didn't get text to wrap round: gallery below the text ---- */
@@ -3368,9 +3608,7 @@ function buildEventsSection(ids, data, firstBreak){
 
 /* ---------- Publications ---------- */
 function bodyParagraphs(text){
-  const { Paragraph, TextRun } = docx;
-  return (text || '').split(/\n+/).map(s => s.trim()).filter(Boolean)
-    .map(s => new Paragraph({ spacing:{after:160, line:BODY_LINE}, children:[ new TextRun({ text:s, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] }));
+  return (text || '').split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => richParagraph(s));
 }
 function buildPublicationArticle(p, anchor, pageBreak, startY){
   const journal = p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : "");
@@ -3525,10 +3763,11 @@ function puzzleItem(pz, anchor){
       y += 26;
     }
     const imgs = allPhotos(entryPhotos(pz));
-    (pz.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => {
-      // title + text stay on the same page as the puzzle's images
-      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext: imgs.length > 0, keepLines:true, spacing:{after:160, line:BODY_LINE}, children:[ new TextRun({ text:t, color:"1B1B18", size:BODY_SIZE, font:"Inter" }) ] }));
-      y += Math.ceil(t.length * FLOW.CHAR_PX * 1.06 / PAGE_CONTENT_PX) * FLOW.LINE_PX + 11;
+    const pzLines = (pz.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean);
+    pzLines.forEach((t, li) => {
+      // a puzzle stays together: title, every line of text and its images on one page
+      out.push(richParagraph(t, { pageBreakBefore:brk(), keepNext: imgs.length > 0 || li < pzLines.length - 1, keepLines:true }));
+      y += Math.ceil(stripRich(t).length * FLOW.CHAR_PX * 1.06 / PAGE_CONTENT_PX) * FLOW.LINE_PX + 11;
     });
     for(let k = 0; k < imgs.length; k += 2){
       const pair = imgs.slice(k, k + 2);
@@ -3789,7 +4028,7 @@ async function renderWordIssue(plan){
       properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
       headers: { default: buildRunningHeader(plan.strapline, plan.dateRange), first: blankHeader() },
       footers: { default: buildRunningFooter(), first: buildRunningFooter() },
-      children: [ ...cover, ...body ]
+      children: [ ...cover, ...body, ...buildTeamBox() ]
     }]
   });
   return Packer.toBlob(doc);
@@ -3884,7 +4123,7 @@ function pdfCss(plan){
 .nlp .cbody { display: flex; align-items: flex-start; }
 .nlp .cbody .mv { padding: 16px 24px 12px 0; }
 .nlp .cbody .mv h3 { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 14pt; margin: 0 0 5px; }
-.nlp .cbody .mv p { font-style: italic; margin: 0 0 16px; font-size: 11pt; line-height: 1.4; }
+.nlp .cbody .mv p { font-style: italic; margin: 0 0 16px; font-size: 11pt; line-height: 1.4; text-align: justify; hyphens: manual; }
 .nlp .idx { background: #132340; color: #E8E4D8; padding: 18px 17px 14px; }
 .nlp .idx .it { color: #C6A34A; font-weight: 700; margin-bottom: 8px; }
 .nlp .idx .gh { color: #fff; font-weight: 700; margin: 9px 0 3px; }
@@ -3898,6 +4137,15 @@ function pdfCss(plan){
 .nlp .people .rl { color: #A8842F; font-weight: 700; font-size: 7pt; letter-spacing: .06em; }
 .nlp .people .nm { color: #132340; font-weight: 700; font-size: 9pt; line-height: 1.25; }
 .nlp .people .dg { color: #736C5E; font-size: 7.5pt; line-height: 1.25; }
+.nlp .team { break-inside: avoid; margin-top: 30px; background: #F3EDDE; border-top: 1.5pt solid #C6A34A; padding: 12px 14px 10px; text-align: center; clear: both; }
+.nlp .team .tt { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: #132340; font-size: 11pt; letter-spacing: .2em; margin-bottom: 8px; }
+.nlp .team .tp { display: flex; justify-content: center; gap: 40px; }
+.nlp .team .pp { flex: 0 1 260px; }
+.nlp .team .rl { color: #A8842F; font-weight: 700; font-size: 7.5pt; letter-spacing: .06em; }
+.nlp .team .nm { color: #132340; font-weight: 700; font-size: 10.5pt; }
+.nlp .team .dg { color: #736C5E; font-size: 8.5pt; }
+.nlp .team .tc { margin-top: 8px; font-size: 8pt; color: #736C5E; }
+.nlp .team .tc a { color: #1155CC; }
 .nlp .contact { background: #F3EDDE; text-align: center; font-size: 8pt; padding: 6px; }
 .nlp .contact a { color: #1155CC; }
 .nlp .contact .sp { color: #C6A34A; padding: 0 12px; }
@@ -3927,7 +4175,9 @@ function pdfCss(plan){
 .nlp .meta b { color: #132340; font-style: normal; }
 .nlp .meta a { color: #1155CC; }
 .nlp .metaend { height: 8px; }
-.nlp .art p { margin: 0 0 9px; }
+.nlp .art p, .nlp .pz p { margin: 0 0 9px; text-align: justify; hyphens: manual; }
+.nlp p.li { text-align: left; display: flex; gap: 8px; margin: 0 0 4px 8px; }
+.nlp p.li .mk { flex: 0 0 auto; min-width: 14px; color: #132340; font-weight: 600; }
 .nlp .refs { font-size: 9pt; margin: 6px 0 2px; break-inside: avoid; }
 .nlp .refs .rh2 { font-weight: 700; color: #132340; margin-bottom: 2px; }
 .nlp .refs .rf { display: flex; gap: 6px; margin: 0 0 2px; }
@@ -3952,7 +4202,9 @@ function flowHtml(o){
   const imgs = (o.images || []).filter(i => i && i.url).map(i => ({ ...i, d: imageDimsFit(i.w, i.h, fmax.w, fmax.h) }));
   const tag = (im, cls) => `<img class="${cls}" src="${im.url}" style="width:${im.d.width}px;height:${im.d.height}px">`;
   const paras = (o.text || '').split(/\n+/).map(p => p.trim()).filter(Boolean);
-  const total = paras.reduce((n, p) => n + p.length, 0);
+  const total = paras.reduce((n, p) => n + stripRich(p).length, 0);
+  const pHtml = t => { const li = listInfo(t);
+    return li ? `<p class="li"><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p>${richToHtml(t, H)}</p>`; };
   let html = `<article class="art"${o.anchor ? ` id="${o.anchor}"` : ''}>`;
   if(imgs[0]) html += tag(imgs[0], 'fr');
   if(o.kicker) html += `<div class="kick" style="color:${hx(o.kicker.color || '132340')}">${H(o.kicker.text)}</div>`;
@@ -3966,18 +4218,19 @@ function flowHtml(o){
   for(let k = 1; k <= slots; k++){ const at = Math.round(total * k / (slots + 1)); if(total - at >= 260) marks.push(at); }
   let next = 0, seen = 0, side = 'fl';
   paras.forEach(p => {
-    let cur = '';
-    splitSentences(p).forEach(s => {
+    let cur = '', open = [];
+    const para = t => { const r = balanceRich(t, open); open = r.open; return pHtml(r.text); };
+    (listInfo(p) ? [ p ] : splitSentences(p)).forEach(s => {
       if(next < marks.length && seen >= marks[next] && cur){
-        html += `<p>${H(cur.trim())}</p>` + tag(rest[next], side);
+        html += para(cur.trim()) + tag(rest[next], side);
         side = side === 'fl' ? 'fr' : 'fl'; next++; cur = '';
       }
-      cur += s; seen += s.length;
+      cur += s; seen += stripRich(s).length;
     });
     if(next < marks.length && seen >= marks[next]){
-      html += `<p>${H(cur.trim())}</p>` + tag(rest[next], side);
+      html += para(cur.trim()) + tag(rest[next], side);
       side = side === 'fl' ? 'fr' : 'fl'; next++;
-    } else if(cur.trim()) html += `<p>${H(cur.trim())}</p>`;
+    } else if(cur.trim()) html += para(cur.trim());
   });
   const left = rest.slice(next);
   if(left.length){
@@ -4042,7 +4295,8 @@ function pdfItemHtml(it, anchor){
       let h = `<div class="pz"${anchor ? ` id="${anchor}"` : ''}>`;
       if(d.title) h += `<div class="pt">${H(d.title)}</div>`;
       if(d.author) h += `<div class="pa">Contributed by ${H(d.author)}</div>`;
-      (d.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => h += `<p>${H(t)}</p>`);
+      (d.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => { const li = listInfo(t);
+        h += li ? `<p class="li"><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p>${richToHtml(t, H)}</p>`; });
       const ims = allPhotos(entryPhotos(d));
       if(ims.length) h += `<div class="imgs">` + ims.map(im => { const z = imageDimsFit(im.w, im.h, ims.length > 1 ? 320 : 540, ims.length > 1 ? 420 : 600);
         return `<img src="${im.url}" style="width:${z.width}px;height:${z.height}px">`; }).join('') + `</div>`;
@@ -4205,7 +4459,8 @@ async function renderPdfIssue(plan, progress){
 
     const source = document.createElement('div');
     source.className = 'nlp';
-    source.innerHTML = cover.html + contents + body;
+    source.setAttribute('lang', 'en');
+    source.innerHTML = cover.html + contents + body + teamBoxHtml();
     const target = document.createElement('div');
     target.className = 'nlp';
     host.appendChild(target);
@@ -4291,7 +4546,7 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
     const row = ws.addRow({
       month, date: formatDate(p.date), title: p.title, journal: p.journal,
       volume: p.volume || '', issue: p.issue || '', indexing: p.indexing || '',
-      authors: p.authors, abstract: p.abstract, photos: (p.photos||[]).length, submittedBy: submitterText(p),
+      authors: p.authors, abstract: stripRich(p.abstract), photos: (p.photos||[]).length, submittedBy: submitterText(p),
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
     row.alignment = { vertical:'top' };
@@ -4320,7 +4575,7 @@ function addAwardsSheet(wb, sheetLabel, rows, includeMonth){
   ws.getRow(1).height = 22;
   rows.forEach(({ month, a }) => {
     const row = ws.addRow({ month, date: formatDate(a.date), type: a.type || '', title: a.title, recipients: a.recipients,
-      awardedBy: a.awardedBy, desc: a.desc, photos: (a.photos||[]).length, submittedBy: submitterText(a) });
+      awardedBy: a.awardedBy, desc: stripRich(a.desc), photos: (a.photos||[]).length, submittedBy: submitterText(a) });
     row.getCell('desc').alignment = { wrapText:true, vertical:'top' };
     row.alignment = { vertical:'top' };
   });
@@ -4352,7 +4607,7 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
       month, date: formatDate(c.date), paperTitle: c.paperTitle,
       authors: confAuthorsList(c).map(a => a.name + (a.affiliation ? ' (' + a.affiliation + ')' : '')).join('; '),
       confName: c.confName,
-      confDetails: c.confDetails || '', presenter: c.presenter, abstract: c.abstract, photos: (c.photos||[]).length, submittedBy: submitterText(c),
+      confDetails: c.confDetails || '', presenter: c.presenter, abstract: stripRich(c.abstract), photos: (c.photos||[]).length, submittedBy: submitterText(c),
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
     row.getCell('authors').alignment = { wrapText:true, vertical:'top' };
@@ -4412,7 +4667,7 @@ async function generateExcel(){
           dateEnd: e.dateEnd ? formatDate(e.dateEnd) : '',
           category: e.category,
           title: e.title,
-          desc: e.desc,
+          desc: stripRich(e.desc),
           organizer: e.organizer,
           role: e.role === 'Attended' ? 'Attended' : 'Organized',
           photos: (e.photos||[]).length,
@@ -4514,7 +4769,7 @@ async function generateAnnualExcel(){
             dateEnd: e.dateEnd ? formatDate(e.dateEnd) : '',
             category: e.category,
             title: e.title,
-            desc: e.desc,
+            desc: stripRich(e.desc),
             organizer: e.organizer,
             role: e.role === 'Attended' ? 'Attended' : 'Organized',
             photos: (e.photos||[]).length,
@@ -4579,6 +4834,7 @@ document.getElementById('f_date').valueAsDate = new Date();
   document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; })();
 resetConfAuthors();
 loadSubmitter();
+initRichEditors();
 </script>
 </body>
 </html>

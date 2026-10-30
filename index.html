@@ -171,6 +171,8 @@
   .rte-area div{ min-height:1.55em; }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;}
+  .pzsol-box{ margin-top:30px; padding-top:22px; border-top:1px dashed #d8cfb8; }
+  .pzsol-title{ font-family:'Playfair Display',serif; color:var(--navy); font-size:17px; margin:0 0 4px; }
   @media(max-width:640px){.row2,.row3{grid-template-columns:1fr;}}
 
   .subtabs{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -716,6 +718,36 @@
         <button class="primary" id="submitBtn-puzzle" onclick="submitPuzzle()">Submit Puzzle</button>
         <div class="msg" id="submitMsg-puzzle"></div>
       </form>
+
+      <div class="pzsol-box">
+        <h3 class="pzsol-title">Solution to an Earlier Puzzle</h3>
+        <p class="section-desc" style="margin-top:0;">Choose the puzzle you are answering. The newsletter prints a short reminder of that puzzle with your solution, in the month you pick below.</p>
+        <form id="pzsolForm" onsubmit="return false;">
+          <label class="first">Which puzzle? *</label>
+          <select id="pzs_puzzle" onchange="onSolutionPuzzleChange()"><option value="">Loading puzzles…</option></select>
+          <div class="row2">
+            <div>
+              <label>Solution by</label>
+              <input type="text" id="pzs_author" placeholder="Your name (optional)" />
+            </div>
+            <div>
+              <label>Newsletter Month *</label>
+              <input type="month" id="pzs_month" />
+            </div>
+          </div>
+          <label>Solution</label>
+          <textarea id="pzs_content" style="min-height:120px;" placeholder="The answers, with a short explanation if you like..."></textarea>
+          <label>Solution Images</label>
+          <div class="photo-drop" onclick="document.getElementById('pzs_photos').click()">
+            <input type="file" id="pzs_photos" accept="image/*" multiple onchange="handlePhotoSelect('pzsol', event)" />
+            <div><strong>Click to add images</strong></div>
+            <div class="hint">JPG/PNG, up to 6, e.g. the solved crossword grid.</div>
+          </div>
+          <div class="thumbs" id="thumbs-pzsol"></div>
+          <button class="primary" id="submitBtn-pzsol" onclick="submitPuzzleSolution()">Submit Solution</button>
+          <div class="msg" id="submitMsg-pzsol"></div>
+        </form>
+      </div>
     </div>
 
     <div class="card subview" id="subview-upcomingconf">
@@ -946,7 +978,7 @@
 
     <div class="card">
       <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Puzzles This Month</h2>
-      <p class="section-desc" style="margin-top:-8px;">Submitted from the public "Puzzle" tab for the month selected above. All of them are printed in the last section of that month's newsletter.</p>
+      <p class="section-desc" style="margin-top:-8px;">Submitted from the public "Puzzle" tab for the month selected above, together with solutions to earlier puzzles. All of them are printed in the Puzzle section of that month's newsletter: new puzzles first, then the solutions.</p>
       <div id="puzzleList"></div>
     </div>
 
@@ -1133,12 +1165,13 @@ function switchSubtab(name){
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
+  if(name === 'puzzle') loadPuzzleIndex();
 }
 
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], desk: [] };
+let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], pzsol: [], desk: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1436,7 +1469,7 @@ function submitBlog(){
      [b]bold[/b]   [i]italic[/i]   [u]underline[/u]
      a line starting "• " is a bullet point, "1. " a numbered point.
    Old plain-text entries need no change. */
-const RICH_FIELDS = ['f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','desk_content'];
+const RICH_FIELDS = ['f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','pzs_content','desk_content','s_mission','s_vision'];
 const RICH_TAG_RE = /\[(\/?)(b|i|u)\]/g;
 const LIST_RE = /^(?:([•\-*])|(\d{1,3})[.)])\s+/;
 function stripRich(t){ return String(t || '').replace(RICH_TAG_RE, ''); }
@@ -1719,6 +1752,58 @@ function submitPuzzle(){
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Puzzle'; });
 }
 
+/* ---------------- Submit: Puzzle solution (open to anyone) ----------------
+   Visitors can't read the puzzles themselves (they hold the contributors'
+   details), so the dropdown reads puzzleIndex: just month, id and title,
+   refreshed automatically whenever an admin has the dashboard open. */
+let puzzleIndexCache = {};
+function loadPuzzleIndex(){
+  const sel = document.getElementById('pzs_puzzle');
+  if(!sel || !firebaseReady) return;
+  db.ref('puzzleIndex').once('value').then(snap => {
+    puzzleIndexCache = snap.val() || {};
+    const keep = sel.value;
+    const opts = [];
+    Object.keys(puzzleIndexCache).sort().reverse().forEach(m => {
+      Object.entries(puzzleIndexCache[m] || {}).forEach(([id, t]) => opts.push(`<option value="${m}|${escapeHtml(id)}">${escapeHtml(monthLabel(m))} — ${escapeHtml(String(t || 'Puzzle'))}</option>`));
+    });
+    sel.innerHTML = opts.length ? '<option value="">Select the puzzle…</option>' + opts.join('') : '<option value="">No puzzles published yet</option>';
+    if(keep) sel.value = keep;
+  }).catch(() => { sel.innerHTML = '<option value="">Could not load the puzzles — please refresh</option>'; });
+}
+/* picking a puzzle suggests the month after it for the solution */
+function onSolutionPuzzleChange(){
+  const v = document.getElementById('pzs_puzzle').value;
+  if(!v) return;
+  const [y, m] = v.split('|')[0].split('-').map(Number);
+  const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  document.getElementById('pzs_month').value = next;
+}
+function submitPuzzleSolution(){
+  if(!firebaseReady){ showSubmitMsg('pzsol', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter();
+  if(!submittedBy) return;
+  const pick = document.getElementById('pzs_puzzle').value;
+  const month = document.getElementById('pzs_month').value;
+  const solution = document.getElementById('pzs_content').value.trim();
+  const author = document.getElementById('pzs_author').value.trim();
+  if(!pick || !month){ showSubmitMsg('pzsol', false, 'Please choose the puzzle and the newsletter month.'); return; }
+  if(!solution && photoState.pzsol.length === 0){ showSubmitMsg('pzsol', false, 'Please add the solution text or at least one image.'); return; }
+  const [puzzleMonth, puzzleId] = pick.split('|');
+  const puzzleTitle = String((puzzleIndexCache[puzzleMonth] || {})[puzzleId] || 'Puzzle');
+  const btn = document.getElementById('submitBtn-pzsol');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  db.ref('puzzleSolutions/' + month).push({ submittedBy, puzzleMonth, puzzleId, puzzleTitle, author, solution, photos: photoPayload('pzsol'), submittedAt: Date.now() })
+    .then(() => {
+      showSubmitMsg('pzsol', true, 'Solution submitted for the ' + monthLabel(month) + ' newsletter. Thank you!');
+      document.getElementById('pzsolForm').reset();
+      document.getElementById('pzs_month').value = month;
+      photoState.pzsol = []; renderThumbs('pzsol');
+    })
+    .catch(err => showSubmitMsg('pzsol', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Solution'; });
+}
+
 /* ---------------- Submit: Upcoming Event (open to anyone) ---------------- */
 function submitUpcomingEvent(){
   if(!firebaseReady){ showSubmitMsg('upcoming', false, 'Firebase is not configured yet.'); return; }
@@ -1900,7 +1985,7 @@ function removeMessage(key){
 }
 
 /* ---------------- Backup & erase (start of a new year) ---------------- */
-const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles'];
+const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles','puzzleSolutions','puzzleIndex'];
 function downloadBackup(){
   if(!firebaseReady) return;
   db.ref('/').once('value').then(snap => {
@@ -1934,6 +2019,7 @@ let allUpcomingConferences = {}; // flat: { pushId: {title, date, link, brochure
 let allEditorialsByMonth = {};    // Editor's Desk (admin): { "2026-07": { title, author, content, photos } }
                                   //   (older portal entries may also sit under it as { pushId: {...} } — read as guest editorials)
 let allGuestEditorialsByMonth = {};  // { "2026-07": { pushId: { title, author, content, photos } } }
+let allPuzzleSolutionsByMonth = {}; // { "2026-10": { pushId: { puzzleMonth, puzzleId, puzzleTitle, author, solution, photos } } }
 let allPuzzlesByMonth = {};       // { "2026-07": { pushId: { title, author, content, photos } } }
 let currentMonth = null;
 let dashboardInitialized = false;
@@ -1953,6 +2039,7 @@ function allMonthKeys(){
     ...Object.keys(allEditorialsByMonth),
     ...Object.keys(allGuestEditorialsByMonth),
     ...Object.keys(allPuzzlesByMonth),
+    ...Object.keys(allPuzzleSolutionsByMonth),
   ]));
 }
 
@@ -1977,6 +2064,11 @@ function initDashboard(){
   });
   db.ref('puzzles').on('value', snap => {
     allPuzzlesByMonth = snap.val() || {};
+    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
+    syncPuzzleIndex();
+  });
+  db.ref('puzzleSolutions').on('value', snap => {
+    allPuzzleSolutionsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
   });
   db.ref('events').on('value', snap => {
@@ -2009,8 +2101,8 @@ function initDashboard(){
   });
   db.ref('settings/newsletter').on('value', snap => {
     const s = snap.val() || {};
-    document.getElementById('s_mission').value = s.mission || '';
-    document.getElementById('s_vision').value = s.vision || '';
+    setRich('s_mission', s.mission || '');
+    setRich('s_vision', s.vision || '');
     document.getElementById('s_quoteText').value = s.quoteText || '';
     document.getElementById('s_quoteAttr').value = s.quoteAttr || '';
     document.getElementById('s_website').value = s.website || '';
@@ -2279,7 +2371,9 @@ function renderEPList(kind){
   const isEd = kind === 'editorial';
   const listEl = document.getElementById(isEd ? 'editorialList' : 'puzzleList');
   if(!listEl || !currentMonth) return;
-  const items = isEd ? guestEditorialEntries(currentMonth) : monthEntries(allPuzzlesByMonth, currentMonth).map(e => Object.assign({ _src:'puzzles' }, e));
+  const items = isEd ? guestEditorialEntries(currentMonth) : monthEntries(allPuzzlesByMonth, currentMonth).map(e => Object.assign({ _src:'puzzles' }, e))
+    .concat(monthEntries(allPuzzleSolutionsByMonth, currentMonth).map(e => Object.assign({ _src:'puzzleSolutions', _sol:true }, e,
+      { title: 'Solution: ' + (e.puzzleTitle || 'Puzzle') + (e.puzzleMonth ? ' (' + monthLabel(e.puzzleMonth) + ')' : ''), content: e.solution || '' })));
   if(items.length === 0){
     listEl.innerHTML = `<div class="empty-state">No ${isEd ? 'guest editorial' : 'puzzle'} submitted for ${monthLabel(currentMonth)}.</div>`;
     return;
@@ -2293,7 +2387,7 @@ function renderEPList(kind){
     <div class="event-card">
       <div class="top">
         <div>
-          <span class="badge ${isEd ? 'academic' : 'social'}">${isEd ? 'Guest Editorial' : 'Puzzle'}</span>
+          <span class="badge ${isEd ? 'academic' : 'social'}">${isEd ? 'Guest Editorial' : (e._sol ? 'Puzzle Solution' : 'Puzzle')}</span>
           <h3>${escapeHtml(e.title || (isEd ? 'Guest Editorial' : 'Puzzle'))}</h3>
           ${e.author ? `<div class="event-meta"><span>✍️ ${escapeHtml(e.author)}</span></div>` : ''}
         </div>
@@ -2355,8 +2449,45 @@ function removeEditorsDesk(){
   db.ref('editorials/' + currentMonth).update(wipe).then(() => deskMsg(true, 'Removed.'));
 }
 function renderPuzzlesForMonth(){ renderEPList('puzzle'); }
+/* Public list of puzzle titles for the solution dropdown on the portal (admin writes it) */
+let lastPuzzleIndexJson = null;
+function syncPuzzleIndex(){
+  const idx = {};
+  Object.keys(allPuzzlesByMonth).forEach(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).forEach(p => {
+    (idx[m] = idx[m] || {})[p._id || 'legacy'] = (p.title || 'Puzzle').slice(0, 300);
+  }));
+  const json = JSON.stringify(idx);
+  if(json === lastPuzzleIndexJson) return;
+  lastPuzzleIndexJson = json;
+  db.ref('puzzleIndex').set(idx).catch(() => { lastPuzzleIndexJson = null; });
+}
+/* The puzzle a solution answers (null if it has been deleted since) */
+function solvedPuzzle(sol){
+  return monthEntries(allPuzzlesByMonth, sol.puzzleMonth || '').find(p => (p._id || 'legacy') === sol.puzzleId) || null;
+}
+/* A short reminder of the puzzle: its opening words */
+function puzzleShortDescription(sol){
+  const pz = solvedPuzzle(sol);
+  const when = sol.puzzleMonth ? monthLabel(sol.puzzleMonth) : '';
+  const text = pz ? stripRich(pz.content || '').replace(/\s*\n+\s*/g, ' ').trim() : '';
+  if(!text) return when ? `The puzzle appeared in the ${when} newsletter.` : '';
+  if(text.length <= 260) return text;
+  const cut = text.slice(0, 260);
+  return cut.slice(0, cut.lastIndexOf(' ') > 180 ? cut.lastIndexOf(' ') : 260) + ' …';
+}
+const hasSolution = sol => sol && ((sol.solution || '').trim() || (sol.photos || []).length);
+function solutionEntries(month){
+  return monthEntries(allPuzzleSolutionsByMonth, month).filter(hasSolution);
+}
+/* What the printers get: the puzzle's look, with a heading, the reminder and the answer */
+function solutionView(sol){
+  return { title: sol.puzzleTitle || (solvedPuzzle(sol) || {}).title || 'Puzzle',
+    kicker: 'SOLUTION' + (sol.puzzleMonth ? ' · ' + monthLabel(sol.puzzleMonth).toUpperCase() + ' PUZZLE' : ''),
+    byLabel: 'Solution by ', author: sol.author, intro: puzzleShortDescription(sol),
+    content: sol.solution || '', photos: sol.photos || [] };
+}
 function deleteEP(src, month, id){
-  if(!confirm('Delete this ' + (src === 'puzzles' ? 'puzzle' : 'guest editorial') + '? This cannot be undone.')) return;
+  if(!confirm('Delete this ' + (src === 'puzzles' ? 'puzzle' : src === 'puzzleSolutions' ? 'puzzle solution' : 'guest editorial') + '? This cannot be undone.')) return;
   const base = src + '/' + month;
   if(id) db.ref(base + '/' + id).remove();
   else { const wipe = {}; LEGACY_EP_KEYS.forEach(k => wipe[k] = null); db.ref(base).update(wipe); } // old format: remove only its own fields
@@ -2721,6 +2852,32 @@ function logoDimsForHeight(targetHeight, maxWidth){
    They're placeholders until you replace the text below.
    --------------------------------------------------------------------- */
 let MISSION_TEXT = "[Replace this placeholder with the department's Mission statement — search for MISSION_TEXT in this file to edit it.]";
+/* Mission / Vision text as cover lines. Bold, italic, underline, bullet and
+   numbered points work as in the other text boxes; an older single-line text
+   with several "•" in it is split into one bullet per point. */
+function coverLines(text){
+  let lines = String(text || '').split('\n').map(t => t.trim()).filter(Boolean);
+  if(lines.length === 1 && (stripRich(lines[0]).match(/•/g) || []).length >= 2)
+    lines = lines[0].split(/\s*•\s*/).map(t => t.trim()).filter(Boolean).map(t => '• ' + t);
+  return lines;
+}
+function coverTextParagraphs(text, lastAfter){
+  const { Paragraph, TextRun, AlignmentType, TabStopType } = docx;
+  const base = { color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true };
+  const lines = coverLines(text);
+  return lines.map((t, k) => {
+    const li = listInfo(t), last = k === lines.length - 1;
+    const after = last ? lastAfter : (li ? 40 : 100);
+    if(li) return new Paragraph({ spacing:{ after, line:290 }, indent:{ left:300, hanging:240 }, tabStops:[ { type:TabStopType.LEFT, position:300 } ],
+      alignment:AlignmentType.JUSTIFIED, children:[ new TextRun(Object.assign({}, base, { text: li.marker + '\t' })), ...richRuns(li.rest, base) ] });
+    return new Paragraph({ alignment:AlignmentType.JUSTIFIED, spacing:{ after, line:290 }, children: richRuns(t, base) });
+  });
+}
+function coverTextHtml(text, last){
+  const lines = coverLines(text);
+  return lines.map((t, k) => { const li = listInfo(t), st = (k === lines.length - 1 && last) ? ' style="margin-bottom:0"' : '';
+    return li ? `<p class="li"${st}><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p${st}>${richToHtml(t, H)}</p>`; }).join('');
+}
 let VISION_TEXT = "[Replace this placeholder with the department's Vision statement — search for VISION_TEXT in this file to edit it.]";
 let QUOTE_TEXT = "[Replace with this month's quote — search for QUOTE_TEXT to edit it.]";
 let QUOTE_ATTRIBUTION = "[Attribution — e.g. a scientist's name, or \"Department of Physical Sciences\"]";
@@ -2891,6 +3048,7 @@ function buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, co
    --------------------------------------------------------------------- */
 const PAGE_BODY_PX = Math.floor((16838 - 700 - 800) / 15);  // usable A4 height in px
 const COVER_SAFETY_PX = 24;
+const COVER_FILL_SAFETY_PX = 36;
 const COVER_STRIP_TW = 420, COVER_MAST_TW = 1500;
 const IDX_DATE_TW = 620;
 const IDX_PAD_TW = 260;
@@ -2916,7 +3074,8 @@ function estimateMissionVisionPx(split){
   const { MV_TW } = coverIndexWidths(split);
   const w = (MV_TW - 360) / 15, charPx = 6.4, linePx = 20;
   const lines = t => Math.max(1, Math.ceil((t || '').length * charPx * 1.08 / w));
-  return 40 + 2 * 40 + 19 + (lines(MISSION_TEXT) + lines(VISION_TEXT)) * linePx;
+  const block = t => coverLines(t).reduce((n, l) => { const li = listInfo(l); return n + lines(stripRich(li ? li.rest : l)) + (li ? 0.3 : 0.4); }, 0);
+  return 40 + 2 * 40 + 19 + (block(MISSION_TEXT) + block(VISION_TEXT)) * linePx;
 }
 function estimateQuotePx(){
   const chars = cleanQuote(QUOTE_TEXT).length + (QUOTE_ATTRIBUTION || '').length + 10;
@@ -3113,7 +3272,8 @@ async function buildCover({ issuePeriod, heroSrc, indexSpec, contentsPage }){
   }
   COVER_SPLIT = plan.split || 0.6;
   const hero = (info && plan.heroH > 0) ? heroAtHeight(info, plan.heroH) : null;
-  const bodyMinPx = Math.floor(coverAvailPx() - (hero ? hero.h : 0));
+  // a little short of the estimate, so Word (which measures text slightly differently) never runs onto page 2
+  const bodyMinPx = Math.floor(coverAvailPx() - (hero ? hero.h : 0) - COVER_FILL_SAFETY_PX);
   const cover = buildCoverPage({ issuePeriod, hero, indexSpec:spec, idxSize:plan.idxSize, bodyMinPx });
   return cover.concat(contents);
 }
@@ -3178,9 +3338,9 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, bodyMinPx }){
     margins:{ top:240, bottom:200, left:0, right:360 },
     children:[
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Mission", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
-      new Paragraph({ alignment:AlignmentType.JUSTIFIED, spacing:{after:280, line:290}, children:[ new TextRun({ text:MISSION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
+      ...coverTextParagraphs(MISSION_TEXT, 280),
       new Paragraph({ spacing:{after:80}, children:[ new TextRun({ text:"Our Vision", color:"132340", bold:true, size:28, font:"Playfair Display" }) ] }),
-      new Paragraph({ alignment:AlignmentType.JUSTIFIED, spacing:{after:0, line:290}, children:[ new TextRun({ text:VISION_TEXT, color:"1B1B18", size:BODY_SIZE, font:"Inter", italics:true }) ] }),
+      ...coverTextParagraphs(VISION_TEXT, 0),
     ]
   });
 
@@ -3223,35 +3383,9 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, bodyMinPx }){
   const bodyRow = new TableRow({ children:[ missionVisionCell, indexCell ], ...(bodyMinPx > 0 ? { height:{ value: Math.round(bodyMinPx * 15), rule: HeightRule.ATLEAST } } : {}) });
 
 
-  /* ---- 6a. names on the cover footer (Head of School, Head of Department, Editors) ---- */
-  const people = coverPeople();
-  let peopleRow = null;
-  if(people.length){
-    const innerW = PAGE_CONTENT_TW - 200, colW = Math.floor(innerW / people.length);
-    const inner = new Table({
-      width:{ size:innerW, type:WidthType.DXA }, columnWidths: people.map(() => colW), layout: TableLayoutType.FIXED, borders: noBorders(),
-      rows:[ new TableRow({ children: people.map(pp => new TableCell({
-        width:{ size:colW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:60, right:60 },
-        children:[
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.role.toUpperCase(), color:"A8842F", bold:true, size:13, characterSpacing:10, font:"Inter" }) ] }),
-          new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.name, color:"132340", bold:true, size:18, font:"Inter" }) ] }),
-          ...((pp.designation || isEmail(pp.email)) ? [ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
-            ...(pp.designation ? [ new TextRun({ text:pp.designation, color:"736C5E", size:15, font:"Inter" }) ] : []),
-            ...(pp.designation && isEmail(pp.email) ? [ new TextRun({ text:"  ·  ", color:"C6A34A", size:15, font:"Inter" }) ] : []),
-            ...(isEmail(pp.email) ? [ new ExternalHyperlink({ link:'mailto:' + pp.email.trim(), children:[ new TextRun({ text:pp.email.trim(), color:"1155CC", underline:{}, size:15, font:"Inter" }) ] }) ] : []),
-          ] }) ] : []),
-        ]
-      })) }) ]
-    });
-    peopleRow = new TableRow({ children:[ full(
-      [ inner, new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ],
-      { margins:{ top:60, bottom:20, left:100, right:100 }, shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" } }) ] });
-  }
-
   const rows = [ stripRow, mastRow ];
   if(heroRow) rows.push(heroRow);
   rows.push(quoteRow, bodyRow);
-  if(peopleRow) rows.push(peopleRow);
   return [ new Table({
     width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
     columnWidths: cols,
@@ -3296,6 +3430,33 @@ function blankHeader(){
   return new docx.Header({ children:[ new docx.Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[ new docx.TextRun({ text:'', size:2 }) ] }) ] });
 }
 
+/* Word: Head of School / Head of Department box. It sits in the cover page's
+   footer, so Word always keeps it on the cover, at the foot of the page. */
+function coverPeopleTable(){
+  const people = coverPeople();
+  if(!people.length) return null;
+  const { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, TableLayoutType, ExternalHyperlink } = docx;
+  const innerW = PAGE_CONTENT_TW - 200, colW = Math.floor(innerW / people.length);
+  const inner = new Table({
+    width:{ size:innerW, type:WidthType.DXA }, columnWidths: people.map(() => colW), layout: TableLayoutType.FIXED, borders: noBorders(),
+    rows:[ new TableRow({ cantSplit:true, children: people.map(pp => new TableCell({
+      width:{ size:colW, type:WidthType.DXA }, margins:{ top:0, bottom:0, left:60, right:60 },
+      children:[
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.role.toUpperCase(), color:"A8842F", bold:true, size:13, characterSpacing:10, font:"Inter" }) ] }),
+        new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new TextRun({ text:pp.name, color:"132340", bold:true, size:18, font:"Inter" }) ] }),
+        ...((pp.designation || isEmail(pp.email)) ? [ new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[
+          ...(pp.designation ? [ new TextRun({ text:pp.designation, color:"736C5E", size:15, font:"Inter" }) ] : []),
+          ...(pp.designation && isEmail(pp.email) ? [ new TextRun({ text:"  ·  ", color:"C6A34A", size:15, font:"Inter" }) ] : []),
+          ...(isEmail(pp.email) ? [ new ExternalHyperlink({ link:'mailto:' + pp.email.trim(), children:[ new TextRun({ text:pp.email.trim(), color:"1155CC", underline:{}, size:15, font:"Inter" }) ] }) ] : []),
+        ] }) ] : []),
+      ]
+    })) }) ]
+  });
+  return new Table({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, columnWidths:[ PAGE_CONTENT_TW ], layout: TableLayoutType.FIXED, borders: noBorders(),
+    rows:[ new TableRow({ cantSplit:true, children:[ new TableCell({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
+      margins:{ top:60, bottom:20, left:100, right:100 }, shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" },
+      children:[ inner, new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ] }) ] }) ] });
+}
 /* Website · email · social handle, in small type, for the cover page's footer */
 function coverContactParagraph(){
   const { Paragraph, TextRun, ExternalHyperlink, AlignmentType } = docx;
@@ -3317,8 +3478,10 @@ function coverContactParagraph(){
 function buildRunningFooter(withContacts){
   const { Footer, Paragraph, TextRun, AlignmentType, PageNumber, BorderStyle } = docx;
   const contacts = withContacts ? coverContactParagraph() : null;
+  const people = withContacts ? coverPeopleTable() : null;
   return new Footer({
-    children:[ ...(contacts ? [ contacts ] : []), new Paragraph({
+    children:[ ...(people ? [ people, new Paragraph({ spacing:{ before:0, after:80, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ] : []),
+      ...(contacts ? [ contacts ] : []), new Paragraph({
       alignment: AlignmentType.CENTER,
       border:{ top:{ style:BorderStyle.SINGLE, size:2, color:"E4DAC3", space:6 } },
       children:[
@@ -3780,15 +3943,30 @@ function puzzleItem(pz, anchor){
     let first = true;
     const brk = () => { const b = first && pb; first = false; return b; };
     let y = sy;
+    if(pz.kicker){
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ before:240, after:40 },
+        children:[ new TextRun({ text:pz.kicker, color:"A8842F", bold:true, size:16, characterSpacing:20, font:"Inter" }) ] }));
+      y += 30;
+    }
     if(pz.title){
-      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: pz.author ? 40 : 200 },
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: (pz.author || pz.intro) ? 40 : 200 },
         children: bookmarked(anchor, [ new TextRun({ text:pz.title, color:"132340", bold:true, size:30, font:"Playfair Display" }) ]) }));
       y += 36;
     }
     if(pz.author){
-      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after:200 },
-        children:[ new TextRun({ text:'Contributed by ' + pz.author, italics:true, color:"736C5E", size:META_SIZE, font:"Inter" }) ] }));
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: pz.intro ? 120 : 200 },
+        children:[ new TextRun({ text:(pz.byLabel || 'Contributed by ') + pz.author, italics:true, color:"736C5E", size:META_SIZE, font:"Inter" }) ] }));
       y += 26;
+    }
+    if(pz.intro){
+      const { BorderStyle } = docx;
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext:true, keepLines:true, alignment:AlignmentType.JUSTIFIED,
+        spacing:{ before:60, after:200, line:276 }, indent:{ left:300, right:300 },
+        shading:{ fill:"F3EDDE", type:docx.ShadingType.CLEAR, color:"auto" },
+        border:{ left:{ style:BorderStyle.SINGLE, size:12, color:"C6A34A", space:8 } },
+        children:[ new TextRun({ text:'The puzzle:  ', bold:true, color:"132340", size:META_SIZE + 1, font:"Inter" }),
+                   new TextRun({ text:pz.intro, italics:true, color:"3A3A34", size:META_SIZE + 1, font:"Inter" }) ] }));
+      y += Math.ceil(pz.intro.length * FLOW.CHAR_PX * 0.95 / (PAGE_CONTENT_PX - 40)) * 17 + 24;
     }
     const imgs = allPhotos(entryPhotos(pz));
     const pzLines = (pz.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean);
@@ -3845,6 +4023,7 @@ function itemTocInfo(it){
     case 'desk':    return { title:d.title || 'From the Editor’s Desk' };
     case 'guest':   return { title:d.title || 'Guest Editorial' };
     case 'puzzle':  return { title:d.title || 'Puzzle' };
+    case 'pzsol':   return { title:'Solution: ' + (d.puzzleTitle || 'Puzzle') };
     case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
     case 'upevent': return { title:d.title, date:d.date };
     default:        return { title:d.title, date:d.date };
@@ -3861,6 +4040,7 @@ function monthlyPlan(month){
   const desk = editorsDeskEntry(month);
   const guests = guestEditorialEntries(month).filter(hasText);
   const puzzles = monthEntries(allPuzzlesByMonth, month).filter(hasPuzzle);
+  const solutions = solutionEntries(month);
   const upConfs = getActiveUpcomingConferences(month);
   const upcoming = getUpcomingEvents(month);
 
@@ -3876,11 +4056,12 @@ function monthlyPlan(month){
   add([{ heading:'RESEARCH BLOG', key:'RESEARCH BLOG',
     items: blogIds.map(id => ({ type:'blog', data:blogData[id], key:'blog:' + id })) }]);
   add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
-  add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) })) }]);
+  add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) }))
+    .concat(solutions.map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + (x._id || i) }))) }]);
   // last page: Upcoming Events with their notes (agenda, venue, details)
   add([{ heading:'UPCOMING EVENTS', key:'UPCOMING EVENTS', items: upcoming.map(u => ({ type:'upevent', data:u, key:'ue:' + u.id })) }]);
 
-  const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogIds.length || hasText(desk) || guests.length || puzzles.length;
+  const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogIds.length || hasText(desk) || guests.length || puzzles.length || solutions.length;
   const range = issueDateRangeLabel(month);
   return {
     kind:'monthly', hasContent, stacks, withToc:false,
@@ -3931,7 +4112,8 @@ function periodPlan(year, edKey){
     items: byMonth(m => { const d = allBlogsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'blog', data:d[id], key:'blog:' + id })); }) }]);
   // Upcoming Conferences & Workshops and Upcoming Events are for monthly issues only
   add([{ heading:'PUZZLE', key:'PUZZLE', tocTitle:'Puzzle',
-    items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))) }]);
+    items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))
+      .concat(solutionEntries(m).map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + m + (x._id || i) })))) }]);
 
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
@@ -4021,6 +4203,7 @@ function wordItemBuilder(it, anchor){
     case 'desk':    return deskItem(d, anchor);
     case 'guest':   return guestItem(d, anchor);
     case 'puzzle':  return puzzleItem(d, anchor);
+    case 'pzsol':   return puzzleItem(solutionView(d), anchor);
     case 'message': return messageItem(d, anchor);
     case 'upevent': return upcomingEventItem(d, anchor);
     case 'award':   return awardItem(d, anchor);
@@ -4152,7 +4335,9 @@ function pdfCss(plan){
 .nlp .cbody { display: flex; align-items: flex-start; }
 .nlp .cbody .mv { padding: 16px 24px 12px 0; }
 .nlp .cbody .mv h3 { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 14pt; margin: 0 0 5px; }
-.nlp .cbody .mv p { font-style: italic; margin: 0 0 16px; font-size: 11pt; line-height: 1.4; text-align: justify; hyphens: manual; }
+.nlp .cbody .mv p { font-style: italic; margin: 0 0 6px; font-size: 11pt; line-height: 1.4; text-align: justify; hyphens: manual; }
+.nlp .cbody .mv p.li { text-align: justify; margin: 0 0 3px 0; gap: 6px; }
+.nlp .cbody .mv p.li .mk { font-weight: 400; min-width: 10px; }
 .nlp .idx { background: #132340; color: #E8E4D8; padding: 18px 17px 14px; }
 .nlp .idx .it { color: #C6A34A; font-weight: 700; margin-bottom: 8px; }
 .nlp .idx .gh { color: #fff; font-weight: 700; margin: 9px 0 3px; }
@@ -4225,6 +4410,9 @@ function pdfCss(plan){
 .nlp .pz .pt { font-family: 'Playfair Display', Georgia, serif; font-size: 15pt; font-weight: 700; color: #132340; text-align: center; margin: 0 0 2px; break-after: avoid; }
 .nlp .pz .pa { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin-bottom: 10px; }
 .nlp .pz .imgs { text-align: center; break-inside: avoid; }
+.nlp .pz.sol { margin-top: 22px; }
+.nlp .pz .pk { text-align: center; color: #A8842F; font-weight: 700; font-size: 8pt; letter-spacing: .12em; margin-bottom: 3px; }
+.nlp .pz .pi { background: #F3EDDE; border-left: 2pt solid #C6A34A; padding: 7px 12px; margin: 4px 14px 12px; font-size: 9.5pt; line-height: 1.4; text-align: justify; color: #3A3A34; }
 .nlp .pz .imgs img { margin: 6px; }
 .nlp sup { font-size: 70%; }
 `;
@@ -4292,7 +4480,7 @@ function confAuthorsHtml(c){
     .concat(affs.map((af, i) => metaH((numbered ? `<sup>${i + 1}</sup>` : '') + H(af))));
 }
 function pdfItemHtml(it, anchor){
-  const d = it.data;
+  let d = it.data;
   switch(it.type){
     case 'event': return flowHtml({ kicker:{ text:(d.category || 'Other').toUpperCase(), color:categoryHex(d.category) }, title:d.title, anchor,
       meta:[ metaH(H(eventMetaText(d))) ], text:d.desc, images:allPhotos(d.photos) });
@@ -4325,10 +4513,14 @@ function pdfItemHtml(it, anchor){
       text:d.desc, images:allPhotos(d.photos) });
     case 'upevent': return flowHtml({ kicker:{ text:'UPCOMING EVENT', color:'C1722C' }, title:d.title, anchor,
       meta:[ metaH(`<b>${H(formatDate(d.date))}</b>`, true) ], text:d.note || '', images:[] });
+    case 'pzsol':
     case 'puzzle': {
-      let h = `<div class="pz"${anchor ? ` id="${anchor}"` : ''}>`;
+      if(it.type === 'pzsol') d = solutionView(d);
+      let h = `<div class="pz${d.kicker ? ' sol' : ''}"${anchor ? ` id="${anchor}"` : ''}>`;
+      if(d.kicker) h += `<div class="pk">${H(d.kicker)}</div>`;
       if(d.title) h += `<div class="pt">${H(d.title)}</div>`;
-      if(d.author) h += `<div class="pa">Contributed by ${H(d.author)}</div>`;
+      if(d.author) h += `<div class="pa">${H(d.byLabel || 'Contributed by ')}${H(d.author)}</div>`;
+      if(d.intro) h += `<div class="pi"><b>The puzzle:</b>&nbsp; <i>${H(d.intro)}</i></div>`;
       (d.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => { const li = listInfo(t);
         h += li ? `<p class="li"><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p>${richToHtml(t, H)}</p>`; });
       const ims = allPhotos(entryPhotos(d));
@@ -4366,7 +4558,7 @@ function coverHtml(plan, spec, ptSize, heroUrl, split){
       <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES</div><div class="nw">NEWSLETTER</div></div></div>
     ${heroUrl ? `<img class="hero" src="${heroUrl}">` : ''}
     <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
-    <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3><p>${H(MISSION_TEXT)}</p><h3>Our Vision</h3><p style="margin:0">${H(VISION_TEXT)}</p></div>
+    <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3>${coverTextHtml(MISSION_TEXT)}<div style="height:10px"></div><h3>Our Vision</h3>${coverTextHtml(VISION_TEXT, true)}</div>
       <div class="idx" style="flex:1">${coverIndexHtml(spec, ptSize)}</div></div>
     ${coverPeople().length ? `<div class="people">${coverPeople().map(pp => `<div class="pp"><div class="rl">${H(pp.role.toUpperCase())}</div><div class="nm">${H(pp.name)}</div>${(pp.designation || isEmail(pp.email)) ? `<div class="dg">${H(pp.designation || '')}${pp.designation && isEmail(pp.email) ? '<span class="sp">·</span>' : ''}${isEmail(pp.email) ? `<a style="white-space:nowrap" href="mailto:${H(pp.email.trim())}">${H(pp.email.trim())}</a>` : ''}</div>` : ''}</div>`).join('')}</div>` : ''}
     <div class="contact">${linkOrText(CONTACT_WEBSITE, maybeUrl(CONTACT_WEBSITE))}<span class="sp">·</span>${linkOrText(CONTACT_EMAIL, emailUrl)}<span class="sp">·</span>${socialParts(CONTACT_SOCIAL).map(p => linkOrText(p.text, p.url)).join('')}</div>

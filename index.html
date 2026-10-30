@@ -1741,7 +1741,10 @@ function submitPuzzle(){
   if(!content && photoState.puzzle.length === 0){ showSubmitMsg('puzzle', false, 'Please add the puzzle text or at least one image.'); return; }
   const btn = document.getElementById('submitBtn-puzzle');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('puzzles/' + month).push({ submittedBy, title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() })
+  const newRef = db.ref('puzzles/' + month).push({ submittedBy, title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() });
+  newRef
+    // list the new puzzle straight away for the "Solution to an Earlier Puzzle" dropdown
+    .then(() => newRef.key ? db.ref('puzzleIndex/' + month + '/' + newRef.key).set(title.slice(0, 300)).catch(() => {}) : null)
     .then(() => {
       showSubmitMsg('puzzle', true, 'Puzzle submitted for ' + monthLabel(month) + '. Thank you!');
       document.getElementById('puzzleForm').reset();
@@ -1767,7 +1770,7 @@ function loadPuzzleIndex(){
     Object.keys(puzzleIndexCache).sort().reverse().forEach(m => {
       Object.entries(puzzleIndexCache[m] || {}).forEach(([id, t]) => opts.push(`<option value="${m}|${escapeHtml(id)}">${escapeHtml(monthLabel(m))} — ${escapeHtml(String(t || 'Puzzle'))}</option>`));
     });
-    sel.innerHTML = opts.length ? '<option value="">Select the puzzle…</option>' + opts.join('') : '<option value="">No puzzles published yet</option>';
+    sel.innerHTML = opts.length ? '<option value="">Select the puzzle…</option>' + opts.join('') : '<option value="">No puzzles listed yet</option>';
     if(keep) sel.value = keep;
   }).catch(() => { sel.innerHTML = '<option value="">Could not load the puzzles — please refresh</option>'; });
 }

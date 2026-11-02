@@ -171,6 +171,22 @@
   .rte-area div{ min-height:1.55em; }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;}
+  .secpick-backdrop{ position:fixed; inset:0; background:rgba(19,35,64,.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; }
+  .secpick{ background:#fff; border-radius:12px; max-width:440px; width:100%; max-height:90vh; overflow:auto; padding:22px 24px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
+  .secpick h3{ font-family:'Playfair Display',serif; color:var(--navy); margin:0 0 6px; font-size:19px; }
+  .secpick p{ margin:0 0 12px; font-size:13.5px; color:var(--muted); }
+  .secpick-all{ display:flex; gap:8px; margin-bottom:10px; }
+  .secpick-all button{ padding:5px 12px; font-size:13px; }
+  .secpick-list label{ display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid #eee6d4; margin:0; cursor:pointer; font-size:14.5px; color:var(--navy); }
+  .secpick-list input{ width:18px; height:18px; margin:0; flex:none; }
+  .secpick-list span{ flex:1; }
+  .secpick-list em{ font-style:normal; font-size:12px; color:var(--muted); background:#F3EDDE; border-radius:10px; padding:1px 8px; }
+  .secpick .secpick-list label{ text-transform:none; letter-spacing:0; font-weight:500; }
+  .secpick button{ margin:0; width:auto; }
+  .secpick-btns{ align-items:center; }
+  .secpick-btns button{ padding:10px 18px; }
+  .secpick-msg{ color:#B3261E; font-size:13px; min-height:18px; margin-top:8px; }
+  .secpick-btns{ display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
   .pzsol-box{ margin-top:30px; padding-top:22px; border-top:1px dashed #d8cfb8; }
   .pzsol-title{ font-family:'Playfair Display',serif; color:var(--navy); font-size:17px; margin:0 0 4px; }
   @media(max-width:640px){.row2,.row3{grid-template-columns:1fr;}}
@@ -315,7 +331,7 @@
     <img src="" id="topbarLogo" alt="Amity University Punjab" style="width:44px; height:44px; border-radius:50%; flex-shrink:0;" />
     <div>
     <span class="eyebrow">Amity University Punjab · Mohali</span>
-    <h1>School of Physical Sciences</h1>
+    <h1 id="schoolNameH1">School of Physical Sciences</h1>
     <span class="sub">Department Newsletter — Event Collection Portal</span>
     </div>
   </div>
@@ -805,7 +821,11 @@
       <h2 class="section-title" style="font-size:19px;">Newsletter Content Settings</h2>
       <p class="section-desc">These appear on the cover page of every newsletter you generate. Mission, Vision, and contact details usually stay the same all year — update the quote whenever you like. Save once, and every future newsletter uses them automatically.</p>
 
-      <label class="first">Mission Statement</label>
+      <label class="first">School Name</label>
+      <input type="text" id="s_schoolName" placeholder="e.g. School of Physical Sciences" />
+      <p class="field-hint" style="margin-top:4px;">Shown at the top of the portal and printed on every newsletter (cover and page headers), after "Amity University Punjab".</p>
+
+      <label>Mission Statement</label>
       <textarea id="s_mission" placeholder="Our mission is..."></textarea>
 
       <label>Vision Statement</label>
@@ -1036,7 +1056,7 @@
 
 </main>
 
-<footer class="foot">Department Newsletter Manager · School of Physical Sciences, Amity University Punjab, Mohali</footer>
+<footer class="foot">Department Newsletter Manager · <span id="schoolNameFoot">School of Physical Sciences</span>, Amity University Punjab, Mohali</footer>
 
 <script>
 /* =========================================================================
@@ -1073,6 +1093,9 @@ try{
 
 if(!firebaseReady){
   document.getElementById('setupBanner').style.display = 'block';
+} else {
+  // everyone may read the school name (nothing else in settings), so the portal header shows it
+  db.ref('settings/newsletter/schoolName').once('value').then(snap => { if(snap.val()) applySchoolName(snap.val()); }).catch(() => {});
 }
 
 /* ---------------- Admin sign-in (Firebase Authentication) ----------------
@@ -2104,6 +2127,7 @@ function initDashboard(){
   });
   db.ref('settings/newsletter').on('value', snap => {
     const s = snap.val() || {};
+    document.getElementById('s_schoolName').value = s.schoolName || '';
     setRich('s_mission', s.mission || '');
     setRich('s_vision', s.vision || '');
     document.getElementById('s_quoteText').value = s.quoteText || '';
@@ -2203,6 +2227,7 @@ function teamBoxHtml(){
 function applyNewsletterSettings(s){
   COVER_PEOPLE_SETTINGS = {};
   COVER_PEOPLE_FIELDS.forEach(k => COVER_PEOPLE_SETTINGS[k] = (s[k] || '').trim());
+  applySchoolName(s.schoolName);
   if(s.mission) MISSION_TEXT = s.mission;
   if(s.vision) VISION_TEXT = s.vision;
   if(s.quoteText) QUOTE_TEXT = s.quoteText;
@@ -2244,6 +2269,7 @@ function handleSettingsImage(type, evt){
 function saveNewsletterSettings(){
   if(!firebaseReady) return;
   const s = {
+    schoolName: document.getElementById('s_schoolName').value.trim(),
     mission: document.getElementById('s_mission').value.trim(),
     vision: document.getElementById('s_vision').value.trim(),
     quoteText: document.getElementById('s_quoteText').value.trim(),
@@ -2881,6 +2907,15 @@ function coverTextHtml(text, last){
   return lines.map((t, k) => { const li = listInfo(t), st = (k === lines.length - 1 && last) ? ' style="margin-bottom:0"' : '';
     return li ? `<p class="li"${st}><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p${st}>${richToHtml(t, H)}</p>`; }).join('');
 }
+/* School name: shown on the portal and printed on every newsletter */
+const DEFAULT_SCHOOL_NAME = 'School of Physical Sciences';
+let SCHOOL_NAME = DEFAULT_SCHOOL_NAME;
+function applySchoolName(name){
+  SCHOOL_NAME = (name || '').trim() || DEFAULT_SCHOOL_NAME;
+  const h1 = document.getElementById('schoolNameH1'); if(h1) h1.textContent = SCHOOL_NAME;
+  const ft = document.getElementById('schoolNameFoot'); if(ft) ft.textContent = SCHOOL_NAME;
+  document.title = 'Department Newsletter Manager — Amity ' + SCHOOL_NAME;
+}
 let VISION_TEXT = "[Replace this placeholder with the department's Vision statement — search for VISION_TEXT in this file to edit it.]";
 let QUOTE_TEXT = "[Replace with this month's quote — search for QUOTE_TEXT to edit it.]";
 let QUOTE_ATTRIBUTION = "[Attribution — e.g. a scientist's name, or \"Department of Physical Sciences\"]";
@@ -3316,7 +3351,7 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, bodyMinPx }){
       shading:{ fill:"132340", type:ShadingType.CLEAR, color:"auto" },
       margins:{ top:0, bottom:0, left:300, right:300 }, verticalAlign: VerticalAlign.CENTER,
       children:[
-        new Paragraph({ spacing:{ before:0, after:40 }, children:[ new TextRun({ text:"AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES", color:"C6A34A", bold:true, size:16, font:"Inter" }) ] }),
+        new Paragraph({ spacing:{ before:0, after:40 }, children:[ new TextRun({ text:"AMITY UNIVERSITY PUNJAB · " + SCHOOL_NAME.toUpperCase(), color:"C6A34A", bold:true, size:16, font:"Inter" }) ] }),
         new Paragraph({ spacing:{ before:0, after:0 }, children:[ new TextRun({ text:"NEWSLETTER", color:"FFFFFF", bold:true, size:56, characterSpacing:40, font:"Playfair Display" }) ] }),
       ]
     })
@@ -4069,7 +4104,7 @@ function monthlyPlan(month){
   return {
     kind:'monthly', hasContent, stacks, withToc:false,
     issuePeriod: range, dateRange: range,
-    strapline: 'SCHOOL OF PHYSICAL SCIENCES · NEWSLETTER',
+    strapline: SCHOOL_NAME.toUpperCase() + ' · NEWSLETTER',
     fileBase: `Newsletter_${month}`, label: monthLabel(month),
     heroSrc: resolveHeroSource(ids, data),
     index: () => buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, confData, upConfs, upcoming })
@@ -4115,8 +4150,9 @@ function periodPlan(year, edKey){
     items: byMonth(m => { const d = allBlogsByMonth[m] || {}; return sortedIds(d).map(id => ({ type:'blog', data:d[id], key:'blog:' + id })); }) }]);
   // Upcoming Conferences & Workshops and Upcoming Events are for monthly issues only
   add([{ heading:'PUZZLE', key:'PUZZLE', tocTitle:'Puzzle',
-    items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))
-      .concat(solutionEntries(m).map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + m + (x._id || i) })))) }]);
+    items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))) }]);
+  add([{ heading:'PUZZLE SOLUTIONS', key:'PUZZLE SOLUTIONS', tocTitle:'Puzzle Solutions',
+    items: byMonth(m => solutionEntries(m).map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + m + (x._id || i) }))) }]);
 
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
@@ -4125,7 +4161,7 @@ function periodPlan(year, edKey){
   return {
     kind:'period', hasContent, stacks, withToc:true,
     issuePeriod: `${ed.name} · ${range}`, dateRange: range,
-    strapline: `SCHOOL OF PHYSICAL SCIENCES · ${ed.short} NEWSLETTER ${year}`,
+    strapline: `${SCHOOL_NAME.toUpperCase()} · ${ed.short} NEWSLETTER ${year}`,
     fileBase: `${ed.file}_Newsletter_${year}`, label: `${ed.name} ${year}` + (edKey === 'full' ? '' : (edKey === 'h1' ? ' (January–June)' : ' (July–December)')),
     heroSrc: resolveHeroSource(heroIds, heroData)
   };
@@ -4276,7 +4312,63 @@ async function generateAnnualNewsletter(){
   const edKey = document.getElementById('editionSelect').value;
   const plan = periodPlan(year, edKey);
   if(!plan.hasContent){ alert('No content found for the ' + plan.label + '.'); return; }
-  await produceIssue(plan, document.getElementById('genAnnualWordBtn'));
+  const picked = await pickSections(plan);
+  if(!picked) return;                       // cancelled
+  await produceIssue(filterPlanSections(plan, picked), document.getElementById('genAnnualWordBtn'));
+}
+
+/* ---- "Choose sections" window for the bi-annual and annual editions ----
+   One tick box per section that has content (all leadership messages count
+   as one section). Unticked sections are left out of the Word and PDF files,
+   their Table of Contents and the cover. */
+const sectionIdOf = g => g.key.indexOf('MSG ') === 0 ? 'MESSAGES' : g.key;
+function planSections(plan){
+  const out = [], seen = {};
+  plan.stacks.forEach(st => st.forEach(g => {
+    const id = sectionIdOf(g);
+    const n = g.items.filter(x => !x.marker).length;
+    if(!n) return;
+    if(!seen[id]){ seen[id] = { id, label: id === 'MESSAGES' ? 'Leadership Messages' : (g.tocTitle || g.heading), count:0 }; out.push(seen[id]); }
+    seen[id].count += n;
+  }));
+  return out;
+}
+function filterPlanSections(plan, ids){
+  const keep = new Set(ids);
+  const stacks = plan.stacks.map(st => st.filter(g => keep.has(sectionIdOf(g)))).filter(st => st.length);
+  return Object.assign({}, plan, { stacks });
+}
+function pickSections(plan){
+  const secs = planSections(plan);
+  return new Promise(resolve => {
+    const box = document.createElement('div');
+    box.className = 'secpick-backdrop';
+    box.innerHTML = `<div class="secpick" role="dialog" aria-modal="true">
+      <h3>Sections for the ${escapeHtml(plan.label)}</h3>
+      <p>Untick any section you don't want in this edition. The numbers show how many entries each one has.</p>
+      <div class="secpick-all"><button type="button" class="ghost" data-all="1">Select all</button><button type="button" class="ghost" data-all="0">Clear all</button></div>
+      <div class="secpick-list">${secs.map(x => `<label><input type="checkbox" value="${escapeHtml(x.id)}" checked> <span>${escapeHtml(x.label)}</span> <em>${x.count}</em></label>`).join('')}</div>
+      <div class="secpick-msg"></div>
+      <div class="secpick-btns"><button type="button" class="ghost" data-act="cancel">Cancel</button><button type="button" class="primary" data-act="go">Generate (Word + PDF)</button></div>
+    </div>`;
+    document.body.appendChild(box);
+    const close = v => { box.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
+    const onKey = e => { if(e.key === 'Escape') close(null); };
+    document.addEventListener('keydown', onKey);
+    box.addEventListener('click', e => {
+      if(e.target === box) return close(null);
+      const all = e.target.getAttribute('data-all');
+      if(all !== null) box.querySelectorAll('.secpick-list input').forEach(c => c.checked = all === '1');
+      const act = e.target.getAttribute('data-act');
+      if(act === 'cancel') close(null);
+      if(act === 'go'){
+        const ids = Array.from(box.querySelectorAll('.secpick-list input:checked')).map(c => c.value);
+        const content = ids.filter(id => id !== 'MESSAGES');
+        if(!content.length){ box.querySelector('.secpick-msg').textContent = 'Please tick at least one section besides the messages.'; return; }
+        close(ids);
+      }
+    });
+  });
 }
 
 /* =========================================================================
@@ -4558,7 +4650,7 @@ function coverHtml(plan, spec, ptSize, heroUrl, split){
   return `<section class="cover">
     <div class="strip">${H(plan.issuePeriod.toUpperCase())}</div>
     <div class="mast"><div class="lg"><img src="${logoDataUrl()}"></div>
-      <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · SCHOOL OF PHYSICAL SCIENCES</div><div class="nw">NEWSLETTER</div></div></div>
+      <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · ${H(SCHOOL_NAME.toUpperCase())}</div><div class="nw">NEWSLETTER</div></div></div>
     ${heroUrl ? `<img class="hero" src="${heroUrl}">` : ''}
     <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
     <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3>${coverTextHtml(MISSION_TEXT)}<div style="height:10px"></div><h3>Our Vision</h3>${coverTextHtml(VISION_TEXT, true)}</div>

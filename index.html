@@ -171,6 +171,49 @@
   .rte-area div{ min-height:1.55em; }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;}
+  .status-badge{ display:inline-block; font-size:11.5px; font-weight:700; border-radius:10px; padding:3px 9px; margin-right:4px; white-space:nowrap; }
+  .status-badge.ok{ background:#E3F1E6; color:#2E6B3A; }
+  .status-badge.pending{ background:#FCEBD7; color:#9A4E0E; }
+  button.small{ padding:6px 11px; font-size:12.5px; }
+  button.approve{ background:#2E6B3A; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+  .event-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
+  .pending-bar{ background:#FCEBD7; border:1px solid #F0C99A; color:#6B3A0C; border-radius:10px; padding:10px 14px; margin:0 0 18px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; font-size:14px; }
+  .editbox{ max-width:640px; }
+  .editbox label{ display:block; margin:12px 0 4px; }
+  .editbox input, .editbox select, .editbox textarea{ width:100%; }
+  .edit-photos{ display:flex; flex-wrap:wrap; gap:8px; }
+  .eph{ position:relative; width:104px; }
+  .eph img{ width:104px; height:78px; object-fit:cover; border-radius:6px; display:block; border:1px solid #e4dac3; }
+  .eph-btns{ display:flex; justify-content:space-between; gap:4px; margin-top:4px; }
+  .editbox .eph-btns button{ flex:1; margin:0; padding:3px 0; font-size:14px; line-height:1.2; border:1px solid #d8cfb8; background:#fff; color:var(--navy); border-radius:5px; cursor:pointer; width:auto; }
+  .editbox .eph-btns button:disabled{ opacity:.3; cursor:default; }
+  .editbox .eph-btns button.rm{ color:#B3261E; font-weight:700; }
+  .eph-first{ position:absolute; top:4px; left:4px; background:var(--navy); color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:8px; }
+  .editbox .eph-add{ width:104px; height:78px; margin:0; border:2px dashed #d8cfb8; background:#FBF7EE; color:var(--navy); border-radius:6px; cursor:pointer; font-size:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .eph-add span{ font-size:11.5px; font-weight:600; margin-top:2px; }
+  .preview-host{ position:fixed; inset:0; z-index:1100; background:#3d4350; overflow:auto; padding:0 0 40px; }
+  .preview-bar{ position:sticky; top:0; z-index:2; display:flex; gap:14px; align-items:center; flex-wrap:wrap; background:var(--navy); color:#fff; padding:10px 16px; font-family:Inter,sans-serif; font-size:14px; }
+  .preview-bar span{ flex:1; color:#c9d2e3; font-size:12.5px; }
+  .preview-bar button{ background:var(--gold) !important; color:var(--navy) !important; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer; margin:0; width:auto; }
+  .preview-host > .nlp{ zoom: var(--pv-scale, 1); }
+  .preview-host .pagedjs_pages{ display:flex; flex-direction:column; align-items:center; gap:18px; padding-top:18px; }
+  .preview-host .pagedjs_page{ background:#fff; box-shadow:0 4px 18px rgba(0,0,0,.35); }
+  .deadline-banner{ background:#FBF5E4; border:1px solid #E7D49A; color:#3f3820; border-radius:10px; padding:10px 16px; margin:0 0 16px; font-size:14.5px; }
+  .deadline-banner.urgent{ background:#FCEBD7; border-color:#F0B27A; color:#6B3A0C; }
+  .draft-note{ background:#EEF3FB; border:1px solid #C9D6EE; color:#24406e; border-radius:8px; padding:8px 12px; margin:0 0 12px; font-size:13px; }
+  .mysubs{ display:flex; flex-direction:column; gap:8px; }
+  .mysub{ display:flex; gap:12px; align-items:center; justify-content:space-between; border:1px solid #eee6d4; border-radius:8px; padding:10px 12px; flex-wrap:wrap; }
+  .status-badge.off{ background:#EEE; color:#666; }
+  .ejs-box{ margin:18px 0 6px; border:1px dashed #d8cfb8; border-radius:8px; padding:10px 14px; }
+  .ejs-box summary{ cursor:pointer; font-weight:600; color:var(--navy); }
+  .fac-card{ display:flex; gap:14px; align-items:flex-start; }
+  .fac-ph{ width:64px; height:80px; object-fit:cover; border-radius:6px; flex:none; }
+  .fac-ph.none{ background:#F3EDDE; color:#9a917c; font-size:11px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .sharebox{ max-width:620px; }
+  .sharebox label{ display:block; margin:12px 0 4px; }
+  .sharebox input, .sharebox textarea{ width:100%; font-size:13.5px; }
+  .share-btns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  a.btnlink{ text-decoration:none; display:inline-flex; align-items:center; border:1px solid #d8cfb8; border-radius:8px; color:var(--navy); font-size:12.5px; font-weight:600; padding:6px 11px; background:#fff; }
   .secpick-backdrop{ position:fixed; inset:0; background:rgba(19,35,64,.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; }
   .secpick{ background:#fff; border-radius:12px; max-width:440px; width:100%; max-height:90vh; overflow:auto; padding:22px 24px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
   .secpick h3{ font-family:'Playfair Display',serif; color:var(--navy); margin:0 0 6px; font-size:19px; }
@@ -353,6 +396,7 @@
 
   <!-- ============ SUBMIT VIEW ============ -->
   <section id="view-submit" class="view active">
+    <div class="deadline-banner" id="deadlineBanner"></div>
     <div class="card" style="padding-bottom:14px;">
       <h2 class="section-title" style="margin-bottom:14px;"><span class="orbit-mark">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.3" fill="var(--gold)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="var(--navy)" stroke-width="1.1" transform="rotate(20 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="var(--navy)" stroke-width="1.1" transform="rotate(-20 12 12)"/></svg>
@@ -751,6 +795,8 @@
               <input type="month" id="pzs_month" />
             </div>
           </div>
+          <label>Correct answers received from (optional)</label>
+          <textarea id="pzs_winners" style="min-height:56px;" placeholder="Names of readers who sent the right answer, e.g. Ms. A. Kaur (B.Sc. II), Mr. R. Singh (M.Sc. I)"></textarea>
           <label>Solution</label>
           <textarea id="pzs_content" style="min-height:120px;" placeholder="The answers, with a short explanation if you like..."></textarea>
           <label>Solution Images</label>
@@ -794,6 +840,17 @@
         <button class="primary" id="submitBtn-upcomingconf" onclick="submitUpcomingConference()">Add to Upcoming Conferences & Workshops</button>
         <div class="msg" id="submitMsg-upcomingconf"></div>
       </form>
+    </div>
+
+    <!-- ---- My submissions ---- -->
+    <div class="card" id="mySubsCard">
+      <h2 class="section-title" style="font-size:18px; margin-bottom:6px;">Check My Submissions</h2>
+      <p class="section-desc" style="margin-bottom:12px;">Type the email you used in "Your Details" to see what you have sent and whether it has been approved for the newsletter.</p>
+      <div class="row2" style="align-items:end;">
+        <div><label class="first">Your Email</label><input type="email" id="my_email" placeholder="name@pb.amity.edu" /></div>
+        <div><button class="primary" style="margin:0;" onclick="lookupMySubmissions()">Show my submissions</button></div>
+      </div>
+      <div id="mySubsResult" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -900,6 +957,15 @@
         </div>
       </div>
 
+      <details class="ejs-box">
+        <summary>Confirmation emails to contributors (optional, free EmailJS account)</summary>
+        <p class="field-hint" style="margin-top:8px;">When these three boxes are filled, everyone who submits gets an email with a copy of what they sent. Set up once at <b>emailjs.com</b> (see the Admin Manual for the steps and the email template). Leave empty to switch confirmation emails off.</p>
+        <div class="row3">
+          <div><label>EmailJS Public Key</label><input type="text" id="s_ejsPublicKey" placeholder="e.g. AbCdEf123456" /></div>
+          <div><label>Service ID</label><input type="text" id="s_ejsServiceId" placeholder="e.g. service_xxxxxxx" /></div>
+          <div><label>Template ID</label><input type="text" id="s_ejsTemplateId" placeholder="e.g. template_xxxxxxx" /></div>
+        </div>
+      </details>
       <button class="primary" onclick="saveNewsletterSettings()">Save Settings</button>
       <div class="msg" id="settingsMsg"></div>
     </div>
@@ -936,11 +1002,13 @@
       </div>
       <div class="stat-pills" id="statPills"></div>
     </div>
+    <div class="pending-bar" id="pendingBar" style="display:none;"></div>
 
     <div class="card">
       <div class="toolbar" style="margin-bottom:10px;">
         <h2 class="section-title" style="font-size:19px; margin:0;">Events This Month</h2>
         <div class="export-bar">
+          <button class="ghost" id="previewBtn" onclick="previewNewsletter()">👁 Preview</button>
           <button class="gold" id="genWordBtn" onclick="generateNewsletter()">📄 Generate Newsletter (Word + PDF)</button>
           <button class="gold" id="genExcelBtn" onclick="generateExcel()">📊 Generate Excel Report</button>
         </div>
@@ -1014,6 +1082,36 @@
       <div id="upcomingConfList"></div>
     </div>
 
+    <div class="card" id="facultyCard">
+      <h2 class="section-title" style="font-size:19px;">Faculty Profiles (Bi-Annual &amp; Annual Editions)</h2>
+      <p class="section-desc">Printed as an "Our Faculty" section in the bi-annual and annual editions only (never in monthly issues), in the order you give. Untick the section in the edition window to leave it out.</p>
+      <div class="row2">
+        <div><label class="first">Name *</label><input type="text" id="fac_name" placeholder="e.g. Dr. Swati Tyagi" /></div>
+        <div><label class="first">Designation</label><input type="text" id="fac_desig" placeholder="e.g. Assistant Professor (Mathematics)" /></div>
+      </div>
+      <label>Research Areas</label>
+      <input type="text" id="fac_research" placeholder="e.g. Fractional calculus, mathematical modelling, machine learning" />
+      <div class="row3">
+        <div><label>Email</label><input type="email" id="fac_email" placeholder="name@pb.amity.edu" /></div>
+        <div><label>Profile link (optional)</label><input type="text" id="fac_link" placeholder="Google Scholar / ORCID / university page" /></div>
+        <div><label>Order (1 = first)</label><input type="number" id="fac_order" min="1" placeholder="e.g. 1" /></div>
+      </div>
+      <label>Short profile (optional)</label>
+      <textarea id="fac_bio" style="min-height:90px;" placeholder="Qualifications, experience, highlights..."></textarea>
+      <label>Photo</label>
+      <div class="photo-drop" onclick="document.getElementById('fac_photo').click()">
+        <input type="file" id="fac_photo" accept="image/*" onchange="onFacultyPhoto(event)" />
+        <div><strong>Click to add a photo</strong></div><div class="hint">A portrait photo works best.</div>
+      </div>
+      <div class="thumbs" id="fac_photoPrev"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="primary" id="facSaveBtn" onclick="saveFaculty()">Add Faculty Member</button>
+        <button class="ghost" onclick="clearFacultyForm()">Clear form</button>
+      </div>
+      <div class="msg" id="facultyMsg"></div>
+      <div id="facultyList" style="margin-top:16px;"></div>
+    </div>
+
     <div class="card">
       <h2 class="section-title" style="font-size:19px;">Messages (Annual &amp; Bi-Annual Editions)</h2>
       <p class="section-desc">Optional. Each message you fill in is printed on its own page, in this order, at the start of the annual and bi-annual newsletters, and listed in their Table of Contents. Leave a message empty and it is simply left out. They are not used in monthly issues.</p>
@@ -1033,8 +1131,10 @@
             <option value="h1">Bi-Annual (January – June)</option>
             <option value="h2">Bi-Annual (July – December)</option>
           </select>
+          <button class="ghost" id="previewAnnualBtn" onclick="previewAnnualNewsletter()">👁 Preview</button>
           <button class="ghost" id="genAnnualWordBtn" onclick="generateAnnualNewsletter()">📚 Newsletter (Word + PDF)</button>
           <button class="ghost" id="genAnnualExcelBtn" onclick="generateAnnualExcel()">📚 Report (Excel)</button>
+          <button class="ghost" id="genNaacBtn" onclick="generateNaacExcel()">🏛 NAAC / NBA Report (Excel)</button>
         </div>
       </div>
     </div>
@@ -1278,7 +1378,7 @@ function submitEvent(){
     submittedAt: Date.now()
   };
 
-  db.ref('events/' + monthKey).push(eventData)
+  submitRecord('events', monthKey, eventData)
     .then(() => {
       showSubmitMsg('event', true, 'Event submitted successfully. Thank you!');
       document.getElementById('eventForm').reset();
@@ -1321,7 +1421,7 @@ function submitPublication(){
     submittedAt: Date.now()
   };
 
-  db.ref('publications/' + monthKey).push(pubData)
+  submitRecord('publications', monthKey, pubData)
     .then(() => {
       showSubmitMsg('publication', true, 'Publication submitted successfully. Thank you!');
       document.getElementById('pubForm').reset();
@@ -1348,7 +1448,7 @@ function submitAward(){
   const btn = document.getElementById('submitBtn-award');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('awards/' + date.slice(0,7)).push({
+  submitRecord('awards', date.slice(0,7), {
     submittedBy, title, type, recipients, awardedBy, date, desc,
     photos: photoState.award.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now()
@@ -1402,7 +1502,7 @@ function submitConference(){
     submittedAt: Date.now()
   };
 
-  db.ref('conferences/' + monthKey).push(confData)
+  submitRecord('conferences', monthKey, confData)
     .then(() => {
       showSubmitMsg('conference', true, 'Conference presentation submitted successfully. Thank you!');
       document.getElementById('confForm').reset();
@@ -1475,7 +1575,7 @@ function submitBlog(){
     photos: photoState.blog.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
     submittedAt: Date.now() };
 
-  db.ref('blogs/' + monthKey).push(blogData)
+  submitRecord('blogs', monthKey, blogData)
     .then(() => {
       showSubmitMsg('blog', true, 'Blog submitted successfully. Thank you!');
       document.getElementById('blogForm').reset();
@@ -1492,7 +1592,7 @@ function submitBlog(){
      [b]bold[/b]   [i]italic[/i]   [u]underline[/u]
      a line starting "• " is a bullet point, "1. " a numbered point.
    Old plain-text entries need no change. */
-const RICH_FIELDS = ['f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','pzs_content','desk_content','s_mission','s_vision'];
+const RICH_FIELDS = ['fac_bio','f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','pzs_content','desk_content','s_mission','s_vision'];
 const RICH_TAG_RE = /\[(\/?)(b|i|u)\]/g;
 const LIST_RE = /^(?:([•\-*])|(\d{1,3})[.)])\s+/;
 function stripRich(t){ return String(t || '').replace(RICH_TAG_RE, ''); }
@@ -1742,7 +1842,7 @@ function submitEditorial(){
   if(refs === null) return;
   const btn = document.getElementById('submitBtn-editorial');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('guestEditorials/' + month).push({ submittedBy, title, author, content, refs, photos: photoPayload('editorial'), submittedAt: Date.now() })
+  submitRecord('guestEditorials', month, { submittedBy, title, author, content, refs, photos: photoPayload('editorial'), submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('editorial', true, 'Guest editorial submitted for ' + monthLabel(month) + '. Thank you!');
       document.getElementById('editorialForm').reset();
@@ -1764,7 +1864,7 @@ function submitPuzzle(){
   if(!content && photoState.puzzle.length === 0){ showSubmitMsg('puzzle', false, 'Please add the puzzle text or at least one image.'); return; }
   const btn = document.getElementById('submitBtn-puzzle');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  const newRef = db.ref('puzzles/' + month).push({ submittedBy, title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() });
+  const newRef = submitRecord('puzzles', month, { submittedBy, title, author, content, photos: photoPayload('puzzle'), submittedAt: Date.now() });
   newRef
     // list the new puzzle straight away for the "Solution to an Earlier Puzzle" dropdown
     .then(() => newRef.key ? db.ref('puzzleIndex/' + month + '/' + newRef.key).set(title.slice(0, 300)).catch(() => {}) : null)
@@ -1813,13 +1913,14 @@ function submitPuzzleSolution(){
   const month = document.getElementById('pzs_month').value;
   const solution = document.getElementById('pzs_content').value.trim();
   const author = document.getElementById('pzs_author').value.trim();
+  const winners = document.getElementById('pzs_winners').value.trim().replace(/\s*\n+\s*/g, ', ');
   if(!pick || !month){ showSubmitMsg('pzsol', false, 'Please choose the puzzle and the newsletter month.'); return; }
   if(!solution && photoState.pzsol.length === 0){ showSubmitMsg('pzsol', false, 'Please add the solution text or at least one image.'); return; }
   const [puzzleMonth, puzzleId] = pick.split('|');
   const puzzleTitle = String((puzzleIndexCache[puzzleMonth] || {})[puzzleId] || 'Puzzle');
   const btn = document.getElementById('submitBtn-pzsol');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
-  db.ref('puzzleSolutions/' + month).push({ submittedBy, puzzleMonth, puzzleId, puzzleTitle, author, solution, photos: photoPayload('pzsol'), submittedAt: Date.now() })
+  submitRecord('puzzleSolutions', month, { submittedBy, puzzleMonth, puzzleId, puzzleTitle, author, winners: winners || null, solution, photos: photoPayload('pzsol'), submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('pzsol', true, 'Solution submitted for the ' + monthLabel(month) + ' newsletter. Thank you!');
       document.getElementById('pzsolForm').reset();
@@ -1828,6 +1929,135 @@ function submitPuzzleSolution(){
     })
     .catch(err => showSubmitMsg('pzsol', false, 'Could not submit: ' + err.message))
     .finally(() => { btn.disabled = false; btn.textContent = 'Submit Solution'; });
+}
+
+/* =========================================================================
+   PORTAL HELPERS: receipts, confirmation email, "My submissions",
+   deadline banner and auto-saved drafts
+   ========================================================================= */
+const COL_LABELS = { events:'Event Report', publications:'Publication', awards:'Award / Achievement', conferences:'Conference Presentation',
+  blogs:'Research Blog', guestEditorials:'Guest Editorial', puzzles:'Puzzle', puzzleSolutions:'Puzzle Solution',
+  upcomingEvents:'Upcoming Event', upcomingConferences:'Upcoming Conference / Workshop' };
+const COL_TEXT = { events:'desc', publications:'abstract', awards:'desc', conferences:'abstract', blogs:'content', guestEditorials:'content',
+  puzzles:'content', puzzleSolutions:'solution', upcomingEvents:'note', upcomingConferences:'link' };
+const COL_FORM = { events:'eventForm', publications:'pubForm', awards:'awardForm', conferences:'confForm', blogs:'blogForm', guestEditorials:'editorialForm',
+  puzzles:'puzzleForm', puzzleSolutions:'pzsolForm', upcomingEvents:'upcomingForm', upcomingConferences:'upcomingConfForm' };
+
+/* Every portal submission goes through here: save it, then write the
+   receipt, send the confirmation email and forget the draft. */
+function submitRecord(col, month, data){
+  const ref = db.ref(month ? col + '/' + month : col).push(data);
+  const p = Promise.resolve(ref).then(() => { afterSubmit(col, month, ref.key, data); return ref; });
+  p.key = ref.key;
+  return p;
+}
+function afterSubmit(col, month, key, data){
+  const em = data.submittedBy && data.submittedBy.email;
+  if(key && em){
+    db.ref('receipts/' + emailCode(em) + '/' + key).set({ col, month: month || '', title: (receiptTitle(col, data) || '(untitled)').slice(0, 500),
+      submittedAt: data.submittedAt, status:'received' }).catch(() => {});
+  }
+  clearDraft(COL_FORM[col]);
+  sendConfirmation(col, month, data);
+}
+
+/* ---- confirmation email (EmailJS, optional) ---- */
+let EMAILJS = null;   // { publicKey, serviceId, templateId } from settings/emailjs
+function loadEmailSettings(){
+  if(!firebaseReady) return;
+  db.ref('settings/emailjs').once('value').then(s => { const v = s.val(); EMAILJS = (v && v.publicKey && v.serviceId && v.templateId) ? v : null; }).catch(() => {});
+}
+function sendConfirmation(col, month, data){
+  if(!EMAILJS || !data.submittedBy || !data.submittedBy.email) return;
+  const text = stripRich(String(data[COL_TEXT[col]] || '')).replace(/\s+/g, ' ').trim();
+  const params = {
+    to_email: data.submittedBy.email, to_name: data.submittedBy.name || '',
+    submission_type: COL_LABELS[col] || col, title: receiptTitle(col, data) || '(untitled)',
+    newsletter_month: month ? monthLabel(month) : 'the coming issues',
+    submitted_on: new Date(data.submittedAt || Date.now()).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }),
+    summary: text.length > 400 ? text.slice(0, 400) + '…' : text,
+    photos: String((data.photos || []).length), school_name: SCHOOL_NAME,
+    portal_link: location.href.split('#')[0],
+  };
+  loadScriptOnce('https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js')
+    .then(() => window.emailjs.send(EMAILJS.serviceId, EMAILJS.templateId, params, { publicKey: EMAILJS.publicKey }))
+    .catch(err => console.warn('Confirmation email not sent:', err));
+}
+
+/* ---- "My submissions" ---- */
+function lookupMySubmissions(){
+  const box = document.getElementById('mySubsResult');
+  const em = document.getElementById('my_email').value.trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ box.innerHTML = '<div class="msg err" style="display:block">Please type the email address you used when submitting.</div>'; return; }
+  if(!firebaseReady){ box.textContent = 'Firebase is not configured yet.'; return; }
+  box.innerHTML = '<div class="field-hint">Looking…</div>';
+  db.ref('receipts/' + emailCode(em)).once('value').then(snap => {
+    const v = snap.val() || {};
+    const rows = Object.values(v).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+    if(!rows.length){ box.innerHTML = '<div class="empty-state" style="padding:16px;">Nothing found for this email. Entries sent before November 2026 are not listed here.</div>'; return; }
+    const st = { received:['⏳ Received — waiting for review','pending'], approved:['✓ Approved — will be printed','ok'], removed:['Not included','off'] };
+    box.innerHTML = `<div class="mysubs">${rows.map(r => { const s = st[r.status] || st.received; return `<div class="mysub">
+      <div><b>${escapeHtml(r.title || '(untitled)')}</b><div class="field-hint" style="margin:2px 0 0;">${escapeHtml(COL_LABELS[r.col] || r.col)}${r.month ? ' · ' + escapeHtml(monthLabel(r.month)) + ' newsletter' : ''} · sent ${escapeHtml(new Date(r.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }))}</div></div>
+      <span class="status-badge ${s[1]}">${s[0]}</span></div>`; }).join('')}</div>`;
+  }).catch(err => { box.innerHTML = '<div class="msg err" style="display:block">Could not look this up: ' + escapeHtml(err.message) + '</div>'; });
+}
+
+/* ---- deadline banner ---- */
+function renderDeadlineBanner(){
+  const el = document.getElementById('deadlineBanner');
+  if(!el) return;
+  const now = new Date();
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const days = Math.round((new Date(last.getFullYear(), last.getMonth(), last.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+  const mName = now.toLocaleString('en-US', { month:'long', year:'numeric' });
+  const lastStr = last.toLocaleString('en-US', { day:'numeric', month:'long' });
+  const nextStr = next.toLocaleString('en-US', { day:'numeric', month:'long' });
+  const left = days === 0 ? '<b>closes today</b>' : `closes on <b>${lastStr}</b> — <b>${days} day${days > 1 ? 's' : ''} left</b>`;
+  el.className = 'deadline-banner' + (days <= 3 ? ' urgent' : '');
+  el.innerHTML = `📅 News for the <b>${mName}</b> newsletter ${left}. The newsletter comes out on ${nextStr}.`;
+}
+
+/* ---- drafts: half-filled forms are kept on this device ---- */
+const DRAFT_PREFIX = 'nl-draft-';
+function draftFields(form){ return Array.from(form.querySelectorAll('input[id], select[id], textarea[id]')).filter(el => el.type !== 'file'); }
+function saveDraft(form){
+  const d = {}; let any = false;
+  draftFields(form).forEach(el => { if(el.value && el.value.trim()){ d[el.id] = el.value; if(el.type !== 'month' && el.type !== 'date' && el.tagName !== 'SELECT') any = true; } });
+  if(form.id === 'confForm'){
+    const a = Array.from(form.querySelectorAll('.author-row')).map(r => [ r.querySelector('.ca_name').value, r.querySelector('.ca_aff').value ]);
+    if(a.some(x => x[0].trim())){ d._authors = a; any = true; }
+  }
+  try{ if(any) localStorage.setItem(DRAFT_PREFIX + form.id, JSON.stringify({ at: Date.now(), d })); else localStorage.removeItem(DRAFT_PREFIX + form.id); }catch(e){}
+}
+function clearDraft(formId){
+  try{ localStorage.removeItem(DRAFT_PREFIX + formId); }catch(e){}
+  const n = document.getElementById('draftNote-' + formId); if(n) n.remove();
+}
+function initDrafts(){
+  document.querySelectorAll('#view-submit form[id]').forEach(form => {
+    let t = null;
+    const later = () => { clearTimeout(t); t = setTimeout(() => saveDraft(form), 600); };
+    form.addEventListener('input', later); form.addEventListener('change', later);
+    form.addEventListener('reset', () => setTimeout(() => clearDraft(form.id), 0));
+    let saved = null;
+    try{ saved = JSON.parse(localStorage.getItem(DRAFT_PREFIX + form.id) || 'null'); }catch(e){}
+    if(!saved || !saved.d) return;
+    Object.entries(saved.d).forEach(([id, v]) => {
+      if(id === '_authors'){ const box = document.getElementById('c_authors'); if(box){ box.innerHTML = ''; v.forEach(a => addConfAuthorRow(a[0], a[1])); } return; }
+      const el = document.getElementById(id); if(!el) return;
+      if(el.tagName === 'TEXTAREA' && el._richArea) setRich(id, v); else el.value = v;
+    });
+    const note = document.createElement('div');
+    note.className = 'draft-note'; note.id = 'draftNote-' + form.id;
+    note.innerHTML = `📝 Your unfinished entry from ${new Date(saved.at).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' })} was restored (saved on this device only). Photos need to be added again. <a href="#" onclick="discardDraft('${form.id}'); return false;">Discard it</a>`;
+    form.insertBefore(note, form.firstChild);
+  });
+}
+function discardDraft(formId){
+  clearDraft(formId);
+  const f = document.getElementById(formId);
+  if(f){ f.reset(); if(formId === 'confForm') resetConfAuthors(); }
 }
 
 /* ---------------- Submit: Upcoming Event (open to anyone) ---------------- */
@@ -1850,7 +2080,7 @@ function submitUpcomingEvent(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  db.ref('upcomingEvents').push({ submittedBy, title, date, note: note || null, submittedAt: Date.now() })
+  submitRecord('upcomingEvents', null, { submittedBy, title, date, note: note || null, submittedAt: Date.now() })
     .then(() => {
       showSubmitMsg('upcoming', true, 'Added to Upcoming Events. Thank you!');
       document.getElementById('upcomingForm').reset();
@@ -1890,7 +2120,7 @@ function submitUpcomingConference(){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
 
-  db.ref('upcomingConferences').push({
+  submitRecord('upcomingConferences', null, {
     submittedBy,
     title, date, link: link || null,
     brochure: upcomingConfBrochure ? upcomingConfBrochure.dataUrl : null,
@@ -2011,7 +2241,7 @@ function removeMessage(key){
 }
 
 /* ---------------- Backup & erase (start of a new year) ---------------- */
-const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles','puzzleSolutions','puzzleIndex'];
+const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles','receipts','puzzleSolutions','puzzleIndex'];  // faculty profiles and settings are kept
 function downloadBackup(){
   if(!firebaseReady) return;
   db.ref('/').once('value').then(snap => {
@@ -2078,7 +2308,20 @@ function initDashboard(){
   dashboardInitialized = true;
   db.ref('editorials').on('value', snap => {
     allEditorialsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth(); fillEditorsDesk();
+    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth(); renderPendingBar(); fillEditorsDesk();
+  });
+  db.ref('settings/emailjs').on('value', snap => {
+    const v = snap.val() || {};
+    document.getElementById('s_ejsPublicKey').value = v.publicKey || '';
+    document.getElementById('s_ejsServiceId').value = v.serviceId || '';
+    document.getElementById('s_ejsTemplateId').value = v.templateId || '';
+  });
+  db.ref('faculty').on('value', snap => { allFaculty = snap.val() || {}; renderFacultyAdmin(); });
+  db.ref('settings/approval').on('value', snap => {
+    const v = snap.val() || {};
+    if(!v.since){ db.ref('settings/approval/since').set(Date.now()); return; }
+    APPROVAL_SINCE = v.since;
+    rerenderAllCards();
   });
   db.ref('settings/messages').on('value', snap => {
     allMessages = snap.val() || {};
@@ -2086,43 +2329,45 @@ function initDashboard(){
   });
   db.ref('guestEditorials').on('value', snap => {
     allGuestEditorialsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth();
+    populateMonthSelect(); populateYearSelect(); renderEditorialsForMonth(); renderPendingBar();
   });
   db.ref('puzzles').on('value', snap => {
     allPuzzlesByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
+    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth(); renderPendingBar();
     syncPuzzleIndex();
   });
   db.ref('puzzleSolutions').on('value', snap => {
     allPuzzleSolutionsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth();
+    populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth(); renderPendingBar();
   });
   db.ref('events').on('value', snap => {
     allEventsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderEventsForMonth();
+    populateMonthSelect(); populateYearSelect(); renderEventsForMonth(); renderPendingBar();
   });
   db.ref('publications').on('value', snap => {
     allPublicationsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderPublicationsForMonth();
+    populateMonthSelect(); populateYearSelect(); renderPublicationsForMonth(); renderPendingBar();
   });
   db.ref('awards').on('value', snap => {
     allAwardsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderAwardsForMonth();
+    populateMonthSelect(); populateYearSelect(); renderAwardsForMonth(); renderPendingBar();
   });
   db.ref('conferences').on('value', snap => {
     allConferencesByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderConferencesForMonth();
+    populateMonthSelect(); populateYearSelect(); renderConferencesForMonth(); renderPendingBar();
   });
   db.ref('blogs').on('value', snap => {
     allBlogsByMonth = snap.val() || {};
-    populateMonthSelect(); populateYearSelect(); renderBlogsForMonth();
+    populateMonthSelect(); populateYearSelect(); renderBlogsForMonth(); renderPendingBar();
   });
   db.ref('upcomingEvents').on('value', snap => {
     allUpcomingEvents = snap.val() || {};
+    setTimeout(renderPendingBar, 0);
     renderUpcomingEvents();
   });
   db.ref('upcomingConferences').on('value', snap => {
     allUpcomingConferences = snap.val() || {};
+    setTimeout(renderPendingBar, 0);
     renderUpcomingConferences();
   });
   db.ref('settings/newsletter').on('value', snap => {
@@ -2288,6 +2533,8 @@ function saveNewsletterSettings(){
     if(settingsImages.coverPhotoW){ s.coverPhotoW = settingsImages.coverPhotoW; s.coverPhotoH = settingsImages.coverPhotoH; }
   }
   const msg = document.getElementById('settingsMsg');
+  db.ref('settings/emailjs').set({ publicKey: document.getElementById('s_ejsPublicKey').value.trim(),
+    serviceId: document.getElementById('s_ejsServiceId').value.trim(), templateId: document.getElementById('s_ejsTemplateId').value.trim() }).catch(() => {});
   db.ref('settings/newsletter').update(s)
     .then(() => {
       applyNewsletterSettings(s);
@@ -2361,6 +2608,10 @@ function populateMonthSelect(){
   currentMonth = sel.value;
 }
 
+function rerenderAllCards(){
+  if(!currentMonth) return;
+  onMonthChange(); renderUpcomingEvents(); renderUpcomingConferences();
+}
 function onMonthChange(){
   currentMonth = document.getElementById('monthSelect').value;
   renderEventsForMonth();
@@ -2371,6 +2622,7 @@ function onMonthChange(){
   renderEditorialsForMonth();
   renderPuzzlesForMonth();
   fillEditorsDesk();
+  renderPendingBar();
 }
 
 /* ---------------- Editorials & Puzzles (submitted from the portal) ----------------
@@ -2420,7 +2672,7 @@ function renderEPList(kind){
           <h3>${escapeHtml(e.title || (isEd ? 'Guest Editorial' : 'Puzzle'))}</h3>
           ${e.author ? `<div class="event-meta"><span>✍️ ${escapeHtml(e.author)}</span></div>` : ''}
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteEP('${e._src}','${currentMonth}',${e._id ? `'${e._id}'` : 'null'})">Delete</button></div>
+        <div class="event-actions">${e._id ? adminActions(e._src, currentMonth, e._id) : ''}<button class="danger" onclick="deleteEP('${e._src}','${currentMonth}',${e._id ? `'${e._id}'` : 'null'})">Delete</button></div>
       </div>
       ${snippet ? `<div class="event-desc">${escapeHtml(snippet)}</div>` : ''}
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
@@ -2492,7 +2744,9 @@ function syncPuzzleIndex(){
 }
 /* The puzzle a solution answers (null if it has been deleted since) */
 function solvedPuzzle(sol){
-  return monthEntries(allPuzzlesByMonth, sol.puzzleMonth || '').find(p => (p._id || 'legacy') === sol.puzzleId) || null;
+  // the reminder may quote a puzzle even if it was never approved for print
+  const src = (FULL_DATA && FULL_DATA.allPuzzlesByMonth) || allPuzzlesByMonth;
+  return monthEntries(src, sol.puzzleMonth || '').find(p => (p._id || 'legacy') === sol.puzzleId) || null;
 }
 /* A short reminder of the puzzle: its opening words */
 function puzzleShortDescription(sol){
@@ -2513,12 +2767,12 @@ function solutionView(sol){
   return { title: sol.puzzleTitle || (solvedPuzzle(sol) || {}).title || 'Puzzle',
     kicker: 'SOLUTION' + (sol.puzzleMonth ? ' · ' + monthLabel(sol.puzzleMonth).toUpperCase() + ' PUZZLE' : ''),
     byLabel: 'Solution by ', author: sol.author, intro: puzzleShortDescription(sol),
-    content: sol.solution || '', photos: sol.photos || [] };
+    content: sol.solution || '', photos: sol.photos || [], winners: sol.winners || '' };
 }
 function deleteEP(src, month, id){
   if(!confirm('Delete this ' + (src === 'puzzles' ? 'puzzle' : src === 'puzzleSolutions' ? 'puzzle solution' : 'guest editorial') + '? This cannot be undone.')) return;
   const base = src + '/' + month;
-  if(id) db.ref(base + '/' + id).remove();
+  if(id){ updateReceipt(getEntry(src, month, id), id, { status:'removed' }); db.ref(base + '/' + id).remove(); }
   else { const wipe = {}; LEGACY_EP_KEYS.forEach(k => wipe[k] = null); db.ref(base).update(wipe); } // old format: remove only its own fields
 }
 
@@ -2573,7 +2827,7 @@ function renderEventsForMonth(){
           </div>
         </div>
         <div class="event-actions">
-          <button class="danger" onclick="deleteEvent('${currentMonth}','${id}')">Delete</button>
+          ${adminActions('events', currentMonth, id)}<button class="danger" onclick="deleteEvent('${currentMonth}','${id}')">Delete</button>
         </div>
       </div>
       <div class="event-desc">${richPreview(e.desc)}</div>
@@ -2603,6 +2857,7 @@ function photoWH(p){ return (p && typeof p === 'object') ? { w: p.w || null, h: 
 
 function deleteEvent(month, id){
   if(!confirm('Delete this event? This cannot be undone.')) return;
+  updateReceipt(getEntry('events', month, id), id, { status:'removed' });
   db.ref('events/' + month + '/' + id).remove();
 }
 
@@ -2630,7 +2885,7 @@ function renderPublicationsForMonth(){
           </div>
           <div class="event-meta"><span>✍️ ${escapeHtml(p.authors)}</span></div>
         </div>
-        <div class="event-actions"><button class="danger" onclick="deletePublication('${currentMonth}','${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('publications', currentMonth, id)}<button class="danger" onclick="deletePublication('${currentMonth}','${id}')">Delete</button></div>
       </div>
       <div class="event-desc">${richPreview(p.abstract)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
@@ -2662,7 +2917,7 @@ function renderAwardsForMonth(){
           </div>
           <div class="event-meta"><span>🏆 ${escapeHtml(a.recipients)}</span></div>
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteAward('${currentMonth}','${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('awards', currentMonth, id)}<button class="danger" onclick="deleteAward('${currentMonth}','${id}')">Delete</button></div>
       </div>
       <div class="event-desc">${richPreview(a.desc)}</div>
       ${photos ? `<div class="event-photos">${photos}</div>` : ''}
@@ -2672,10 +2927,12 @@ function renderAwardsForMonth(){
 }
 function deleteAward(month, id){
   if(!confirm('Delete this award / achievement? This cannot be undone.')) return;
+  updateReceipt(getEntry('awards', month, id), id, { status:'removed' });
   db.ref('awards/' + month + '/' + id).remove();
 }
 function deletePublication(month, id){
   if(!confirm('Delete this publication? This cannot be undone.')) return;
+  updateReceipt(getEntry('publications', month, id), id, { status:'removed' });
   db.ref('publications/' + month + '/' + id).remove();
 }
 
@@ -2704,7 +2961,7 @@ function renderConferencesForMonth(){
           <div class="event-meta"><span>🏛️ ${escapeHtml(c.confName)}</span></div>
           ${confAuthorsList(c).length ? `<div class="event-meta"><span>✍️ ${confAuthorsList(c).map(a => escapeHtml(a.name) + (a.affiliation ? ' <i>(' + escapeHtml(a.affiliation) + ')</i>' : '')).join(', ')}</span></div>` : ''}
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteConference('${currentMonth}','${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('conferences', currentMonth, id)}<button class="danger" onclick="deleteConference('${currentMonth}','${id}')">Delete</button></div>
       </div>
       ${c.confDetails ? `<div class="event-desc" style="font-style:italic;">${escapeHtml(c.confDetails)}</div>` : ''}
       <div class="event-desc">${richPreview(c.abstract)}</div>
@@ -2715,6 +2972,7 @@ function renderConferencesForMonth(){
 }
 function deleteConference(month, id){
   if(!confirm('Delete this conference presentation? This cannot be undone.')) return;
+  updateReceipt(getEntry('conferences', month, id), id, { status:'removed' });
   db.ref('conferences/' + month + '/' + id).remove();
 }
 
@@ -2742,7 +3000,7 @@ function renderBlogsForMonth(){
             <span>✍️ ${escapeHtml(b.author)}</span>
           </div>
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteBlog('${currentMonth}','${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('blogs', currentMonth, id)}<button class="danger" onclick="deleteBlog('${currentMonth}','${id}')">Delete</button></div>
       </div>
       <div class="event-desc">${escapeHtml(snippet)}</div>
       ${(b.photos||[]).length ? `<div class="event-photos">${(b.photos||[]).map(ph => `<img src="${photoUrl(ph)}"/>`).join('')}</div>` : ''}
@@ -2753,6 +3011,7 @@ function renderBlogsForMonth(){
 }
 function deleteBlog(month, id){
   if(!confirm('Delete this blog? This cannot be undone.')) return;
+  updateReceipt(getEntry('blogs', month, id), id, { status:'removed' });
   db.ref('blogs/' + month + '/' + id).remove();
 }
 
@@ -2774,7 +3033,7 @@ function renderUpcomingEvents(){
           <div class="event-meta"><span>📅 ${formatDate(u.date)}</span></div>
           ${u.note ? `<div class="event-desc" style="margin-top:4px;">${richPreview(u.note)}</div>` : ''}
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('upcomingEvents', null, id)}<button class="danger" onclick="deleteUpcomingEvent('${id}')">Delete</button></div>
       </div>
       ${submitterHtml(u)}
     </div>`;
@@ -2783,6 +3042,7 @@ function renderUpcomingEvents(){
 
 function deleteUpcomingEvent(id){
   if(!confirm('Remove this from Upcoming Events?')) return;
+  updateReceipt(getEntry('upcomingEvents', null, id), id, { status:'removed' });
   db.ref('upcomingEvents/' + id).remove();
 }
 
@@ -2806,7 +3066,7 @@ function renderUpcomingConferences(){
             ${u.link ? `<span>🔗 ${escapeHtml(u.link)}</span>` : ''}
           </div>
         </div>
-        <div class="event-actions"><button class="danger" onclick="deleteUpcomingConference('${id}')">Delete</button></div>
+        <div class="event-actions">${adminActions('upcomingConferences', null, id)}<button class="danger" onclick="deleteUpcomingConference('${id}')">Delete</button></div>
       </div>
       ${u.brochure ? `<div class="event-photos"><img src="${u.brochure}"/></div>` : ''}
       ${submitterHtml(u)}
@@ -2816,6 +3076,7 @@ function renderUpcomingConferences(){
 
 function deleteUpcomingConference(id){
   if(!confirm('Remove this from Upcoming Conferences & Workshops?')) return;
+  updateReceipt(getEntry('upcomingConferences', null, id), id, { status:'removed' });
   db.ref('upcomingConferences/' + id).remove();
 }
 
@@ -4013,6 +4274,12 @@ function puzzleItem(pz, anchor){
       out.push(richParagraph(t, { pageBreakBefore:brk(), keepNext: imgs.length > 0 || li < pzLines.length - 1, keepLines:true }));
       y += Math.ceil(stripRich(t).length * FLOW.CHAR_PX * 1.06 / PAGE_CONTENT_PX) * FLOW.LINE_PX + 11;
     });
+    if(pz.winners){
+      out.push(new Paragraph({ pageBreakBefore:brk(), keepNext: imgs.length > 0, keepLines:true, spacing:{ before:120, after:160 },
+        children:[ new TextRun({ text:'🏆 Correct answers received from: ', bold:true, color:"A8842F", size:BODY_SIZE - 1, font:"Inter" }),
+                   new TextRun({ text:pz.winners, color:"1B1B18", size:BODY_SIZE - 1, font:"Inter" }) ] }));
+      y += Math.ceil((pz.winners.length + 36) * FLOW.CHAR_PX / PAGE_CONTENT_PX) * FLOW.LINE_PX + 18;
+    }
     for(let k = 0; k < imgs.length; k += 2){
       const pair = imgs.slice(k, k + 2);
       const runs = []; let rowH = 0;
@@ -4062,10 +4329,586 @@ function itemTocInfo(it){
     case 'guest':   return { title:d.title || 'Guest Editorial' };
     case 'puzzle':  return { title:d.title || 'Puzzle' };
     case 'pzsol':   return { title:'Solution: ' + (d.puzzleTitle || 'Puzzle') };
+    case 'faculty': return { title:d.name };
+    case 'numbers': return { title:'Key figures' };
     case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
     case 'upevent': return { title:d.title, date:d.date };
     default:        return { title:d.title, date:d.date };
   }
+}
+
+/* =========================================================================
+   APPROVAL, EDITING AND MOVING SUBMISSIONS (admin)
+   Every portal submission starts as "Pending" and is printed only once an
+   admin approves it. Entries sent before approvals were switched on
+   (settings/approval/since) count as approved, so older issues are unchanged.
+   ========================================================================= */
+let APPROVAL_SINCE = Infinity;   // set from settings/approval/since when the dashboard loads
+const isApproved = e => !!e && (e.approved === true || (e.approved === undefined && (e.submittedAt || 0) < APPROVAL_SINCE));
+
+/* Where each kind of submission lives, and how its month is decided */
+const COLS = {
+  events:              { label:'event', get:() => allEventsByMonth, monthBy:'date' },
+  publications:        { label:'publication', get:() => allPublicationsByMonth, monthBy:'date' },
+  awards:              { label:'award / achievement', get:() => allAwardsByMonth, monthBy:'date' },
+  conferences:         { label:'conference presentation', get:() => allConferencesByMonth, monthBy:'date' },
+  blogs:               { label:'research blog', get:() => allBlogsByMonth, monthBy:'date' },
+  guestEditorials:     { label:'guest editorial', get:() => allGuestEditorialsByMonth, monthBy:'month' },
+  editorials:          { label:'guest editorial', get:() => allEditorialsByMonth, monthBy:'month' },
+  puzzles:             { label:'puzzle', get:() => allPuzzlesByMonth, monthBy:'month' },
+  puzzleSolutions:     { label:'puzzle solution', get:() => allPuzzleSolutionsByMonth, monthBy:'month' },
+  upcomingEvents:      { label:'upcoming event', get:() => allUpcomingEvents, monthBy:null },
+  upcomingConferences: { label:'upcoming conference / workshop', get:() => allUpcomingConferences, monthBy:null },
+};
+const entryPath = (col, month, id) => COLS[col].monthBy ? `${col}/${month}/${id}` : `${col}/${id}`;
+function getEntry(col, month, id){
+  const all = COLS[col].get() || {};
+  return COLS[col].monthBy ? ((all[month] || {})[id]) : all[id];
+}
+
+/* Status badge + Approve / Edit buttons shown on every admin card */
+function adminActions(col, month, id){
+  const e = getEntry(col, month, id);
+  if(!e || !id) return '';
+  const ok = isApproved(e);
+  const m = month ? `'${month}'` : 'null';
+  return `<span class="status-badge ${ok ? 'ok' : 'pending'}">${ok ? '✓ Approved' : '⏳ Pending'}</span>` +
+    (ok ? `<button class="ghost small" onclick="setApproved('${col}',${m},'${id}',false)" title="Leave it out of the newsletter for now">Unapprove</button>`
+        : `<button class="approve small" onclick="setApproved('${col}',${m},'${id}',true)">Approve</button>`) +
+    `<button class="ghost small" onclick="openEditor('${col}',${m},'${id}')">Edit</button>`;
+}
+function setApproved(col, month, id, val){
+  const e = getEntry(col, month, id);
+  db.ref(entryPath(col, month, id) + '/approved').set(val).then(() => updateReceipt(e, id, { status: val ? 'approved' : 'received' }));
+}
+/* Pending entries for a month (or for several months) */
+function pendingList(months){
+  const out = [];
+  Object.keys(COLS).forEach(col => {
+    const c = COLS[col], all = c.get() || {};
+    if(!c.monthBy){
+      Object.keys(all).forEach(id => { if(all[id] && all[id].submittedAt && !isApproved(all[id])) out.push({ col, month:null, id, e:all[id] }); });
+      return;
+    }
+    months.forEach(m => {
+      const v = all[m] || {};
+      Object.keys(v).forEach(id => { const e = v[id]; if(e && typeof e === 'object' && e.submittedAt && !isApproved(e)) out.push({ col, month:m, id, e }); });
+    });
+  });
+  return out;
+}
+function renderPendingBar(){
+  const el = document.getElementById('pendingBar');
+  if(!el || !currentMonth) return;
+  const list = pendingList([currentMonth]);
+  if(!list.length){ el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `<span>⏳ <b>${list.length}</b> submission${list.length > 1 ? 's' : ''} for ${monthLabel(currentMonth)} (and upcoming items) ${list.length > 1 ? 'are' : 'is'} waiting for approval. Pending entries are not printed.</span>
+    <button class="approve small" onclick="approveAllPending()">Approve all</button>`;
+}
+function approveAllPending(){
+  const list = pendingList([currentMonth]);
+  if(!list.length || !confirm(`Approve all ${list.length} pending submission(s)? Check them first if you haven't.`)) return;
+  const upd = {};
+  list.forEach(x => upd[entryPath(x.col, x.month, x.id) + '/approved'] = true);
+  db.ref('/').update(upd).then(() => list.forEach(x => updateReceipt(x.e, x.id, { status:'approved' })));
+}
+/* Generation uses approved entries only: the data maps are swapped for
+   filtered copies while a newsletter or report is being built. */
+const APPROVAL_GLOBALS = ['allEventsByMonth','allPublicationsByMonth','allAwardsByMonth','allConferencesByMonth','allBlogsByMonth',
+  'allGuestEditorialsByMonth','allEditorialsByMonth','allPuzzlesByMonth','allPuzzleSolutionsByMonth','allUpcomingEvents','allUpcomingConferences'];
+function approvedCopy(name, v){
+  v = v || {};
+  const keep = e => !(e && typeof e === 'object' && !Array.isArray(e) && 'submittedAt' in e) || isApproved(e);
+  if(name === 'allUpcomingEvents' || name === 'allUpcomingConferences'){
+    const o = {}; Object.keys(v).forEach(id => { if(keep(v[id])) o[id] = v[id]; }); return o;
+  }
+  const o = {};
+  Object.keys(v).forEach(m => {
+    const mv = v[m];
+    if(!mv || typeof mv !== 'object'){ o[m] = mv; return; }
+    const x = {}; Object.keys(mv).forEach(k => { if(keep(mv[k])) x[k] = mv[k]; });
+    o[m] = x;
+  });
+  return o;
+}
+const GLOBAL_ACCESS = {
+  allEventsByMonth:[() => allEventsByMonth, v => allEventsByMonth = v], allPublicationsByMonth:[() => allPublicationsByMonth, v => allPublicationsByMonth = v],
+  allAwardsByMonth:[() => allAwardsByMonth, v => allAwardsByMonth = v], allConferencesByMonth:[() => allConferencesByMonth, v => allConferencesByMonth = v],
+  allBlogsByMonth:[() => allBlogsByMonth, v => allBlogsByMonth = v], allGuestEditorialsByMonth:[() => allGuestEditorialsByMonth, v => allGuestEditorialsByMonth = v],
+  allEditorialsByMonth:[() => allEditorialsByMonth, v => allEditorialsByMonth = v], allPuzzlesByMonth:[() => allPuzzlesByMonth, v => allPuzzlesByMonth = v],
+  allPuzzleSolutionsByMonth:[() => allPuzzleSolutionsByMonth, v => allPuzzleSolutionsByMonth = v],
+  allUpcomingEvents:[() => allUpcomingEvents, v => allUpcomingEvents = v], allUpcomingConferences:[() => allUpcomingConferences, v => allUpcomingConferences = v],
+};
+const readGlobal = name => GLOBAL_ACCESS[name][0]();
+const writeGlobal = (name, v) => GLOBAL_ACCESS[name][1](v);
+let FULL_DATA = null;   // the unfiltered maps while withApproved() runs
+async function withApproved(fn){
+  const saved = {}, swapped = {};
+  FULL_DATA = saved;
+  APPROVAL_GLOBALS.forEach(n => { saved[n] = readGlobal(n); swapped[n] = approvedCopy(n, saved[n]); writeGlobal(n, swapped[n]); });
+  try{ return await fn(); }
+  finally{
+    // put the full data back, unless a live update replaced it meanwhile
+    APPROVAL_GLOBALS.forEach(n => { if(readGlobal(n) === swapped[n]) writeGlobal(n, saved[n]); });
+    FULL_DATA = null;
+  }
+}
+/* Before printing: say how many pending entries will be left out */
+function confirmPending(months, what){
+  const n = pendingList(months).length;
+  return !n || confirm(`${n} submission${n > 1 ? 's are' : ' is'} still Pending and will be left out of ${what}.\n\nGenerate anyway? (Click Cancel to review and approve them first.)`);
+}
+
+/* ---------------- Edit window ---------------- */
+const IDX_OPTS = ['', 'SCI', 'Scopus', 'Web of Science', 'UGC-CARE', 'Other'];
+const EDIT_FIELDS = {
+  events: [ ['title','Event Title','text',1], ['category','Category','select',1,CATS], ['organizer','Reported by','text',1],
+            ['role','Role','select',1,['Organized','Attended']], ['date','Event Date','date',1], ['dateEnd','End Date','date'],
+            ['desc','Description','rich',1], ['photos','Photos','photos'] ],
+  publications: [ ['title','Paper Title','text',1], ['journal','Journal / Publisher','text',1], ['indexing','Indexing','select',0,IDX_OPTS],
+            ['volume','Volume','text'], ['issue','Issue','text'], ['authors','Authors','text',1], ['date','Date of Publication','date',1],
+            ['abstract','Abstract','rich',1], ['photos','Figures / Images','photos'] ],
+  awards: [ ['title','Award / Achievement','text',1], ['type','Type','select',1,AWARD_TYPES], ['recipients','Recipient(s)','text',1],
+            ['awardedBy','Conferred by','text',1], ['date','Date','date',1], ['desc','Details','rich',1], ['photos','Photos','photos'] ],
+  conferences: [ ['confName','Conference Name','text',1], ['confDetails','Conference Details','textarea'], ['paperTitle','Paper / Talk Title','text',1],
+            ['authors','Authors & Affiliations (one per line: Name | Affiliation)','authors',1], ['presenter','Presented By','text',1],
+            ['date','Date of Presentation','date',1], ['abstract','Abstract','rich',1], ['photos','Photos','photos'] ],
+  blogs: [ ['title','Blog Title','text',1], ['author','Author','text',1], ['date','Date (decides the month)','date',1],
+            ['content','Blog Content','rich',1], ['refs','Reference links (one per line)','lines'], ['photos','Photos / Figures','photos'] ],
+  guestEditorials: [ ['title','Title','text',1], ['author','Written by','text',1], ['_month','Newsletter Month','month',1],
+            ['content','Editorial Text','rich',1], ['refs','Reference links (one per line)','lines'], ['photos','Photos','photos'] ],
+  puzzles: [ ['title','Puzzle Title','text',1], ['author','Contributed by','text'], ['_month','Newsletter Month','month',1],
+            ['content','Puzzle Text','rich'], ['photos','Puzzle Images','photos'] ],
+  puzzleSolutions: [ ['puzzleTitle','Puzzle','text',1], ['author','Solution by','text'], ['winners','Correct answers from','textarea'],
+            ['_month','Newsletter Month','month',1], ['solution','Solution','rich'], ['photos','Solution Images','photos'] ],
+  upcomingEvents: [ ['title','Event Title','text',1], ['date','Date','date',1], ['note','Details','rich'] ],
+  upcomingConferences: [ ['title','Title','text',1], ['date','Date','date',1], ['link','Link','text'] ],
+};
+EDIT_FIELDS.editorials = EDIT_FIELDS.guestEditorials;
+
+let editing = null;
+function openEditor(col, month, id){
+  const e = getEntry(col, month, id);
+  if(!e) return;
+  editing = { col, month, id, photos: entryPhotos(e).map(p => typeof p === 'string' ? { url:p } : { url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }).filter(p => p.url), photosTouched:false };
+  const fields = EDIT_FIELDS[col];
+  const val = f => f[0] === '_month' ? month : e[f[0]];
+  const box = document.createElement('div');
+  box.className = 'secpick-backdrop'; box.id = 'editBackdrop';
+  box.innerHTML = `<div class="secpick editbox" role="dialog" aria-modal="true">
+    <h3>Edit ${escapeHtml(COLS[col].label)}</h3>
+    <p>Changes are saved straight into the newsletter data. Changing the date (or newsletter month) moves the entry to that month's issue.</p>
+    ${fields.map(f => {
+      const [k, label, type, req, opts] = f, v = val(f);
+      const lab = `<label>${escapeHtml(label)}${req ? ' *' : ''}</label>`;
+      if(type === 'select') return lab + `<select data-k="${k}">${opts.map(o => `<option value="${escapeHtml(o)}"${o === (v || '') ? ' selected' : ''}>${escapeHtml(o || '—')}</option>`).join('')}</select>`;
+      if(type === 'rich' || type === 'textarea') return lab + `<textarea data-k="${k}" id="edit_${k}" style="min-height:${type === 'rich' ? 140 : 70}px;">${escapeHtml(v || '')}</textarea>`;
+      if(type === 'lines') return lab + `<textarea data-k="${k}" style="min-height:60px;">${escapeHtml((v || []).join('\n'))}</textarea>`;
+      if(type === 'authors') return lab + `<textarea data-k="${k}" style="min-height:80px;">${escapeHtml((v || []).map(a => a.name + (a.affiliation ? ' | ' + a.affiliation : '')).join('\n'))}</textarea>`;
+      if(type === 'photos') return lab + `<div class="edit-photos" id="editPhotos"></div>
+        <input type="file" id="editPhotoInput" accept="image/*" multiple style="display:none" onchange="addEditPhotos(event)">
+        <div class="field-hint" style="margin-top:6px;">Up to 6. ← → change the order (the first photo leads the article), × removes a photo.</div>`;
+      return lab + `<input type="${type}" data-k="${k}" value="${escapeHtml(v || '')}">`;
+    }).join('')}
+    <div class="secpick-msg" id="editMsg"></div>
+    <div class="secpick-btns"><button type="button" class="ghost" onclick="closeEditor()">Cancel</button><button type="button" class="primary" onclick="saveEditor()">Save changes</button></div>
+  </div>`;
+  document.body.appendChild(box);
+  box.querySelectorAll('textarea[id^="edit_"]').forEach(ta => { const f = fields.find(x => 'edit_' + x[0] === ta.id); if(f && f[2] === 'rich') makeRich(ta); });
+  renderEditPhotos();
+  box.addEventListener('click', ev => { if(ev.target === box) closeEditor(); });
+}
+/* Photos in the edit window: add (shrunk like on the portal), remove, reorder */
+function renderEditPhotos(){
+  const el = document.getElementById('editPhotos');
+  if(!el || !editing) return;
+  const n = editing.photos.length;
+  el.innerHTML = editing.photos.map((p, i) => `<div class="eph">
+      <img src="${p.url}">
+      <div class="eph-btns">
+        <button type="button" title="Move earlier" ${i === 0 ? 'disabled' : ''} onclick="moveEditPhoto(${i},-1)">←</button>
+        <button type="button" title="Remove this photo" class="rm" onclick="removeEditPhoto(${i})">×</button>
+        <button type="button" title="Move later" ${i === n - 1 ? 'disabled' : ''} onclick="moveEditPhoto(${i},1)">→</button>
+      </div>${i === 0 && n > 1 ? '<span class="eph-first">First</span>' : ''}</div>`).join('') +
+    (n < 6 ? `<button type="button" class="eph-add" onclick="document.getElementById('editPhotoInput').click()">＋<span>Add photos</span></button>` : '');
+}
+function addEditPhotos(evt){
+  if(!editing) return;
+  const files = Array.from(evt.target.files).slice(0, 6 - editing.photos.length);
+  evt.target.value = '';
+  Promise.all(files.map(f => compressImage(f, 900, 0.68).catch(() => null))).then(list => {
+    list.filter(Boolean).forEach(r => editing.photos.push({ url:r.dataUrl, w:r.width, h:r.height }));
+    editing.photosTouched = true; renderEditPhotos();
+  });
+}
+function removeEditPhoto(i){ if(!editing) return; editing.photos.splice(i, 1); editing.photosTouched = true; renderEditPhotos(); }
+function moveEditPhoto(i, d){
+  if(!editing) return;
+  const j = i + d; if(j < 0 || j >= editing.photos.length) return;
+  const a = editing.photos; [a[i], a[j]] = [a[j], a[i]];
+  editing.photosTouched = true; renderEditPhotos();
+}
+function closeEditor(){ const b = document.getElementById('editBackdrop'); if(b) b.remove(); editing = null; }
+function saveEditor(){
+  if(!editing) return;
+  const { col, month, id } = editing;
+  const e = getEntry(col, month, id) || {};
+  const box = document.getElementById('editBackdrop');
+  const msg = t => { document.getElementById('editMsg').textContent = t; };
+  const obj = JSON.parse(JSON.stringify(e));
+  let newMonth = month;
+  for(const f of EDIT_FIELDS[col]){
+    const [k, label, type, req] = f;
+    if(type === 'photos'){
+      if(!editing.photosTouched) continue;           // photos left exactly as they were
+      if(editing.photos.length) obj.photos = editing.photos.map(p => { const o = { url:p.url }; if(p.w) o.w = p.w; if(p.h) o.h = p.h; return o; });
+      else delete obj.photos;
+      delete obj.photo; delete obj.image;
+      continue;
+    }
+    const el = box.querySelector(`[data-k="${k}"]`);
+    let v = (el.value || '').trim();
+    if(req && !v){ msg('Please fill in: ' + label.replace(/ \(.*/, '')); return; }
+    if(k === '_month'){ newMonth = v; continue; }
+    if(type === 'lines'){ v = v.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 5); if(v.some(u => !/^https?:\/\//i.test(u))){ msg('Reference links must start with http:// or https://'); return; } }
+    if(type === 'authors'){ v = v.split('\n').map(x => x.trim()).filter(Boolean).map(x => { const [n, ...a] = x.split('|'); const o = { name:n.trim() }; if(a.join('|').trim()) o.affiliation = a.join('|').trim(); return o; }); }
+    if((Array.isArray(v) && !v.length) || v === '') delete obj[k]; else obj[k] = v;
+  }
+  if(COLS[col].monthBy === 'date'){
+    newMonth = (obj.date || '').slice(0, 7);
+    if(obj.dateEnd && obj.dateEnd < obj.date){ msg('The end date is before the start date.'); return; }
+  }
+  if(col === 'puzzleSolutions' && !(obj.solution || (obj.photos || []).length)){ msg('Please add the solution text or keep at least one image.'); return; }
+  if(col === 'puzzles' && !(obj.content || (obj.photos || []).length)){ msg('Please add the puzzle text or keep at least one image.'); return; }
+  obj.editedAt = Date.now();
+  const oldPath = entryPath(col, month, id), newPath = entryPath(col, newMonth, id);
+  const write = oldPath === newPath ? db.ref(oldPath).set(obj) : db.ref('/').update({ [oldPath]: null, [newPath]: obj });
+  write.then(() => {
+    updateReceipt(obj, id, { month: newMonth || '', title: receiptTitle(col, obj) });
+    closeEditor();
+    if(newMonth && newMonth !== month) alert(`Saved. The ${COLS[col].label} now belongs to ${monthLabel(newMonth)}.`);
+  }).catch(err => msg('Could not save: ' + err.message));
+}
+
+/* ---------------- "My submissions" receipts ----------------
+   receipts/<code>/<id> = { col, month, title, submittedAt, status }
+   <code> is a one-way code made from the submitter's email, so a teacher can
+   look up their own entries by typing their email, without emails being
+   stored in a readable list. */
+function emailCode(email){
+  const s = String(email || '').trim().toLowerCase();
+  const h = seed => { let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for(let i = 0; i < s.length; i++){ const ch = s.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0'); };
+  return 'e' + h(1) + h(2);
+}
+function receiptTitle(col, d){
+  if(col === 'conferences') return d.paperTitle || d.confName || '';
+  if(col === 'puzzleSolutions') return 'Solution: ' + (d.puzzleTitle || 'Puzzle');
+  return d.title || '';
+}
+function updateReceipt(entry, id, patch){
+  const em = entry && entry.submittedBy && entry.submittedBy.email;
+  if(!em || !id || !firebaseReady) return;
+  db.ref('receipts/' + emailCode(em) + '/' + id).once('value').then(s => { if(s.val()) db.ref('receipts/' + emailCode(em) + '/' + id).update(patch); }).catch(() => {});
+}
+
+/* =========================================================================
+   FACULTY PROFILES (admin; printed in the bi-annual and annual editions)
+   faculty/<id> = { name, designation, research, email, link, bio, photo:{url,w,h}, order }
+   ========================================================================= */
+let allFaculty = {};
+let facultyEditId = null, facultyPhoto = null;
+const facultyList = () => Object.entries(allFaculty || {}).map(([id, f]) => Object.assign({ _id:id }, f))
+  .sort((a, b) => ((a.order || 999) - (b.order || 999)) || (a.name || '').localeCompare(b.name || ''));
+function renderFacultyAdmin(){
+  const el = document.getElementById('facultyList');
+  if(!el) return;
+  const list = facultyList();
+  el.innerHTML = list.length ? list.map(f => `<div class="event-card fac-card">
+      ${f.photo && f.photo.url ? `<img class="fac-ph" src="${f.photo.url}">` : '<div class="fac-ph none">No photo</div>'}
+      <div style="flex:1; min-width:0;"><h3 style="margin:0;">${escapeHtml(f.name)}</h3>
+        <div class="event-meta"><span>${escapeHtml(f.designation || '')}</span>${f.email ? `<span>✉ ${escapeHtml(f.email)}</span>` : ''}<span>Order: ${escapeHtml(String(f.order || '—'))}</span></div>
+        ${f.research ? `<div class="event-desc" style="margin-top:4px;"><b>Research areas:</b> ${escapeHtml(f.research)}</div>` : ''}</div>
+      <div class="event-actions"><button class="ghost small" onclick="editFaculty('${f._id}')">Edit</button><button class="danger small" onclick="deleteFaculty('${f._id}')">Delete</button></div>
+    </div>`).join('') : '<div class="empty-state">No faculty profiles yet. Add the first one above.</div>';
+}
+function facultyMsg(ok, t){ const m = document.getElementById('facultyMsg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t; if(ok) setTimeout(() => { m.style.display = 'none'; }, 3500); }
+function clearFacultyForm(){
+  facultyEditId = null; facultyPhoto = null;
+  ['fac_name','fac_desig','fac_research','fac_email','fac_link','fac_order'].forEach(id => document.getElementById(id).value = '');
+  setRich('fac_bio', '');
+  document.getElementById('fac_photoPrev').innerHTML = '';
+  document.getElementById('facSaveBtn').textContent = 'Add Faculty Member';
+}
+function editFaculty(id){
+  const f = allFaculty[id]; if(!f) return;
+  facultyEditId = id; facultyPhoto = f.photo || null;
+  document.getElementById('fac_name').value = f.name || '';
+  document.getElementById('fac_desig').value = f.designation || '';
+  document.getElementById('fac_research').value = f.research || '';
+  document.getElementById('fac_email').value = f.email || '';
+  document.getElementById('fac_link').value = f.link || '';
+  document.getElementById('fac_order').value = f.order || '';
+  setRich('fac_bio', f.bio || '');
+  document.getElementById('fac_photoPrev').innerHTML = facultyPhoto ? `<img src="${facultyPhoto.url}">` : '';
+  document.getElementById('facSaveBtn').textContent = 'Save Changes';
+  document.getElementById('facultyCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function onFacultyPhoto(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  compressImage(file, 600, 0.8).then(r => { facultyPhoto = { url:r.dataUrl, w:r.width, h:r.height }; document.getElementById('fac_photoPrev').innerHTML = `<img src="${r.dataUrl}">`; });
+  evt.target.value = '';
+}
+function saveFaculty(){
+  if(!firebaseReady) return;
+  const v = id => document.getElementById(id).value.trim();
+  const f = { name:v('fac_name'), designation:v('fac_desig'), research:v('fac_research'), email:v('fac_email'), link:v('fac_link'),
+    bio: v('fac_bio'), order: parseInt(v('fac_order'), 10) || null, photo: facultyPhoto || null, updatedAt: Date.now() };
+  if(!f.name){ facultyMsg(false, 'Please enter the name.'); return; }
+  if(f.email && !isEmail(f.email)){ facultyMsg(false, 'Please check the email address.'); return; }
+  const ref = facultyEditId ? db.ref('faculty/' + facultyEditId) : db.ref('faculty').push();
+  ref.set(f).then(() => { facultyMsg(true, (facultyEditId ? 'Saved: ' : 'Added: ') + f.name); clearFacultyForm(); })
+    .catch(err => facultyMsg(false, 'Could not save: ' + err.message));
+}
+function deleteFaculty(id){
+  const f = allFaculty[id];
+  if(!f || !confirm('Delete the profile of ' + f.name + '?')) return;
+  db.ref('faculty/' + id).remove();
+}
+/* Word item: photo floated beside name, designation, email and research areas */
+function facultyText(f){
+  const parts = [];
+  if(f.research) parts.push('[b]Research areas:[/b] ' + f.research);
+  if(f.bio) parts.push(f.bio);
+  if(f.link) parts.push('[b]Profile:[/b] ' + f.link);
+  return parts.join('\n');
+}
+function facultyItem(f, anchor){
+  return (pb, sy) => buildFlowArticle({
+    kicker:null, title: f.name, anchor,
+    metaParas: [ ...(f.designation ? [ metaLine(f.designation, { italics:false, color:"736C5E", size:BODY_SIZE - 1 }) ] : []),
+                 ...(f.email ? [ metaLine(f.email, { italics:false, color:"1155CC", size:META_SIZE }) ] : []) ],
+    text: facultyText(f), images: f.photo && f.photo.url ? [ { url:f.photo.url, w:f.photo.w, h:f.photo.h } ] : [],
+    floatMax:{ w:120, h:150 }, pageBreak:pb, startY:sy
+  });
+}
+
+/* =========================================================================
+   THE YEAR (HALF-YEAR) IN NUMBERS — opening page of the bi-annual / annual edition
+   ========================================================================= */
+function editionNumbers(months){
+  const count = (byMonth, fn) => { let n = 0; months.forEach(m => { const d = byMonth[m] || {}; Object.keys(d).forEach(id => { if(d[id] && typeof d[id] === 'object') { n++; if(fn) fn(d[id]); } }); }); return n; };
+  const cats = {}, idx = {}, types = {};
+  const events = count(allEventsByMonth, e => { const c = catOf(e); cats[c] = (cats[c] || 0) + 1; });
+  const pubs = count(allPublicationsByMonth, p => { const k = p.indexing || 'Not stated'; idx[k] = (idx[k] || 0) + 1; });
+  const awards = count(allAwardsByMonth, a => { const k = a.type || 'Other'; types[k] = (types[k] || 0) + 1; });
+  const confs = count(allConferencesByMonth);
+  const blogs = count(allBlogsByMonth);
+  let guests = 0, puzzles = 0;
+  months.forEach(m => { guests += guestEditorialEntries(m).filter(hasText).length; puzzles += monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).length; });
+  const tiles = [ [events,'Events'], [pubs,'Publications'], [confs,'Conference Presentations'], [awards,'Awards & Achievements'],
+                  [blogs,'Research Blogs'], [guests,'Guest Editorials'], [puzzles,'Puzzles'], [facultyList().length,'Faculty Members'] ]
+    .filter(t => t[0] > 0).map(([n, label]) => ({ n, label }));
+  const join = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join('  ·  ');
+  const lines = [];
+  if(events) lines.push(['Events by category', join(cats)]);
+  if(pubs) lines.push(['Publications by indexing', join(idx)]);
+  if(awards) lines.push(['Awards & achievements by type', join(types)]);
+  return { tiles, lines, total: events + pubs + awards + confs + blogs };
+}
+function numbersItem(d, anchor){
+  return (pb, sy) => {
+    const { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, TableLayoutType, BorderStyle, VerticalAlign } = docx;
+    const out = [];
+    const PER = 4, colW = Math.floor(PAGE_CONTENT_TW / PER);
+    const white = { style:BorderStyle.SINGLE, size:24, color:"FFFFFF" };
+    for(let r = 0; r < d.tiles.length; r += PER){
+      const row = d.tiles.slice(r, r + PER);
+      while(row.length < PER) row.push(null);
+      out.push(new Table({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, columnWidths: row.map(() => colW), layout:TableLayoutType.FIXED,
+        borders:{ top:white, bottom:white, left:white, right:white, insideHorizontal:white, insideVertical:white },
+        rows:[ new TableRow({ cantSplit:true, height:{ value:1500, rule:docx.HeightRule.ATLEAST }, children: row.map(t => new TableCell({
+          width:{ size:colW, type:WidthType.DXA }, verticalAlign: VerticalAlign.CENTER,
+          shading:{ fill: t ? "F3EDDE" : "FFFFFF", type:ShadingType.CLEAR, color:"auto" }, margins:{ top:160, bottom:160, left:80, right:80 },
+          children: t ? [
+            new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:20 }, children:[ new TextRun({ text:String(t.n), bold:true, color:"132340", size:64, font:"Playfair Display" }) ] }),
+            new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:0 }, children:[ new TextRun({ text:t.label.toUpperCase(), bold:true, color:"A8842F", size:15, characterSpacing:10, font:"Inter" }) ] }),
+          ] : [ new Paragraph({ children:[] }) ] })) }) ] }));
+    }
+    let y = sy + Math.ceil(d.tiles.length / PER) * 112;
+    d.lines.forEach(([k, v], i) => {
+      out.push(new Paragraph({ spacing:{ before: i ? 60 : 280, after:0 }, keepNext:true, children:[ new TextRun({ text:k.toUpperCase(), bold:true, color:"132340", size:17, font:"Inter", characterSpacing:10 }) ] }));
+      out.push(new Paragraph({ spacing:{ after:120 }, children:[ new TextRun({ text:v, color:"3A3A34", size:BODY_SIZE - 2, font:"Inter" }) ] }));
+      y += 54;
+    });
+    if(anchor) out.unshift(new Paragraph({ spacing:{ after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children: bookmarked(anchor, [ new TextRun({ text:'', size:2 }) ]) }));
+    out.endY = y + 20;
+    return out;
+  };
+}
+function numbersHtml(d, anchor){
+  return `<div class="nums"${anchor ? ` id="${anchor}"` : ''}><div class="tiles">${d.tiles.map(t => `<div class="tile"><div class="n">${t.n}</div><div class="l">${H(t.label)}</div></div>`).join('')}</div>` +
+    d.lines.map(([k, v]) => `<div class="nl"><div class="k">${H(k)}</div><div class="v">${H(v)}</div></div>`).join('') + `</div>`;
+}
+
+/* =========================================================================
+   READY-TO-SEND EMAIL AND WHATSAPP MESSAGE (shown after each issue is made)
+   ========================================================================= */
+function issueHighlights(plan){
+  const out = [];
+  plan.stacks.forEach(st => st.forEach(g => {
+    if(g.key === 'NUMBERS' || g.key.indexOf('MSG ') === 0) return;
+    const items = g.items.filter(x => !x.marker);
+    if(!items.length) return;
+    const titles = items.map(it => (itemTocInfo(it).title || '').trim()).filter(Boolean);
+    const name = g.tocTitle || g.heading.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()).replace(/ (And|Of|The) /g, w => w.toLowerCase());
+    out.push({ name, n: items.length, titles: titles.filter(t => t.toLowerCase() !== name.toLowerCase()) });
+  }));
+  if(plan.stacks.some(st => st.some(g => g.key.indexOf('MSG ') === 0))) out.unshift({ name:'Leadership messages', n:0, titles:[] });
+  return out;
+}
+function shareTexts(plan){
+  const hl = issueHighlights(plan);
+  const portal = location.href.split('#')[0];
+  const editor = teamPeople()[0];
+  const sign = editor ? `${editor.name}\n${editor.role}, Department Newsletter` : 'Newsletter Team';
+  const school = SCHOOL_NAME + ', Amity University Punjab';
+  let next = '';
+  if(plan.kind === 'monthly' && currentMonth){
+    const [y, m] = currentMonth.split('-').map(Number);
+    const nm = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    const last = new Date(+nm.slice(0, 4), +nm.slice(5, 7), 0).toLocaleString('en-US', { day:'numeric', month:'long', year:'numeric' });
+    next = { month: monthLabel(nm), by: last };
+  }
+  const short = t => t.length > 70 ? t.slice(0, 67) + '…' : t;
+  const lineFor = h => h.titles.length ? `${h.name} (${h.n}): ${h.titles.slice(0, 3).map(short).join('; ')}${h.titles.length > 3 ? ' and more' : ''}` : h.name;
+  const subject = `${SCHOOL_NAME} Newsletter — ${plan.label}`;
+  const email = `Dear Colleagues,
+
+Greetings from the newsletter team! The ${plan.label} ${plan.kind === 'monthly' ? 'issue' : ''} of the ${school} newsletter is now out. Please find it attached (PDF to read and share, Word to edit).
+
+In this issue:
+${hl.map(h => '• ' + lineFor(h)).join('\n')}
+
+A big thank you to everyone who contributed.${next ? `
+
+News for the ${next.month} issue can be sent through the portal by ${next.by}: ${portal}
+Guest editorials, research blogs and puzzles are always welcome!` : ''}
+
+Warm regards,
+${sign}
+${school}`.replace(/  +/g, ' ');
+  const wa = `📰 *${SCHOOL_NAME} Newsletter — ${plan.label}* is out!
+
+${hl.map(h => '✅ ' + (h.titles.length ? `*${h.name}* (${h.n})` : `*${h.name}*`)).join('\n')}
+
+Thank you to all contributors 🙏${next ? `
+
+📅 Send your news for the *${next.month}* issue by *${next.by}*:
+${portal}` : ''}`;
+  return { subject, email, wa };
+}
+function showShareMessages(plan){
+  const t = shareTexts(plan);
+  const box = document.createElement('div');
+  box.className = 'secpick-backdrop';
+  box.innerHTML = `<div class="secpick sharebox" role="dialog" aria-modal="true">
+    <h3>Ready to send</h3>
+    <p>Your files are downloaded. Copy these messages to announce the ${escapeHtml(plan.label)} and attach the PDF. Edit them freely before sending.</p>
+    <label>Email subject</label><input type="text" id="shSubject" value="${escapeHtml(t.subject)}">
+    <label>Email</label><textarea id="shEmail" style="min-height:220px;">${escapeHtml(t.email)}</textarea>
+    <div class="share-btns"><button type="button" class="ghost small" data-copy="shSubject">Copy subject</button><button type="button" class="ghost small" data-copy="shEmail">Copy email</button>
+      <a class="ghost small btnlink" href="mailto:?subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.email)}">Open in email app</a></div>
+    <label>WhatsApp message</label><textarea id="shWa" style="min-height:170px;">${escapeHtml(t.wa)}</textarea>
+    <div class="share-btns"><button type="button" class="ghost small" data-copy="shWa">Copy WhatsApp message</button>
+      <a class="ghost small btnlink" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(t.wa)}">Open in WhatsApp</a></div>
+    <div class="secpick-btns"><button type="button" class="primary" data-act="close">Done</button></div>
+  </div>`;
+  document.body.appendChild(box);
+  box.addEventListener('click', e => {
+    if(e.target === box || e.target.getAttribute('data-act') === 'close') return box.remove();
+    const id = e.target.getAttribute('data-copy');
+    if(id){
+      const el = document.getElementById(id); el.select();
+      const ok = () => { const o = e.target.textContent; e.target.textContent = 'Copied ✓'; setTimeout(() => e.target.textContent = o, 1500); };
+      (navigator.clipboard ? navigator.clipboard.writeText(el.value) : Promise.reject()).then(ok).catch(() => { try{ document.execCommand('copy'); ok(); }catch(err){} });
+    }
+  });
+}
+
+/* =========================================================================
+   NAAC / NBA REPORT (Excel): one sheet per accreditation table
+   ========================================================================= */
+async function generateNaacExcel(){ return withApproved(() => generateNaacExcelInner()); }
+async function generateNaacExcelInner(){
+  const year = document.getElementById('yearSelect').value;
+  const edKey = document.getElementById('editionSelect').value;
+  const months = editionMonths(year, edKey);
+  const ed = EDITIONS[edKey] || EDITIONS.full;
+  const rows = (byMonth) => { const out = []; months.forEach(m => { const d = byMonth[m] || {}; sortedIds(d).forEach(id => out.push(d[id])); }); return out; };
+  const pubs = rows(allPublicationsByMonth), confs = rows(allConferencesByMonth), awards = rows(allAwardsByMonth), events = rows(allEventsByMonth);
+  if(!pubs.length && !confs.length && !awards.length && !events.length){ alert('No approved content found for this period.'); return; }
+  const btn = document.getElementById('genNaacBtn'); const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Generating...';
+  try{
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Department Newsletter Manager'; wb.created = new Date();
+    const dept = SCHOOL_NAME + ', Amity University Punjab';
+    const yearOf = d => (d || '').slice(0, 4);
+    const plain = t => stripRich(String(t || '')).replace(/\s*\n+\s*/g, ' ').trim();
+    const sheet = (name, title, cols, data) => {
+      const ws = wb.addWorksheet(name, { views:[{ state:'frozen', ySplit:3 }] });
+      ws.mergeCells(1, 1, 1, cols.length);
+      ws.getCell(1, 1).value = title; ws.getCell(1, 1).font = { bold:true, size:13, color:{ argb:'FF132340' } };
+      ws.mergeCells(2, 1, 2, cols.length);
+      ws.getCell(2, 1).value = `${dept} · ${ed.name} ${year} (${ed.range(year)}) · approved entries from the newsletter portal`;
+      ws.getCell(2, 1).font = { italic:true, size:10, color:{ argb:'FF736C5E' } };
+      ws.getRow(3).values = cols.map(c => c[0]);
+      cols.forEach((c, i) => { ws.getColumn(i + 1).width = c[1]; });
+      ws.getRow(3).eachCell(cell => { cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF132340' } }; cell.font = { bold:true, color:{ argb:'FFFBF7EE' } };
+        cell.alignment = { wrapText:true, vertical:'middle' }; });
+      ws.getRow(3).height = 34;
+      data.forEach((r, i) => { const row = ws.addRow([ i + 1, ...r ]); row.alignment = { wrapText:true, vertical:'top' };
+        if(i % 2) row.eachCell(c => { c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF8F4EA' } }; }); });
+      if(!data.length){ ws.addRow([ '', 'No entries in this period.' ]); }
+      return ws;
+    };
+    sheet('3.3.1 Journal papers', 'Research papers published in journals (NAAC 3.3.1 / NBA research publications)',
+      [ ['Sl. No.',7], ['Title of paper',44], ['Name of the author/s',34], ['Department of the teacher',26], ['Name of journal',30], ['Year of publication',11],
+        ['Indexing (SCI / Scopus / WoS / UGC-CARE)',16], ['Volume',9], ['Issue',9], ['Date of publication',14], ['ISSN number',14], ['DOI / link to UGC enlistment',26] ],
+      pubs.map(p => [ p.title, p.authors, dept, p.journal, yearOf(p.date), p.indexing || '', p.volume || '', p.issue || '', p.date || '', '', '' ]));
+    sheet('3.3.2 Conference papers', 'Papers presented in national / international conferences (NAAC 3.3.2)',
+      [ ['Sl. No.',7], ['Name of the teacher / presenter',26], ['Title of the paper',44], ['Authors & affiliations',44], ['Name of the conference',36],
+        ['Conference details (venue, dates, organiser)',36], ['National / International',14], ['Year',8], ['Date of presentation',14] ],
+      confs.map(c => [ c.presenter, c.paperTitle, (c.authors || []).map(a => a.name + (a.affiliation ? ' (' + a.affiliation + ')' : '')).join('; '), c.confName,
+        plain(c.confDetails), /international/i.test((c.confName || '') + ' ' + (c.confDetails || '')) ? 'International' : (/national/i.test((c.confName || '') + ' ' + (c.confDetails || '')) ? 'National' : ''), yearOf(c.date), c.date || '' ]));
+    sheet('Awards & recognitions', 'Awards, recognitions, fellowships, grants and patents (NAAC 3.1 / 3.4 / 5.3; NBA faculty contributions)',
+      [ ['Sl. No.',7], ['Name of the awardee(s)',32], ['Name of the award / recognition / grant',40], ['Type',20], ['Awarding agency / body',32], ['Year',8], ['Date',14], ['Details',60] ],
+      awards.map(a => [ a.recipients, a.title, a.type, a.awardedBy, yearOf(a.date), a.date || '', plain(a.desc) ]));
+    sheet('Events & activities', 'Workshops, seminars, lectures and other activities (NAAC 3.3 / 3.4 / 5.3; NBA co-curricular activities)',
+      [ ['Sl. No.',7], ['Name of the activity',40], ['Category',13], ['Organised / Participated',14], ['Coordinator / reported by',26], ['From',13], ['To',13], ['Year',8], ['Brief description',70] ],
+      events.map(e => [ e.title, catOf(e), e.role === 'Organized' ? 'Organised' : 'Participated', e.organizer, e.date || '', e.dateEnd || e.date || '', yearOf(e.date), plain(e.desc).slice(0, 600) ]));
+    // summary
+    const ws = wb.addWorksheet('Summary');
+    ws.getColumn(1).width = 46; ws.getColumn(2).width = 12;
+    ws.addRow([ `${SCHOOL_NAME} — ${ed.name} ${year}` ]).font = { bold:true, size:13, color:{ argb:'FF132340' } };
+    ws.addRow([ ed.range(year) ]).font = { italic:true, color:{ argb:'FF736C5E' } };
+    ws.addRow([]);
+    const cnt = (list, f) => list.filter(f).length;
+    [ ['Journal papers (total)', pubs.length], ['  of which SCI', cnt(pubs, p => p.indexing === 'SCI')], ['  of which Scopus', cnt(pubs, p => p.indexing === 'Scopus')],
+      ['  of which Web of Science', cnt(pubs, p => p.indexing === 'Web of Science')], ['  of which UGC-CARE', cnt(pubs, p => p.indexing === 'UGC-CARE')],
+      ['Conference papers presented', confs.length], ['Awards, recognitions, grants & patents', awards.length],
+      ['Events & activities (total)', events.length], ['  organised by the school', cnt(events, e => e.role === 'Organized')], ['  attended / participated', cnt(events, e => e.role !== 'Organized')] ]
+      .forEach(r => { const row = ws.addRow(r); if(!r[0].startsWith('  ')) row.font = { bold:true }; });
+    ws.addRow([]);
+    ws.addRow([ 'Note: ISSN, DOI and National/International columns are not collected by the portal; fill them in where blank before submitting.' ]).font = { italic:true, size:9, color:{ argb:'FF736C5E' } };
+    wb.views = [ { activeTab: 0 } ];
+    const buf = await wb.xlsx.writeBuffer();
+    saveAs(new Blob([ buf ], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `NAAC_NBA_Report_${ed.file}_${year}.xlsx`);
+  }catch(err){ console.error(err); alert('Could not generate the NAAC / NBA report: ' + err.message); }
+  finally{ btn.disabled = false; btn.textContent = orig; }
 }
 
 function monthlyPlan(month){
@@ -4129,10 +4972,16 @@ function periodPlan(year, edKey){
   const stacks = [];
   const add = groups => { groups = groups.filter(g => g.items.length); if(groups.length) stacks.push(groups); };
 
+  // opening page: the year (half-year) in numbers
+  const nums = editionNumbers(months);
+  if(nums.tiles.length) add([{ heading: edKey === 'full' ? 'THE YEAR IN NUMBERS' : 'THE HALF-YEAR IN NUMBERS', key:'NUMBERS', tocTitle:'In Numbers',
+    items:[ { type:'numbers', data:nums, key:'numbers' } ] }]);
   // leadership messages: each on its own page, listed together under "Messages" in the contents
   activeMessages().forEach(msg => add([{ heading: msg.heading.toUpperCase(), key:'MSG ' + msg.key, tocTitle:'Messages', tocGroup:'MESSAGES',
     items:[ { type:'message', data:msg, key:'msg:' + msg.key } ] }]));
 
+  add([{ heading:'OUR FACULTY', key:'FACULTY', tocTitle:'Our Faculty',
+    items: facultyList().map(f => ({ type:'faculty', data:f, key:'fac:' + f._id })) }]);
   add([{ heading:"FROM THE EDITOR’S DESK", key:'EDITORS DESK', tocTitle:'From the Editor’s Desk',
     items: byMonth(m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { type:'desk', data:d, key:'desk:' + m } ] : []; }) }]);
   add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', tocTitle:'Guest Editorials',
@@ -4157,7 +5006,7 @@ function periodPlan(year, edKey){
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
   const range = ed.range(year);
-  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0));
+  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && g.key !== 'NUMBERS' && g.key !== 'FACULTY'));
   return {
     kind:'period', hasContent, stacks, withToc:true,
     issuePeriod: `${ed.name} · ${range}`, dateRange: range,
@@ -4243,6 +5092,8 @@ function wordItemBuilder(it, anchor){
     case 'guest':   return guestItem(d, anchor);
     case 'puzzle':  return puzzleItem(d, anchor);
     case 'pzsol':   return puzzleItem(solutionView(d), anchor);
+    case 'faculty': return facultyItem(d, anchor);
+    case 'numbers': return numbersItem(d, anchor);
     case 'message': return messageItem(d, anchor);
     case 'upevent': return upcomingEventItem(d, anchor);
     case 'award':   return awardItem(d, anchor);
@@ -4295,26 +5146,35 @@ async function produceIssue(plan, btn){
     btn.textContent = 'Building PDF…';
     const pdfBlob = await renderPdfIssue(plan, p => { btn.textContent = p; });
     saveAs(pdfBlob, plan.fileBase + '.pdf');
+    return true;
   }catch(err){
     console.error(err);
     alert('Could not generate the newsletter: ' + err.message);
+    return false;
   }finally{
     btn.disabled = false; btn.textContent = origText;
   }
 }
 async function generateNewsletter(){
-  const plan = monthlyPlan(currentMonth);
-  if(!plan.hasContent){ alert('No content submitted for ' + monthLabel(currentMonth) + ' yet.'); return; }
-  await produceIssue(plan, document.getElementById('genWordBtn'));
+  if(!confirmPending([currentMonth], 'the ' + monthLabel(currentMonth) + ' newsletter')) return;
+  await withApproved(async () => {
+    const plan = monthlyPlan(currentMonth);
+    if(!plan.hasContent){ alert('No approved content for ' + monthLabel(currentMonth) + ' yet.'); return; }
+    if(await produceIssue(plan, document.getElementById('genWordBtn'))) showShareMessages(plan);
+  });
 }
 async function generateAnnualNewsletter(){
   const year = document.getElementById('yearSelect').value;
   const edKey = document.getElementById('editionSelect').value;
-  const plan = periodPlan(year, edKey);
-  if(!plan.hasContent){ alert('No content found for the ' + plan.label + '.'); return; }
-  const picked = await pickSections(plan);
-  if(!picked) return;                       // cancelled
-  await produceIssue(filterPlanSections(plan, picked), document.getElementById('genAnnualWordBtn'));
+  if(!confirmPending(editionMonths(year, edKey), 'this edition')) return;
+  await withApproved(async () => {
+    const plan = periodPlan(year, edKey);
+    if(!plan.hasContent){ alert('No approved content found for the ' + plan.label + '.'); return; }
+    const picked = await pickSections(plan);
+    if(!picked) return;                       // cancelled
+    const chosen = filterPlanSections(plan, picked);
+    if(await produceIssue(chosen, document.getElementById('genAnnualWordBtn'))) showShareMessages(chosen);
+  });
 }
 
 /* ---- "Choose sections" window for the bi-annual and annual editions ----
@@ -4338,7 +5198,7 @@ function filterPlanSections(plan, ids){
   const stacks = plan.stacks.map(st => st.filter(g => keep.has(sectionIdOf(g)))).filter(st => st.length);
   return Object.assign({}, plan, { stacks });
 }
-function pickSections(plan){
+function pickSections(plan, forPreview){
   const secs = planSections(plan);
   return new Promise(resolve => {
     const box = document.createElement('div');
@@ -4349,7 +5209,7 @@ function pickSections(plan){
       <div class="secpick-all"><button type="button" class="ghost" data-all="1">Select all</button><button type="button" class="ghost" data-all="0">Clear all</button></div>
       <div class="secpick-list">${secs.map(x => `<label><input type="checkbox" value="${escapeHtml(x.id)}" checked> <span>${escapeHtml(x.label)}</span> <em>${x.count}</em></label>`).join('')}</div>
       <div class="secpick-msg"></div>
-      <div class="secpick-btns"><button type="button" class="ghost" data-act="cancel">Cancel</button><button type="button" class="primary" data-act="go">Generate (Word + PDF)</button></div>
+      <div class="secpick-btns"><button type="button" class="ghost" data-act="cancel">Cancel</button><button type="button" class="primary" data-act="go">${forPreview ? 'Show preview' : 'Generate (Word + PDF)'}</button></div>
     </div>`;
     document.body.appendChild(box);
     const close = v => { box.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
@@ -4505,6 +5365,15 @@ function pdfCss(plan){
 .nlp .pz .pt { font-family: 'Playfair Display', Georgia, serif; font-size: 15pt; font-weight: 700; color: #132340; text-align: center; margin: 0 0 2px; break-after: avoid; }
 .nlp .pz .pa { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin-bottom: 10px; }
 .nlp .pz .imgs { text-align: center; break-inside: avoid; }
+.nlp .pz .pw { color: #1B1B18; margin: 8px 0 10px; }
+.nlp .pz .pw b { color: #A8842F; }
+.nlp .nums .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 20px; }
+.nlp .nums .tile { background: #F3EDDE; text-align: center; padding: 16px 6px 13px; break-inside: avoid; }
+.nlp .nums .tile .n { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 30pt; color: #132340; line-height: 1.1; }
+.nlp .nums .tile .l { color: #A8842F; font-weight: 700; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+.nlp .nums .nl { margin: 0 0 10px; break-inside: avoid; }
+.nlp .nums .nl .k { color: #132340; font-weight: 700; font-size: 8.5pt; letter-spacing: .06em; text-transform: uppercase; }
+.nlp .nums .nl .v { color: #3A3A34; font-size: 10pt; }
 .nlp .pz.sol { margin-top: 22px; }
 .nlp .pz .pk { text-align: center; color: #A8842F; font-weight: 700; font-size: 8pt; letter-spacing: .12em; margin-bottom: 3px; }
 .nlp .pz .pi { background: #F3EDDE; border-left: 2pt solid #C6A34A; padding: 7px 12px; margin: 4px 14px 12px; font-size: 9.5pt; line-height: 1.4; text-align: justify; color: #3A3A34; }
@@ -4601,6 +5470,10 @@ function pdfItemHtml(it, anchor){
     case 'desk': return flowHtml({ title:d.title || '', anchor, meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
     case 'guest': return flowHtml({ kicker:{ text:'GUEST EDITORIAL', color:'A8842F' }, title:d.title || 'Guest Editorial', anchor,
       meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)), refs:d.refs });
+    case 'faculty': return flowHtml({ title:d.name, anchor,
+      meta:[ ...(d.designation ? [ metaH(H(d.designation), true) ] : []), ...(d.email ? [ metaH(`<a href="mailto:${H(d.email)}">${H(d.email)}</a>`) ] : []) ],
+      text: facultyText(d), images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:120, h:150 } });
+    case 'numbers': return numbersHtml(d, anchor);
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
     case 'award': return flowHtml({ kicker:{ text:(d.type || 'Award').toUpperCase(), color:'A8842F' }, title:d.title, anchor,
@@ -4618,6 +5491,7 @@ function pdfItemHtml(it, anchor){
       if(d.intro) h += `<div class="pi"><b>The puzzle:</b>&nbsp; <i>${H(d.intro)}</i></div>`;
       (d.content || '').split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => { const li = listInfo(t);
         h += li ? `<p class="li"><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p>${richToHtml(t, H)}</p>`; });
+      if(d.winners) h += `<p class="pw"><b>🏆 Correct answers received from:</b> ${H(d.winners)}</p>`;
       const ims = allPhotos(entryPhotos(d));
       if(ims.length) h += `<div class="imgs">` + ims.map(im => { const z = imageDimsFit(im.w, im.h, ims.length > 1 ? 320 : 540, ims.length > 1 ? 420 : 600);
         return `<img src="${im.url}" style="width:${z.width}px;height:${z.height}px">`; }).join('') + `</div>`;
@@ -4736,7 +5610,7 @@ function bodyHtml(plan){
   return { html, toc };
 }
 
-async function renderPdfIssue(plan, progress){
+async function renderPdfIssue(plan, progress, previewOnly){
   progress = progress || (() => {});
   progress('Loading PDF tools…');
   await loadPdfLibs();
@@ -4804,6 +5678,12 @@ async function renderPdfIssue(plan, progress){
       hd.innerHTML = `<img src="${logoDataUrl()}"><span class="st">${H(plan.strapline)}</span><span class="dt">${H(plan.dateRange)}</span>`;
       page.appendChild(hd);
     });
+    if(previewOnly){
+      // hand the laid-out pages to the preview window; it cleans up when closed
+      const done = () => { if(previewer && previewer.polisher && previewer.polisher.destroy) previewer.polisher.destroy(); host.remove(); };
+      previewer = null;                  // keep the page styles alive until the preview closes
+      return { host, pages, done };
+    }
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit:'mm', format:'a4', compress:true });
     for(let i = 0; i < pages.length; i++){
@@ -4830,10 +5710,57 @@ async function renderPdfIssue(plan, progress){
     }
     return pdf.output('blob');
   } finally {
-    if(previewer && previewer.polisher && previewer.polisher.destroy) previewer.polisher.destroy();
     measureStyle.remove();
-    host.remove();
+    if(previewer){ if(previewer.polisher && previewer.polisher.destroy) previewer.polisher.destroy(); host.remove(); }
+    else if(!previewOnly) host.remove();
   }
+}
+
+/* ---------------- Preview before generating ----------------
+   Lays the issue out exactly as the PDF will be, and shows the pages in a
+   scrollable window. Nothing is downloaded. */
+async function showPreview(plan, btn){
+  const orig = btn.textContent; btn.disabled = true;
+  let res;
+  try{ res = await renderPdfIssue(plan, p => { btn.textContent = p; }, true); }
+  catch(err){ console.error(err); alert('Could not build the preview: ' + err.message); return; }
+  finally{ btn.disabled = false; btn.textContent = orig; }
+  const { host, pages, done } = res;
+  host.className = 'preview-host';
+  host.style.cssText = '';
+  const bar = document.createElement('div');
+  bar.className = 'preview-bar';
+  bar.innerHTML = `<b>Preview · ${escapeHtml(plan.label)}</b><span>${pages.length} page${pages.length > 1 ? 's' : ''} · exactly as the PDF will look (the Word file has the same content)</span><button type="button" class="primary">Close preview</button>`;
+  host.insertBefore(bar, host.firstChild);
+  const fit = () => { const w = Math.min(window.innerWidth - 24, 820); host.style.setProperty('--pv-scale', String(Math.min(1, w / 794))); };
+  fit(); window.addEventListener('resize', fit);
+  const close = () => { window.removeEventListener('resize', fit); document.removeEventListener('keydown', onKey); done(); };
+  const onKey = e => { if(e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  bar.querySelector('button').onclick = close;
+  // links inside the preview jump within it
+  host.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]'); if(!a) return;
+    e.preventDefault(); const t = host.querySelector('[id="' + a.getAttribute('href').slice(1) + '"]'); if(t) t.scrollIntoView({ behavior:'smooth' });
+  });
+}
+async function previewNewsletter(){
+  await withApproved(async () => {
+    const plan = monthlyPlan(currentMonth);
+    if(!plan.hasContent){ alert('No approved content for ' + monthLabel(currentMonth) + ' yet.'); return; }
+    await showPreview(plan, document.getElementById('previewBtn'));
+  });
+}
+async function previewAnnualNewsletter(){
+  const year = document.getElementById('yearSelect').value;
+  const edKey = document.getElementById('editionSelect').value;
+  await withApproved(async () => {
+    const plan = periodPlan(year, edKey);
+    if(!plan.hasContent){ alert('No approved content found for the ' + plan.label + '.'); return; }
+    const picked = await pickSections(plan, true);
+    if(!picked) return;
+    await showPreview(filterPlanSections(plan, picked), document.getElementById('previewAnnualBtn'));
+  });
 }
 
 
@@ -4937,7 +5864,8 @@ function addConferencesSheet(wb, sheetLabel, rows, includeMonth){
   });
 }
 
-async function generateExcel(){
+async function generateExcel(){ return withApproved(() => generateExcelInner()); }
+async function generateExcelInner(){
   const monthData = allEventsByMonth[currentMonth] || {};
   const ids = Object.keys(monthData).sort((a,b) => (monthData[a].date||'').localeCompare(monthData[b].date||''));
   const pubData = allPublicationsByMonth[currentMonth] || {};
@@ -5038,7 +5966,8 @@ async function generateExcel(){
   }
 }
 
-async function generateAnnualExcel(){
+async function generateAnnualExcel(){ return withApproved(() => generateAnnualExcelInner()); }
+async function generateAnnualExcelInner(){
   const year = document.getElementById('yearSelect').value;
   const edKey = document.getElementById('editionSelect').value;
   const months = editionMonths(year, edKey);
@@ -5157,6 +6086,10 @@ document.getElementById('f_date').valueAsDate = new Date();
 resetConfAuthors();
 loadSubmitter();
 initRichEditors();
+renderDeadlineBanner();
+initDrafts();
+loadEmailSettings();
+(function(){ try{ const d = JSON.parse(localStorage.getItem(SUBMITTER_KEY) || 'null'); if(d && d.email) document.getElementById('my_email').value = d.email; }catch(e){} })();
 </script>
 </body>
 </html>

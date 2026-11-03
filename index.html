@@ -219,6 +219,17 @@
   #ap_form > div[style*="flex-wrap:wrap; margin-top:14px"]{ align-items:center; }
   #ap_form button.approve, #ap_form button.primary, #ap_form button.ghost, #ap_form button.danger{ margin:0; padding:10px 16px; }
   .save-toast{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#2E6B3A; color:#fff; padding:11px 18px; border-radius:10px; font-size:14px; font-weight:600; z-index:1200; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+  .cthumbs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin:10px 0 14px; }
+  .cthumb .thumb{ width:100%; height:110px; }
+  .cthumb .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .cthumb input{ width:100%; margin-top:6px; font-size:13px; padding:7px 9px; }
+  .cl-admin{ display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; }
+  .cl-ph{ width:150px; }
+  .cl-ph img{ width:150px; height:105px; object-fit:cover; border-radius:6px; display:block; border:1px solid #e4dac3; }
+  .cl-cap{ font-size:12px; color:var(--muted); margin:4px 0; min-height:16px; }
+  .cl-ph button{ margin:0; width:100%; }
+  .cl-ph button.best{ background:var(--gold); color:var(--navy); border-color:var(--gold); }
+  .editbox .eph-cap{ width:104px; margin-top:4px; font-size:12px; padding:4px 6px; }
   .seg{ display:inline-flex; border:1px solid #d8cfb8; border-radius:9px; overflow:hidden; margin:4px 0 8px; }
   .seg button{ margin:0; border:none; border-radius:0; background:#fff; color:var(--navy); padding:8px 16px; font-weight:600; cursor:pointer; width:auto; }
   .seg button.active{ background:var(--navy); color:#fff; }
@@ -420,6 +431,7 @@
         <button class="subtab" onclick="switchSubtab('upcomingconf')">Upcoming Conference/Workshop</button>
         <button class="subtab" onclick="switchSubtab('editorial')">Guest Editorial</button>
         <button class="subtab" onclick="switchSubtab('puzzle')">Puzzle</button>
+        <button class="subtab" onclick="switchSubtab('campus')">Campus Life</button>
         <button class="subtab" onclick="switchSubtab('profile')">My Profile</button>
       </div>
     </div>
@@ -851,6 +863,26 @@
       </form>
     </div>
 
+    <!-- ---- Campus Life photos ---- -->
+    <div class="card subview" id="subview-campus">
+      <p class="section-desc" style="margin-top:0;">Share up to 6 photos of campus life: the campus, events, friends, nature, everyday moments. The best ones fill the last page of the newsletter, "Campus Through Physical Lens". Please send only your own photos.</p>
+      <form id="campusForm" onsubmit="return false;">
+        <div class="row2">
+          <div><label class="first">Photos by</label><input type="text" id="cl_by" placeholder="Your name (as it should be printed)" /></div>
+          <div><label class="first">Newsletter Month *</label><input type="month" id="cl_month" /></div>
+        </div>
+        <label>Photos *</label>
+        <div class="photo-drop" onclick="document.getElementById('cl_photos').click()">
+          <input type="file" id="cl_photos" accept="image/*" multiple onchange="addCampusPhotos(event)" />
+          <div><strong>Click to add photos</strong></div>
+          <div class="hint">Up to 6, JPG/PNG. Landscape photos look best. Add a short caption under each.</div>
+        </div>
+        <div class="cthumbs" id="thumbs-campus"></div>
+        <button class="primary" id="submitBtn-campus" onclick="submitCampus()">Submit Photos</button>
+        <div class="msg" id="submitMsg-campus"></div>
+      </form>
+    </div>
+
     <!-- ---- My Profile (faculty and research scholars) ---- -->
     <div class="card subview" id="subview-profile">
       <p class="section-desc" style="margin-top:0;">Faculty members and research scholars: send your profile once. It is printed in the "Our Faculty" or "Our Research Scholars" section of the bi-annual and annual newsletters (not in monthly issues). To update it later, simply send it again.</p>
@@ -982,6 +1014,9 @@
             <div class="hint">Used as the cover's hero image. Leave empty to auto-use the month's first event photo.</div>
           </div>
           <div class="thumbs" id="thumb-coverPhoto"></div>
+          <label style="margin-top:10px;">If the photo must be trimmed to fit the cover, keep its</label>
+          <select id="s_coverFocus"><option value="centre">Centre</option><option value="top">Top part</option><option value="bottom">Bottom part</option></select>
+          <p class="field-hint" style="margin-top:4px;">In the Word file you can still reveal the rest: click the photo, Picture Format → Crop, and drag the handles.</p>
         </div>
       </div>
 
@@ -1096,6 +1131,12 @@
       <h2 class="section-title" style="font-size:19px; margin-bottom:14px;">Puzzles This Month</h2>
       <p class="section-desc" style="margin-top:-8px;">Submitted from the public "Puzzle" tab for the month selected above, together with solutions to earlier puzzles. All of them are printed in the Puzzle section of that month's newsletter: new puzzles first, then the solutions.</p>
       <div id="puzzleList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="font-size:19px; margin-bottom:6px;">Campus Life This Month</h2>
+      <p class="section-desc" style="margin-top:0;">Photos sent from the portal's Campus Life tab. Approved photos (up to 6) fill the last page of the month's newsletter, "Campus Through Physical Lens". Mark one photo ★ Best of month for the bi-annual and annual editions (otherwise the first photo is used).</p>
+      <div id="campusList"></div>
     </div>
 
     <div class="card">
@@ -1314,7 +1355,7 @@ function switchTab(tab){
 }
 
 function switchSubtab(name){
-  ['event','publication','award','conference','blog','upcoming','upcomingconf','editorial','puzzle','profile'].forEach(n => {
+  ['event','publication','award','conference','blog','upcoming','upcomingconf','editorial','puzzle','campus','profile'].forEach(n => {
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
@@ -1324,7 +1365,7 @@ function switchSubtab(name){
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], pzsol: [], profile: [], desk: [] };
+let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], pzsol: [], profile: [], campus: [], desk: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1967,11 +2008,11 @@ function submitPuzzleSolution(){
    ========================================================================= */
 const COL_LABELS = { events:'Event Report', publications:'Publication', awards:'Award / Achievement', conferences:'Conference Presentation',
   blogs:'Research Blog', guestEditorials:'Guest Editorial', puzzles:'Puzzle', puzzleSolutions:'Puzzle Solution',
-  upcomingEvents:'Upcoming Event', upcomingConferences:'Upcoming Conference / Workshop', faculty:'Faculty Profile', scholars:'Research Scholar Profile' };
+  upcomingEvents:'Upcoming Event', upcomingConferences:'Upcoming Conference / Workshop', faculty:'Faculty Profile', scholars:'Research Scholar Profile', campusLife:'Campus Life Photos' };
 const COL_TEXT = { events:'desc', publications:'abstract', awards:'desc', conferences:'abstract', blogs:'content', guestEditorials:'content',
-  puzzles:'content', puzzleSolutions:'solution', upcomingEvents:'note', upcomingConferences:'link', faculty:'research', scholars:'topic' };
+  puzzles:'content', puzzleSolutions:'solution', upcomingEvents:'note', upcomingConferences:'link', faculty:'research', scholars:'topic', campusLife:'photographer' };
 const COL_FORM = { events:'eventForm', publications:'pubForm', awards:'awardForm', conferences:'confForm', blogs:'blogForm', guestEditorials:'editorialForm',
-  puzzles:'puzzleForm', puzzleSolutions:'pzsolForm', upcomingEvents:'upcomingForm', upcomingConferences:'upcomingConfForm', faculty:'profileForm', scholars:'profileForm' };
+  puzzles:'puzzleForm', puzzleSolutions:'pzsolForm', upcomingEvents:'upcomingForm', upcomingConferences:'upcomingConfForm', faculty:'profileForm', scholars:'profileForm', campusLife:'campusForm' };
 
 /* Every portal submission goes through here: save it, then write the
    receipt, send the confirmation email and forget the draft. */
@@ -2273,7 +2314,7 @@ function removeMessage(key){
 }
 
 /* ---------------- Backup & erase (start of a new year) ---------------- */
-const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles','receipts','puzzleSolutions','puzzleIndex'];  // faculty profiles and settings are kept
+const ERASE_PATHS = ['events','publications','awards','conferences','blogs','upcomingEvents','upcomingConferences','editorials','guestEditorials','puzzles','receipts','puzzleSolutions','puzzleIndex','campusLife','campusBest'];  // faculty profiles and settings are kept
 function downloadBackup(){
   if(!firebaseReady) return;
   db.ref('/').once('value').then(snap => {
@@ -2328,6 +2369,7 @@ function allMonthKeys(){
     ...Object.keys(allGuestEditorialsByMonth),
     ...Object.keys(allPuzzlesByMonth),
     ...Object.keys(allPuzzleSolutionsByMonth),
+    ...Object.keys(allCampusByMonth),
   ]));
 }
 
@@ -2369,6 +2411,8 @@ function initDashboard(){
     populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth(); renderPendingBar();
     syncPuzzleIndex();
   });
+  db.ref('campusLife').on('value', snap => { allCampusByMonth = snap.val() || {}; populateMonthSelect(); populateYearSelect(); renderCampusForMonth(); renderPendingBar(); });
+  db.ref('campusBest').on('value', snap => { allCampusBest = snap.val() || {}; renderCampusForMonth(); });
   db.ref('puzzleSolutions').on('value', snap => {
     allPuzzleSolutionsByMonth = snap.val() || {};
     populateMonthSelect(); populateYearSelect(); renderPuzzlesForMonth(); renderPendingBar();
@@ -2406,6 +2450,7 @@ function initDashboard(){
   db.ref('settings/newsletter').on('value', snap => {
     const s = snap.val() || {};
     document.getElementById('s_schoolName').value = s.schoolName || '';
+    document.getElementById('s_coverFocus').value = s.coverFocus || 'centre';
     setRich('s_mission', s.mission || '');
     setRich('s_vision', s.vision || '');
     document.getElementById('s_quoteText').value = s.quoteText || '';
@@ -2506,6 +2551,7 @@ function applyNewsletterSettings(s){
   COVER_PEOPLE_SETTINGS = {};
   COVER_PEOPLE_FIELDS.forEach(k => COVER_PEOPLE_SETTINGS[k] = (s[k] || '').trim());
   applySchoolName(s.schoolName);
+  COVER_FOCUS = ['top','bottom'].includes(s.coverFocus) ? s.coverFocus : 'centre';
   if(s.mission) MISSION_TEXT = s.mission;
   if(s.vision) VISION_TEXT = s.vision;
   if(s.quoteText) QUOTE_TEXT = s.quoteText;
@@ -2548,6 +2594,7 @@ function saveNewsletterSettings(){
   if(!firebaseReady) return;
   const s = {
     schoolName: document.getElementById('s_schoolName').value.trim(),
+    coverFocus: document.getElementById('s_coverFocus').value,
     mission: document.getElementById('s_mission').value.trim(),
     vision: document.getElementById('s_vision').value.trim(),
     quoteText: document.getElementById('s_quoteText').value.trim(),
@@ -2654,6 +2701,7 @@ function onMonthChange(){
   renderBlogsForMonth();
   renderEditorialsForMonth();
   renderPuzzlesForMonth();
+  renderCampusForMonth();
   fillEditorsDesk();
   renderPendingBar();
 }
@@ -3437,6 +3485,7 @@ function buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, co
   if(REG.sections['RESEARCH BLOG']) spec.push({ kind:'link', title:'Research Blog', anchor:REG.sections['RESEARCH BLOG'] });
   if(REG.sections['PUZZLE']) spec.push({ kind:'link', title:'Puzzle', anchor:REG.sections['PUZZLE'] });
   if(REG.sections['UPCOMING EVENTS']) spec.push({ kind:'link', title:'Upcoming Events', anchor:REG.sections['UPCOMING EVENTS'] });
+  if(REG.sections['CAMPUS']) spec.push({ kind:'link', title:'Campus Life', anchor:REG.sections['CAMPUS'] });
   return spec;
 }
 
@@ -3514,7 +3563,7 @@ function planCover(indexSpec, fullH){
       if(fullH + body(size, split) <= avail) return { idxSize:size, heroH:fullH, split };
     }
   }
-  // 2) still no room: trim the photo (top/bottom) as little as possible
+  // 2) still no room: show a full-width band of the photo (adjustable crop in Word)
   let best = null;
   for(const size of [16, 15, 14]){
     for(const split of SPLITS){
@@ -3538,18 +3587,50 @@ async function loadHeroInfo(src){
     return null;
   }
 }
-/* Full-width photo bytes at height h — untouched when h is its natural height,
-   otherwise the centre band is kept */
+/* The cover photo spans the full width. When the cover is short of room, a
+   band of the photo is shown (top, centre or bottom, as set in Settings).
+   Word: the WHOLE photo is kept in the file with an adjustable crop, so you can
+   drag the crop handles in Word (Picture Format > Crop) to show more of it.
+   PDF: a cropped copy of the photo is used. */
+let COVER_FOCUS = 'centre';
+function heroCropFractions(info, h){
+  const cut = Math.max(0, 1 - h / info.fullH);
+  const t = COVER_FOCUS === 'top' ? 0 : COVER_FOCUS === 'bottom' ? cut : cut / 2;
+  return { t, b: cut - t };
+}
 function heroAtHeight(info, h){
   const W = PAGE_CONTENT_PX;
   try{
-    if(h >= info.fullH || !info.img) return { bytes: dataUrlToUint8(info.src.url), w:W, h:info.fullH };
-    const sh = Math.round(info.nw * h / W), sy = Math.round((info.nh - sh) / 2);
-    const c = document.createElement('canvas');
-    c.width = info.nw; c.height = sh;
-    c.getContext('2d').drawImage(info.img, 0, sy, info.nw, sh, 0, 0, info.nw, sh);
-    return { bytes: dataUrlToUint8(c.toDataURL('image/jpeg', 0.92)), w:W, h };
+    const hh = Math.min(h, info.fullH);
+    return { bytes: dataUrlToUint8(info.src.url), w: W, h: hh, crop: hh < info.fullH ? heroCropFractions(info, hh) : null };
   }catch(e){ return null; }
+}
+function heroCroppedUrl(info, h){
+  if(h >= info.fullH || !info.img) return info.src.url;
+  try{
+    const W = PAGE_CONTENT_PX, f = heroCropFractions(info, h);
+    const sh = Math.round(info.nw * h / W), sy = Math.round(info.nh * f.t);
+    const c = document.createElement('canvas'); c.width = info.nw; c.height = sh;
+    c.getContext('2d').drawImage(info.img, 0, sy, info.nw, sh, 0, 0, info.nw, sh);
+    return c.toDataURL('image/jpeg', 0.92);
+  }catch(e){ return info.src.url; }
+}
+/* Word: write the cover photo's crop into the finished file (docx.js leaves it empty) */
+let PENDING_HERO_CROP = null;
+async function applyHeroCrop(blob){
+  const crop = PENDING_HERO_CROP; PENDING_HERO_CROP = null;
+  if(!crop) return blob;
+  try{
+    await loadScriptOnce('https://unpkg.com/jszip@3.10.1/dist/jszip.min.js');
+    const zip = await JSZip.loadAsync(blob);
+    let xml = await zip.file('word/document.xml').async('string');
+    const at = xml.indexOf('name="CoverPhoto"');
+    const r = at >= 0 ? xml.indexOf('<a:srcRect/>', at) : -1;
+    if(r < 0) return blob;
+    xml = xml.slice(0, r) + `<a:srcRect t="${Math.round(crop.t * 100000)}" b="${Math.round(crop.b * 100000)}"/>` + xml.slice(r + '<a:srcRect/>'.length);
+    zip.file('word/document.xml', xml);
+    return await zip.generateAsync({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }catch(e){ console.warn('Cover crop not applied:', e); return blob; }
 }
 
 /* Too many entries for the cover? The cover then lists each section once
@@ -3725,8 +3806,10 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, bodyMinPx }){
   ] });
 
   /* ---- 3. full-width cover photo, whole image ---- */
+  PENDING_HERO_CROP = hero && hero.crop ? hero.crop : null;
   const heroRow = (hero && hero.bytes) ? new TableRow({ children:[ full(
-    [ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ],
+    [ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h },
+        altText:{ name:'CoverPhoto', title:'Cover photo', description:'Cover photo. To show more of it: click the photo, Picture Format > Crop, and drag the black handles.' } }) ] }) ],
     { margins:zero }) ] }) : null;
 
   /* ---- 4. quote (grows to as many lines as it needs) ---- */
@@ -4144,8 +4227,12 @@ function buildStackedSections(groups, firstBreak, firstStartY){
     const secAnchor = sectionAnchor(g.anchorKey);
     REG.pages[secAnchor] = REG.page;
     if(g.tc) REG.tc[secAnchor] = { text:g.tc, level:1 };
-    out.push(sectionTitlePara(g.heading, brk, secAnchor, g.subtitle ? 60 : 200));
-    pageY += STACK.HEAD_PX;
+    if(g.bare){   // the section draws its own heading (Campus Life)
+      out.push(new Paragraph({ pageBreakBefore: brk, spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children: bookmarked(secAnchor, [ new TextRun({ text:'', size:2 }) ]) }));
+    } else {
+      out.push(sectionTitlePara(g.heading, brk, secAnchor, g.subtitle ? 60 : 200));
+      pageY += STACK.HEAD_PX;
+    }
     if(g.subtitle){
       out.push(new Paragraph({ alignment:AlignmentType.CENTER, keepNext:true, spacing:{after:240},
         children:[ new TextRun({ text:g.subtitle, italics:true, color:"736C5E", size:18, font:"Inter" }) ] }));
@@ -4440,6 +4527,7 @@ function itemTocInfo(it){
     case 'pzsol':   return { title:'Solution: ' + (d.puzzleTitle || 'Puzzle') };
     case 'faculty': return { title:d.name };
     case 'scholar': return { title:d.name };
+    case 'campus':  return { title:'Photo gallery' };
     case 'numbers': return { title:'Key figures' };
     case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
     case 'upevent': return { title:d.title, date:d.date };
@@ -4471,6 +4559,7 @@ const COLS = {
   upcomingConferences: { label:'upcoming conference / workshop', get:() => allUpcomingConferences, monthBy:null },
   faculty:             { label:'faculty profile', get:() => allFaculty, monthBy:null },
   scholars:            { label:'research scholar profile', get:() => allScholars, monthBy:null },
+  campusLife:          { label:'campus life photos', get:() => allCampusByMonth, monthBy:'month' },
 };
 const entryPath = (col, month, id) => COLS[col].monthBy ? `${col}/${month}/${id}` : `${col}/${id}`;
 function getEntry(col, month, id){
@@ -4528,7 +4617,7 @@ function approveAllPending(){
 /* Generation uses approved entries only: the data maps are swapped for
    filtered copies while a newsletter or report is being built. */
 const APPROVAL_GLOBALS = ['allEventsByMonth','allPublicationsByMonth','allAwardsByMonth','allConferencesByMonth','allBlogsByMonth',
-  'allGuestEditorialsByMonth','allEditorialsByMonth','allPuzzlesByMonth','allPuzzleSolutionsByMonth','allUpcomingEvents','allUpcomingConferences','allFaculty','allScholars'];
+  'allGuestEditorialsByMonth','allEditorialsByMonth','allPuzzlesByMonth','allPuzzleSolutionsByMonth','allUpcomingEvents','allUpcomingConferences','allFaculty','allScholars','allCampusByMonth'];
 function approvedCopy(name, v){
   v = v || {};
   const keep = e => !(e && typeof e === 'object' && !Array.isArray(e) && 'submittedAt' in e) || isApproved(e);
@@ -4552,6 +4641,7 @@ const GLOBAL_ACCESS = {
   allPuzzleSolutionsByMonth:[() => allPuzzleSolutionsByMonth, v => allPuzzleSolutionsByMonth = v],
   allUpcomingEvents:[() => allUpcomingEvents, v => allUpcomingEvents = v], allUpcomingConferences:[() => allUpcomingConferences, v => allUpcomingConferences = v],
   allFaculty:[() => allFaculty, v => allFaculty = v], allScholars:[() => allScholars, v => allScholars = v],
+  allCampusByMonth:[() => allCampusByMonth, v => allCampusByMonth = v],
 };
 const readGlobal = name => GLOBAL_ACCESS[name][0]();
 const writeGlobal = (name, v) => GLOBAL_ACCESS[name][1](v);
@@ -4597,6 +4687,7 @@ const EDIT_FIELDS = {
             ['_month','Newsletter Month','month',1], ['solution','Solution','rich'], ['photos','Solution Images','photos'] ],
   upcomingEvents: [ ['title','Event Title','text',1], ['date','Date','date',1], ['note','Details','rich'] ],
   upcomingConferences: [ ['title','Title','text',1], ['date','Date','date',1], ['link','Link','text'], ['brochure','Brochure (one image)','photos'] ],
+  campusLife: [ ['photographer','Photos by','text'], ['_month','Newsletter Month','month',1], ['photos','Photos (caption under each)','photos'] ],
 };
 EDIT_FIELDS.editorials = EDIT_FIELDS.guestEditorials;
 
@@ -4605,7 +4696,7 @@ function openEditor(col, month, id){
   const e = getEntry(col, month, id);
   if(!e) return;
   editing = { col, month, id, max: col === 'upcomingConferences' ? 1 : 6,
-    photos: (col === 'upcomingConferences' ? (e.brochure ? [ { url:e.brochure, w:e.brochureW, h:e.brochureH } ] : []) : entryPhotos(e)).map(p => typeof p === 'string' ? { url:p } : { url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }).filter(p => p.url), photosTouched:false };
+    photos: (col === 'upcomingConferences' ? (e.brochure ? [ { url:e.brochure, w:e.brochureW, h:e.brochureH } ] : []) : entryPhotos(e)).map(p => typeof p === 'string' ? { url:p } : Object.assign({ url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }, p.caption ? { caption:p.caption } : {})).filter(p => p.url), photosTouched:false };
   const fields = EDIT_FIELDS[col];
   const val = f => f[0] === '_month' ? month : e[f[0]];
   const box = document.createElement('div');
@@ -4644,7 +4735,7 @@ function renderEditPhotos(){
         <button type="button" title="Move earlier" ${i === 0 ? 'disabled' : ''} onclick="moveEditPhoto(${i},-1)">←</button>
         <button type="button" title="Remove this photo" class="rm" onclick="removeEditPhoto(${i})">×</button>
         <button type="button" title="Move later" ${i === n - 1 ? 'disabled' : ''} onclick="moveEditPhoto(${i},1)">→</button>
-      </div>${i === 0 && n > 1 ? '<span class="eph-first">First</span>' : ''}</div>`).join('') +
+      </div>${i === 0 && n > 1 ? '<span class="eph-first">First</span>' : ''}${editing.col === 'campusLife' ? `<input type="text" class="eph-cap" placeholder="Caption" maxlength="150" value="${escapeHtml(p.caption || '')}" oninput="editing.photos[${i}].caption=this.value; editing.photosTouched=true">` : ''}</div>`).join('') +
     (n < (editing.max || 6) ? `<button type="button" class="eph-add" onclick="document.getElementById('editPhotoInput').click()">＋<span>Add photos</span></button>` : '');
 }
 function addEditPhotos(evt){
@@ -4686,7 +4777,7 @@ function saveEditor(){
         else { delete obj.brochure; delete obj.brochureW; delete obj.brochureH; }
         continue;
       }
-      if(editing.photos.length) obj.photos = editing.photos.map(p => { const o = { url:p.url }; if(p.w) o.w = p.w; if(p.h) o.h = p.h; return o; });
+      if(editing.photos.length) obj.photos = editing.photos.map(p => { const o = { url:p.url }; if(p.w) o.w = p.w; if(p.h) o.h = p.h; if(col === 'campusLife' && (p.caption || '').trim()) o.caption = p.caption.trim().slice(0, 150); return o; });
       else delete obj.photos;
       delete obj.photo; delete obj.image;
       continue;
@@ -4705,6 +4796,7 @@ function saveEditor(){
   }
   if(col === 'puzzleSolutions' && !(obj.solution || (obj.photos || []).length)){ msg('Please add the solution text or keep at least one image.'); return; }
   if(col === 'puzzles' && !(obj.content || (obj.photos || []).length)){ msg('Please add the puzzle text or keep at least one image.'); return; }
+  if(col === 'campusLife' && !(obj.photos || []).length){ msg('Keep at least one photo, or delete the entry instead.'); return; }
   obj.editedAt = Date.now();
   const oldPath = entryPath(col, month, id), newPath = entryPath(col, newMonth, id);
   const write = oldPath === newPath ? db.ref(oldPath).set(obj) : db.ref('/').update({ [oldPath]: null, [newPath]: obj });
@@ -4737,6 +4829,7 @@ function receiptTitle(col, d){
   if(col === 'conferences') return d.paperTitle || d.confName || '';
   if(col === 'puzzleSolutions') return 'Solution: ' + (d.puzzleTitle || 'Puzzle');
   if(col === 'faculty' || col === 'scholars') return d.name || '';
+  if(col === 'campusLife'){ const n = (d.photos || []).length; return n + ' campus photo' + (n === 1 ? '' : 's'); }
   return d.title || '';
 }
 function updateReceipt(entry, id, patch){
@@ -5188,6 +5281,205 @@ async function generateNaacExcelInner(){
   finally{ btn.disabled = false; btn.textContent = orig; }
 }
 
+/* =========================================================================
+   CAMPUS LIFE — "Campus Through Physical Lens"
+   Members upload up to 6 photos (each with a caption) for a month. The
+   monthly issue ends with one Campus Life page of up to 6 photos, followed by
+   the Editorial Team box. Bi-annual and annual editions show the best photo
+   of each month (marked ★ in Admin; otherwise the month's first photo).
+     campusLife/<YYYY-MM>/<id> = { photos:[{url,w,h,caption}], photographer, submittedBy, submittedAt, approved }
+     campusBest/<YYYY-MM>      = "<id>:<photo index>"   (admin)
+   ========================================================================= */
+let allCampusByMonth = {}, allCampusBest = {};
+const CAMPUS_MAX = 6;
+const CAMPUS_BARS = [ ['132340','2F5A8A'], ['C1722C','E0A04F'], ['2F7F86','5BB0A8'], ['7A4E9A','A77CC4'], ['A8842F','D9B860'], ['B3474F','D9777E'] ];
+/* rows for 1–6 photos so that one page always holds them: [columns, photo height in mm] */
+function campusRows(n){
+  return { 1:[[1,112]], 2:[[1,68],[1,68]], 3:[[1,60],[2,42]], 4:[[2,54],[2,54]], 5:[[1,50],[2,33],[2,33]], 6:[[2,37],[2,37],[2,37]] }[Math.max(1, Math.min(6, n))];
+}
+/* the month's printable photos: approved entries in the order sent, at most 6 */
+function campusPhotosForMonth(month){
+  const out = [];
+  monthEntries(allCampusByMonth, month).forEach(e => (e.photos || []).forEach((p, i) => {
+    if(p && (p.url || typeof p === 'string')) out.push({ url: photoUrl(p), w: photoWH(p).w, h: photoWH(p).h, caption: p.caption || '', by: e.photographer || (e.submittedBy && e.submittedBy.name) || '', key: e._id + ':' + i });
+  }));
+  return out;
+}
+function campusBestForMonth(month){
+  const list = campusPhotosForMonth(month);
+  if(!list.length) return null;
+  const pick = allCampusBest[month];
+  return Object.assign({ month }, list.find(p => p.key === pick) || list[0]);
+}
+/* crop a photo to the frame's shape (like object-fit: cover) — same picture in Word and PDF */
+const campusCropCache = {};
+function campusCrop(url, w, h, boxW, boxH){
+  const key = url.length + ':' + url.slice(-40) + ':' + boxW + 'x' + boxH;
+  if(campusCropCache[key]) return campusCropCache[key];
+  return campusCropCache[key] = loadImageEl(url).then(img => {
+    const nw = img.naturalWidth, nh = img.naturalHeight, want = boxW / boxH;
+    let sw = nw, sh = nh, sx = 0, sy = 0;
+    if(nw / nh > want){ sw = Math.round(nh * want); sx = Math.round((nw - sw) / 2); } else { sh = Math.round(nw / want); sy = Math.round((nh - sh) / 2); }
+    const scale = Math.min(1, 1400 / sw);
+    const c = document.createElement('canvas'); c.width = Math.round(sw * scale); c.height = Math.round(sh * scale);
+    c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.88);
+  }).catch(() => url);
+}
+const MM = 3.7795;   // px per mm
+/* Pre-crops every photo for the page(s); called before building (both formats) */
+async function prepareCampus(plan){
+  for(const st of plan.stacks) for(const g of st) for(const it of g.items){
+    if(it.type !== 'campus') continue;
+    for(const page of it.data.pages){
+      const rows = campusRows(page.length);
+      let k = 0;
+      for(const [cols, hmm] of rows){
+        for(let c = 0; c < cols && k < page.length; c++, k++){
+          const p = page[k], wmm = cols === 1 ? 166 : 81;
+          p.crop = await campusCrop(p.url, p.w, p.h, wmm, hmm);
+          p.boxW = wmm; p.boxH = hmm;
+        }
+      }
+    }
+  }
+}
+const campusPages = list => { const pages = []; for(let i = 0; i < list.length; i += CAMPUS_MAX) pages.push(list.slice(i, i + CAMPUS_MAX)); return pages; };
+
+/* ---------------- Word ---------------- */
+function campusItem(d, anchor){
+  return (pb, sy) => {
+    const { Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, TableLayoutType, BorderStyle, VerticalAlign } = docx;
+    const out = [];
+    const none = { style:BorderStyle.NONE, size:0, color:"FFFFFF" };
+    const gold = (sz) => ({ style:BorderStyle.SINGLE, size:sz || 6, color:"C6A34A" });
+    d.pages.forEach((page, pi) => {
+      // heading block (first page only)
+      if(pi === 0){
+        out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ before:0, after:20 }, keepNext:true,
+          children: bookmarked(anchor, [ new TextRun({ text:'CAMPUS LIFE', bold:true, color:"A8842F", size:17, characterSpacing:60, font:"Inter" }) ]) }));
+        out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:20 }, keepNext:true, children:[
+          new TextRun({ text:'Campus Through ', bold:true, color:"132340", size:46, font:"Playfair Display" }),
+          new TextRun({ text:'Physical', bold:true, italics:true, color:"A8842F", size:46, font:"Playfair Display" }),
+          new TextRun({ text:' Lens', bold:true, color:"132340", size:46, font:"Playfair Display" }) ] }));
+        out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:20 }, keepNext:true, children:[ new ImageRun({ data: ornBytes('divider'), transformation:{ width:220, height:12 } }) ] }));
+        out.push(new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:160 }, keepNext:true, children:[
+          new TextRun({ text: d.subtitle, italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
+      } else {
+        out.push(new Paragraph({ pageBreakBefore:true, alignment:AlignmentType.CENTER, spacing:{ after:160 }, children:[
+          new TextRun({ text:'Campus Through Physical Lens (continued)', italics:true, color:"736C5E", size:19, font:"Inter" }) ] }));
+      }
+      // photo mounts, row by row, inside a soft panel
+      const rows = campusRows(page.length), innerTw = PAGE_CONTENT_TW - 360;
+      let k = 0;
+      const rowTables = [];
+      rows.forEach(([cols, hmm], ri) => {
+        const cells = [];
+        for(let c = 0; c < cols; c++){
+          const p = page[k];
+          if(!p){ cells.push(null); continue; }
+          const bar = CAMPUS_BARS[k % CAMPUS_BARS.length]; k++;
+          const imgW = Math.round((cols === 1 ? 166 : 81) * MM) - 10, imgH = Math.round(hmm * MM);
+          cells.push(new TableCell({ width:{ size: Math.floor(innerTw / cols), type:WidthType.DXA },
+            borders:{ top:gold(8), left:gold(8), right:gold(8), bottom:{ style:BorderStyle.SINGLE, size:30, color:bar[0] } },
+            shading:{ fill:"FFFFFF", type:ShadingType.CLEAR, color:"auto" }, margins:{ top:110, bottom:90, left:110, right:110 },
+            children:[
+              new Paragraph({ alignment:AlignmentType.CENTER, spacing:{ after:60 }, children:[ new ImageRun({ data: dataUrlToUint8(p.crop || p.url), transformation:{ width:imgW, height:imgH } }) ] }),
+              ...(p.caption ? [ new Paragraph({ spacing:{ after:10 }, children:[ new TextRun({ text:p.caption, bold:true, color:"132340", size:19, font:"Playfair Display" }) ] }) ] : []),
+              new Paragraph({ spacing:{ after:0 }, children:[ new TextRun({ text: (d.byMonth && p.month ? monthLabel(p.month) + '  ·  ' : '') + (p.by ? 'Photo: ' + p.by : ''), italics:true, color:"736C5E", size:15, font:"Inter" }) ] }),
+            ] }));
+        }
+        const colTw = Math.floor(innerTw / cols);
+        const gapCell = () => new TableCell({ width:{ size:160, type:WidthType.DXA }, borders:{ top:none, bottom:none, left:none, right:none }, children:[ new Paragraph({ children:[] }) ] });
+        const children = []; cells.forEach((c, i) => { if(i) children.push(gapCell()); children.push(c || new TableCell({ borders:{ top:none, bottom:none, left:none, right:none }, children:[ new Paragraph({ children:[] }) ] })); });
+        rowTables.push(new Table({ width:{ size: innerTw, type:WidthType.DXA }, layout:TableLayoutType.FIXED,
+          columnWidths: cols === 1 ? [ innerTw ] : [ colTw - 80, 160, colTw - 80 ],
+          borders:{ top:none, bottom:none, left:none, right:none, insideHorizontal:none, insideVertical:none },
+          rows:[ new TableRow({ cantSplit:true, children }) ] }));
+        if(ri < rows.length - 1) rowTables.push(new Paragraph({ spacing:{ before:0, after:0, line:180, lineRule:docx.LineRuleType.EXACT }, children:[] }));
+      });
+      out.push(new Table({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA }, columnWidths:[ PAGE_CONTENT_TW ], layout:TableLayoutType.FIXED,
+        borders:{ top:gold(6), bottom:gold(6), left:gold(6), right:gold(6), insideHorizontal:none, insideVertical:none },
+        rows:[ new TableRow({ children:[ new TableCell({ width:{ size:PAGE_CONTENT_TW, type:WidthType.DXA },
+          shading:{ fill:"F8F1E7", type:ShadingType.CLEAR, color:"auto" }, margins:{ top:180, bottom:180, left:180, right:180 },
+          children:[ ...rowTables, new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ] }) ] }) ] }));
+    });
+    out.endY = sy + (d.pages.length - 1) * FLOW.PAGE_PX + FLOW.PAGE_PX - 140;
+    return out;
+  };
+}
+
+/* ---------------- PDF ---------------- */
+function campusHtml(d, anchor){
+  return d.pages.map((page, pi) => {
+    const rows = campusRows(page.length);
+    let k = 0, grid = '';
+    rows.forEach(([cols, hmm]) => {
+      for(let c = 0; c < cols && k < page.length; c++, k++){
+        const p = page[k], bar = CAMPUS_BARS[k % CAMPUS_BARS.length];
+        grid += `<div class="cph${cols === 1 ? ' wide' : ''}">${k === 0 && pi === 0 ? '<span class="cc tl"></span><span class="cc br"></span>' : ''}
+          <img src="${p.crop || p.url}" style="height:${hmm}mm">
+          <div class="ccap">${p.caption ? `<b>${H(p.caption)}</b>` : ''}<span class="by">${H((d.byMonth && p.month ? monthLabel(p.month) + '  ·  ' : '') + (p.by ? 'Photo: ' + p.by : ''))}</span></div>
+          <div class="cbar" style="background:linear-gradient(90deg,#${bar[0]},#${bar[1]})"></div></div>`;
+      }
+    });
+    const head = pi === 0
+      ? `<div class="ckick"${anchor ? ` id="${anchor}"` : ''}>CAMPUS LIFE</div><div class="ctitle">Campus Through <i>Physical</i> Lens</div><div class="corn"></div><div class="csub">${H(d.subtitle)}</div>`
+      : `<div class="csub" style="break-before:page">Campus Through Physical Lens (continued)</div>`;
+    return `<div class="campus">${head}<div class="cpanel"><div class="cgrid">${grid}</div></div></div>`;
+  }).join('');
+}
+
+/* ---------------- portal: Campus Life tab ---------------- */
+function renderCampusThumbs(){
+  const box = document.getElementById('thumbs-campus'); if(!box) return;
+  box.innerHTML = photoState.campus.map((p, i) => `<div class="cthumb"><div class="thumb"><img src="${p.dataUrl}"/><button type="button" class="rm" onclick="photoState.campus.splice(${i},1); renderCampusThumbs()">×</button></div>
+    <input type="text" placeholder="Caption, e.g. Sunrise over the Science Block" value="${escapeHtml(p.caption || '')}" oninput="photoState.campus[${i}].caption=this.value" maxlength="150"></div>`).join('');
+}
+function addCampusPhotos(evt){
+  const files = Array.from(evt.target.files).slice(0, CAMPUS_MAX - photoState.campus.length);
+  evt.target.value = '';
+  Promise.all(files.map(f => compressImage(f, 1400, 0.8).catch(() => null))).then(list => {
+    list.filter(Boolean).forEach(r => photoState.campus.push({ dataUrl:r.dataUrl, width:r.width, height:r.height, caption:'' }));
+    renderCampusThumbs();
+  });
+}
+function submitCampus(){
+  if(!firebaseReady){ showSubmitMsg('campus', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter(); if(!submittedBy) return;
+  const month = document.getElementById('cl_month').value;
+  if(!month){ showSubmitMsg('campus', false, 'Please choose the newsletter month.'); return; }
+  if(!photoState.campus.length){ showSubmitMsg('campus', false, 'Please add at least one photo.'); return; }
+  const photographer = document.getElementById('cl_by').value.trim();
+  const photos = photoState.campus.map(p => { const o = { url:p.dataUrl, w:p.width || null, h:p.height || null }; if((p.caption || '').trim()) o.caption = p.caption.trim().slice(0, 150); return o; });
+  const btn = document.getElementById('submitBtn-campus');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  submitRecord('campusLife', month, { submittedBy, photographer: photographer || null, photos, submittedAt: Date.now() })
+    .then(() => { showSubmitMsg('campus', true, 'Photos sent for the ' + monthLabel(month) + ' newsletter. Thank you!');
+      photoState.campus = []; renderCampusThumbs(); document.getElementById('cl_by').value = ''; })
+    .catch(err => showSubmitMsg('campus', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit Photos'; });
+}
+
+/* ---------------- admin: Campus Life This Month ---------------- */
+function renderCampusForMonth(){
+  const el = document.getElementById('campusList'); if(!el || !currentMonth) return;
+  const entries = monthEntries(allCampusByMonth, currentMonth);
+  const printable = campusPhotosForMonth(currentMonth);
+  const best = campusBestForMonth(currentMonth);
+  const approvedCount = entries.filter(isApproved).reduce((n, e) => n + (e.photos || []).length, 0);
+  if(!entries.length){ el.innerHTML = `<div class="empty-state">No campus photos sent for ${monthLabel(currentMonth)}.</div>`; return; }
+  el.innerHTML = (approvedCount > CAMPUS_MAX ? `<div class="pending-bar" style="display:flex">⚠ ${approvedCount} approved photos — only the first ${CAMPUS_MAX} fit on the Campus Life page. Remove some (Edit) or unapprove an entry.</div>` : '') +
+    entries.map(e => `<div class="event-card">
+      <div class="top"><div><span class="badge social">Campus Life</span><h3>${(e.photos || []).length} photo${(e.photos || []).length === 1 ? '' : 's'}${e.photographer ? ' · by ' + escapeHtml(e.photographer) : ''}</h3></div>
+        <div class="event-actions">${e._id ? adminActions('campusLife', currentMonth, e._id) : ''}<button class="danger" onclick="deleteEP('campusLife','${currentMonth}','${e._id}')">Delete</button></div></div>
+      <div class="cl-admin">${(e.photos || []).map((p, i) => { const key = e._id + ':' + i, isBest = best && best.key === key;
+        return `<div class="cl-ph"><img src="${photoUrl(p)}"><div class="cl-cap">${escapeHtml(p.caption || '(no caption)')}</div>
+          <button type="button" class="ghost small${isBest ? ' best' : ''}" title="Use this photo for ${monthLabel(currentMonth)} in the bi-annual and annual editions" onclick="setCampusBest('${key}')">${isBest ? '★ Best of month' : '☆ Best of month'}</button></div>`; }).join('')}</div>
+      ${submitterHtml(e)}</div>`).join('');
+}
+function setCampusBest(key){ db.ref('campusBest/' + currentMonth).set(key); }
+
 function monthlyPlan(month){
   const data = allEventsByMonth[month] || {}, ids = sortedIds(data);
   const pubData = allPublicationsByMonth[month] || {}, pubIds = sortedIds(pubData);
@@ -5216,8 +5508,12 @@ function monthlyPlan(month){
   add([{ heading:'UPCOMING CONFERENCES & WORKSHOPS', key:'UPCOMING CONFERENCES & WORKSHOPS', items: upConfs.map(u => ({ type:'uc', data:u, key:'uc:' + u.id })) }]);
   add([{ heading:'PUZZLE', key:'PUZZLE', items: puzzles.map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + (p._id || i) }))
     .concat(solutions.map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + (x._id || i) }))) }]);
-  // last page: Upcoming Events with their notes (agenda, venue, details)
+  // Upcoming Events with their notes (agenda, venue, details)
   add([{ heading:'UPCOMING EVENTS', key:'UPCOMING EVENTS', items: upcoming.map(u => ({ type:'upevent', data:u, key:'ue:' + u.id })) }]);
+  // last page: Campus Life — up to 6 photos on one page, then the Editorial Team box
+  const campus = campusPhotosForMonth(month).slice(0, CAMPUS_MAX);
+  if(campus.length) add([{ heading:'CAMPUS LIFE', key:'CAMPUS', bare:true, tocTitle:'Campus Life',
+    items:[ { type:'campus', data:{ pages:[ campus ], subtitle:'Moments from our campus this month, captured by our students and faculty' }, key:'campus:' + month } ] }]);
 
   const hasContent = ids.length || pubIds.length || awIds.length || confIds.length || blogIds.length || hasText(desk) || guests.length || puzzles.length || solutions.length;
   const range = issueDateRangeLabel(month);
@@ -5281,11 +5577,15 @@ function periodPlan(year, edKey){
     items: byMonth(m => monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).map((p, i) => ({ type:'puzzle', data:p, key:'pz:' + m + (p._id || i) }))) }]);
   add([{ heading:'PUZZLE SOLUTIONS', key:'PUZZLE SOLUTIONS', tocTitle:'Puzzle Solutions',
     items: byMonth(m => solutionEntries(m).map((x, i) => ({ type:'pzsol', data:x, key:'pzs:' + m + (x._id || i) }))) }]);
+  // last: Campus Life — the best photo of each month (six to a page)
+  const bestShots = months.map(campusBestForMonth).filter(Boolean);
+  if(bestShots.length) add([{ heading:'CAMPUS LIFE', key:'CAMPUS', bare:true, tocTitle:'Campus Life',
+    items:[ { type:'campus', data:{ pages: campusPages(bestShots), byMonth:true, subtitle:'The best of campus life, month by month' }, key:'campus:' + year + edKey } ] }]);
 
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
   const range = ed.range(year);
-  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && !['NUMBERS','FACULTY','SCHOLARS'].includes(g.key)));
+  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && !['NUMBERS','FACULTY','SCHOLARS','CAMPUS'].includes(g.key)));
   return {
     kind:'period', hasContent, stacks, withToc:true,
     issuePeriod: `${ed.name} · ${range}`, dateRange: range,
@@ -5373,6 +5673,7 @@ function wordItemBuilder(it, anchor){
     case 'pzsol':   return puzzleItem(solutionView(d), anchor);
     case 'faculty': return facultyItem(d, anchor);
     case 'scholar': return scholarItem(d, anchor);
+    case 'campus':  return campusItem(d, anchor);
     case 'numbers': return numbersItem(d, anchor);
     case 'message': return messageItem(d, anchor);
     case 'upevent': return upcomingEventItem(d, anchor);
@@ -5381,11 +5682,12 @@ function wordItemBuilder(it, anchor){
 }
 async function renderWordIssue(plan){
   const { Document, Packer } = docx;
+  await prepareCampus(plan);
   resetRegistry();
   let body = [];
   const toc = walkPlan(plan, groups => {
     body = body.concat(buildStackedSections(groups.map(({ g, entries, tocTitle }) => ({
-      heading: g.heading, anchorKey: g.key, subtitle: g.subtitle, tc: tocTitle,
+      heading: g.heading, anchorKey: g.key, subtitle: g.subtitle, tc: tocTitle, bare: g.bare,
       items: entries.map(e => {
         if(e.marker) return { marker: e.marker, tc: plan.withToc, anchor: e.anchor };
         const b = wordItemBuilder(e.item, e.anchor); b.anchor = e.anchor; return b;
@@ -5412,7 +5714,7 @@ async function renderWordIssue(plan){
       children: [ ...cover, ...body, ...buildTeamBox() ]
     }]
   });
-  return Packer.toBlob(doc);
+  return applyHeroCrop(await Packer.toBlob(doc));
 }
 
 /* ---------- Generate buttons: Word first, then the PDF ---------- */
@@ -5566,6 +5868,8 @@ function pdfCss(plan){
 .nlp .mast .eb { color: #C6A34A; font-weight: 700; font-size: 8pt; margin-bottom: 3px; }
 .nlp .mast .nw { color: #fff; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 28pt; letter-spacing: 2px; line-height: 1.1; }
 .nlp .hero { display: block; width: 100%; height: auto; }
+.nlp .herobox { background: #F3EDDE; text-align: center; }
+.nlp .herobox .hero { margin: 0 auto; }
 .nlp .quote { text-align: center; padding: 11px 14px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 12.5pt; color: #132340; line-height: 1.3; }
 .nlp .quote .qa { font-family: Inter, sans-serif; font-style: normal; font-size: 8.5pt; color: #736C5E; }
 .nlp .cbody { display: flex; align-items: flex-start; }
@@ -5622,6 +5926,25 @@ function pdfCss(plan){
 .nlp .sub { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin: -6px 0 14px; break-after: avoid; }
 .nlp .mon { color: #A8842F; font-weight: 700; font-size: 12pt; letter-spacing: .08em; border-bottom: 1.2pt solid #C6A34A; padding-bottom: 3px; margin: 14px 0 12px; break-after: avoid; clear: both; }
 .nlp .ahead { display: flow-root; break-inside: avoid; }
+.nlp .campus { break-inside: avoid; }
+.nlp .ckick { text-align: center; color: #A8842F; font-weight: 700; font-size: 8.5pt; letter-spacing: .32em; margin-top: 1mm; }
+.nlp .ctitle { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: #132340; font-size: 25pt; letter-spacing: .02em; line-height: 1.1; margin-top: 1mm; }
+.nlp .ctitle i { color: #A8842F; }
+.nlp .corn { width: 220px; height: 12px; margin: 2.5mm auto 1.5mm; background: url(${ornament('divider')}) center / 220px 12px no-repeat; }
+.nlp .csub { text-align: center; font-style: italic; color: #736C5E; font-size: 9.5pt; margin-bottom: 3.5mm; }
+.nlp .cpanel { position: relative; border-radius: 3mm; padding: 5mm 5mm 4.5mm; margin: 0 1mm; background: linear-gradient(135deg, #FBF3E2 0%, #F6ECEF 45%, #E8F2F2 100%); border: 0.8pt solid #E2CF9A; }
+.nlp .cpanel::before { content: ''; position: absolute; inset: 1.6mm; border: 0.5pt dashed rgba(198,163,74,.55); border-radius: 2mm; }
+.nlp .cgrid { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4.2mm; }
+.nlp .cph { background: #fff; padding: 2.2mm 2.2mm 0; border: 0.9pt solid #C6A34A; box-shadow: 0 2.5px 7px rgba(19,35,64,.18); position: relative; break-inside: avoid; }
+.nlp .cph.wide { grid-column: 1 / 3; }
+.nlp .cph img { display: block; width: 100%; height: auto !important; outline: 0.5pt solid rgba(19,35,64,.25); }
+.nlp .ccap { padding: 1.5mm 0.5mm 1.6mm; font-size: 8.2pt; line-height: 1.3; text-align: left; }
+.nlp .ccap b { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 9.5pt; display: block; }
+.nlp .ccap .by { display: block; color: #736C5E; font-style: italic; font-size: 7.6pt; margin-top: .6mm; }
+.nlp .cbar { height: 1.6mm; margin: 0 -2.2mm; }
+.nlp .cc { position: absolute; width: 7mm; height: 7mm; border-color: #C6A34A; border-style: solid; }
+.nlp .cc.tl { top: -1.2mm; left: -1.2mm; border-width: 1.4pt 0 0 1.4pt; } .nlp .cc.br { bottom: -1.2mm; right: -1.2mm; border-width: 0 1.4pt 1.4pt 0; }
+.nlp .team { margin-top: 18px; }
 .nlp .sep { border: 0; height: 10px; margin: 14px 0 18px; clear: both; background: url(${ornament('sep')}) center / 90px 10px no-repeat; }
 .nlp .art { break-inside: auto; }
 .nlp .art::after { content: ""; display: block; clear: both; }
@@ -5765,6 +6088,7 @@ function pdfItemHtml(it, anchor){
       meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)), refs:d.refs });
     case 'faculty': return profileHtml(d, anchor, 'faculty');
     case 'scholar': return profileHtml(d, anchor, 'scholar');
+    case 'campus':  return campusHtml(d, anchor);
     case 'numbers': return numbersHtml(d, anchor);
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
@@ -5809,6 +6133,8 @@ function coverIndexHtml(spec, ptSize){
   return h;
 }
 function coverHtml(plan, spec, ptSize, heroUrl, split){
+  const heroH = heroUrl && typeof heroUrl === 'object' ? heroUrl.h : 0;
+  if(heroUrl && typeof heroUrl === 'object') heroUrl = heroUrl.url;
   const linkOrText = (text, url, bold) => url ? `<a href="${H(url)}"${bold ? ' style="font-weight:700"' : ''}>${H(text)}</a>` : `<span${bold ? ' style="font-weight:700"' : ''}>${H(text)}</span>`;
   const maybeUrl = str => !str ? null : /^https?:\/\//i.test(str) ? str : (/\./.test(str) && !/\s/.test(str) && !/^\[/.test(str)) ? 'https://' + str.replace(/^\/+/, '') : null;
   const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
@@ -5817,7 +6143,7 @@ function coverHtml(plan, spec, ptSize, heroUrl, split){
     <div class="strip">${H(plan.issuePeriod.toUpperCase())}</div>
     <div class="mast"><div class="lg"><img src="${logoDataUrl()}"></div>
       <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · ${H(SCHOOL_NAME.toUpperCase())}</div><div class="nw">NEWSLETTER</div></div></div>
-    ${heroUrl ? `<img class="hero" src="${heroUrl}">` : ''}
+    ${heroUrl ? (heroH ? `<div class="herobox"><img class="hero" src="${heroUrl}" style="width:auto; height:${heroH}px;"></div>` : `<img class="hero" src="${heroUrl}">`) : ''}
     <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
     <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3>${coverTextHtml(MISSION_TEXT)}<div style="height:10px"></div><h3>Our Vision</h3>${coverTextHtml(VISION_TEXT, true)}</div>
       <div class="idx" style="flex:1">${coverIndexHtml(spec, ptSize)}</div></div>
@@ -5844,9 +6170,8 @@ async function fitCoverHtml(plan, spec, measureBox){
       const noHero = heights(pt, null, 0.5);
       const h = Math.floor(limit - noHero - 2);
       if(h >= 200){
-        const cropped = heroAtHeight(info, Math.min(h, info.fullH));
-        const url = cropped ? 'data:image/jpeg;base64,' + uint8ToBase64(cropped.bytes) : fullUrl;
-        heights(pt, url, 0.5); await waitImgs();
+        // not enough room for the whole photo: a full-width band of it (top / centre / bottom, from Settings)
+        heights(pt, heroCroppedUrl(info, Math.min(h, info.fullH)), 0.5); await waitImgs();
         if(measureBox.firstElementChild.getBoundingClientRect().height <= limit) return { html: fillCover(measureBox.innerHTML, limit), fits:true };
       }
     }
@@ -5887,7 +6212,7 @@ function bodyHtml(plan){
     html += `<section class="stack">`;
     groups.forEach(({ g, entries }, gi) => {
       if(gi > 0) html += `<div class="gap"></div>`;
-      html += `<h1 class="sh" id="${sectionAnchor(g.key)}">${H(g.heading)}</h1>`;
+      html += g.bare ? `<div id="${sectionAnchor(g.key)}"></div>` : `<h1 class="sh" id="${sectionAnchor(g.key)}">${H(g.heading)}</h1>`;
       if(g.subtitle) html += `<div class="sub">${H(g.subtitle)}</div>`;
       let fresh = true;
       entries.forEach(e => {
@@ -5907,6 +6232,7 @@ async function renderPdfIssue(plan, progress, previewOnly){
   progress('Loading PDF tools…');
   await loadPdfLibs();
   if(document.fonts && document.fonts.ready) await document.fonts.ready;
+  await prepareCampus(plan);
 
   resetRegistry();
   const { html: body, toc } = bodyHtml(plan);
@@ -6378,7 +6704,7 @@ async function generateAnnualExcelInner(){
 document.getElementById('topbarLogo').src = 'data:image/png;base64,' + AMITY_LOGO_BASE64;
 document.getElementById('f_date').valueAsDate = new Date();
 (function(){ const d = new Date(); const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; })();
+  document.getElementById('ed_month').value = m; document.getElementById('pz_month').value = m; document.getElementById('cl_month').value = m; })();
 resetConfAuthors();
 loadSubmitter();
 initRichEditors();

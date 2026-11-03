@@ -230,6 +230,7 @@
   .cl-ph button{ margin:0; width:100%; }
   .cl-ph button.best{ background:var(--gold); color:var(--navy); border-color:var(--gold); }
   .editbox .eph-cap{ width:104px; margin-top:4px; font-size:12px; padding:4px 6px; }
+  .pt-kind{ flex-wrap:wrap; }
   .seg{ display:inline-flex; border:1px solid #d8cfb8; border-radius:9px; overflow:hidden; margin:4px 0 8px; }
   .seg button{ margin:0; border:none; border-radius:0; background:#fff; color:var(--navy); padding:8px 16px; font-weight:600; cursor:pointer; width:auto; }
   .seg button.active{ background:var(--navy); color:#fff; }
@@ -581,13 +582,22 @@
 
     <div class="card subview" id="subview-publication">
       <form id="pubForm" onsubmit="return false;">
-        <label class="first">Paper Title *</label>
-        <input type="text" id="p_title" placeholder="Title of the published paper" required />
+        <label class="first">Type of publication *</label>
+        <div class="pt-kind seg">
+          <button type="button" data-pt="article" class="active" onclick="setPubType('article')">Journal Article</button><button type="button" data-pt="chapter" onclick="setPubType('chapter')">Book Chapter</button><button type="button" data-pt="book" onclick="setPubType('book')">Book (Authored)</button><button type="button" data-pt="edited" onclick="setPubType('edited')">Book (Edited)</button>
+        </div>
+        <input type="hidden" id="p_type" value="article" />
 
-        <div class="row2">
+        <label id="p_title_lbl">Paper Title *</label>
+        <input type="text" id="p_title" placeholder="Title of the published paper" />
+
+        <div data-pt="chapter"><label>Book Title *</label><input type="text" id="p_bookTitle" placeholder="Title of the book in which the chapter appears" /></div>
+        <div data-pt="chapter edited"><label id="p_editors_lbl">Editor(s) of the book *</label><input type="text" id="p_editors" placeholder="e.g. A. Kumar, S. Mehta" /></div>
+
+        <div class="row2" data-pt="article">
           <div>
-            <label>Journal / Publisher *</label>
-            <input type="text" id="p_journal" placeholder="e.g. Journal of Applied Physics" required />
+            <label>Journal *</label>
+            <input type="text" id="p_journal" placeholder="e.g. Journal of Applied Physics" />
           </div>
           <div>
             <label>Indexing</label>
@@ -601,32 +611,38 @@
           </div>
         </div>
 
-        <div class="row2">
-          <div>
-            <label>Volume</label>
-            <input type="text" id="p_volume" placeholder="e.g. 45" />
-          </div>
-          <div>
-            <label>Issue</label>
-            <input type="text" id="p_issue" placeholder="e.g. 3" />
-          </div>
+        <div class="row2" data-pt="article">
+          <div><label>Volume</label><input type="text" id="p_volume" placeholder="e.g. 45" /></div>
+          <div><label>Issue</label><input type="text" id="p_issue" placeholder="e.g. 3" /></div>
         </div>
 
-        <label>Authors *</label>
-        <input type="text" id="p_authors" placeholder="e.g. R. Sharma, A. Kaur, S. Singh" required />
+        <div class="row2" data-pt="chapter book edited">
+          <div><label>Publisher *</label><input type="text" id="p_publisher" placeholder="e.g. Springer, CRC Press, Elsevier" /></div>
+          <div data-pt="chapter"><label>Pages</label><input type="text" id="p_pages" placeholder="e.g. 45–67" /></div>
+          <div data-pt="book edited"><label>Edition</label><input type="text" id="p_edition" placeholder="e.g. 1st edition" /></div>
+        </div>
+
+        <div class="row2" data-pt="chapter book edited">
+          <div><label>ISBN</label><input type="text" id="p_isbn" placeholder="e.g. 978-3-031-12345-6" /></div>
+          <div data-pt="chapter"><label>Indexing of the book</label>
+            <select id="p_bookIndexing"><option value="">Not indexed / not known</option><option value="Scopus">Scopus</option><option value="WoS">Web of Science</option><option value="Other">Other</option></select></div>
+          <div data-pt="book edited"></div>
+        </div>
+
+        <div data-pt="article chapter book"><label>Authors *</label><input type="text" id="p_authors" placeholder="e.g. R. Sharma, A. Kaur, S. Singh" /></div>
 
         <div class="row2">
           <div>
             <label>Date of Publication *</label>
-            <input type="date" id="p_date" required />
+            <input type="date" id="p_date" />
           </div>
-          <div></div>
+          <div><label>DOI / link (optional)</label><input type="text" id="p_doi" placeholder="e.g. https://doi.org/10.1007/..." /></div>
         </div>
 
-        <label>Abstract *</label>
-        <textarea id="p_abstract" placeholder="Paste or summarize the abstract..." required></textarea>
+        <label id="p_abstract_lbl">Abstract *</label>
+        <textarea id="p_abstract" placeholder="Paste or summarize the abstract..."></textarea>
 
-        <label>Figures / Images</label>
+        <label id="p_photos_lbl">Figures / Images</label>
         <div class="photo-drop" onclick="document.getElementById('p_photos').click()">
           <input type="file" id="p_photos" accept="image/*" multiple onchange="handlePhotoSelect('publication', event)" />
           <div><strong>Click to add figures</strong></div>
@@ -1461,41 +1477,63 @@ function submitEvent(){
 }
 
 /* ---------------- Submit: Publication ---------------- */
+/* ---- publication types: journal article, book chapter, authored book, edited book ---- */
+const PUB_TYPES = {
+  article: { label:'Journal Article', kicker:'JOURNAL ARTICLE', title:'Paper Title', abstract:'Abstract', photos:'Figures / Images',
+             need:[ ['title','the paper title'], ['journal','the journal'], ['authors','the authors'], ['date','the date'], ['abstract','the abstract'] ] },
+  chapter: { label:'Book Chapter', kicker:'BOOK CHAPTER', title:'Chapter Title', abstract:'Abstract', photos:'Figures / book cover',
+             need:[ ['title','the chapter title'], ['bookTitle','the book title'], ['editors','the editor(s)'], ['publisher','the publisher'], ['authors','the authors'], ['date','the date'], ['abstract','the abstract'] ] },
+  book:    { label:'Book (Authored)', kicker:'BOOK', title:'Book Title', abstract:'About the book', photos:'Book cover / images',
+             need:[ ['title','the book title'], ['publisher','the publisher'], ['authors','the authors'], ['date','the date'], ['abstract','a few lines about the book'] ] },
+  edited:  { label:'Book (Edited)', kicker:'EDITED BOOK', title:'Book Title', abstract:'About the book', photos:'Book cover / images',
+             need:[ ['title','the book title'], ['editors','the editor(s)'], ['publisher','the publisher'], ['date','the date'], ['abstract','a few lines about the book'] ] },
+};
+const pubTypeOf = p => (p && PUB_TYPES[p.pubType]) ? p.pubType : 'article';
+function setPubType(t){
+  if(!PUB_TYPES[t]) t = 'article';
+  document.getElementById('p_type').value = t;
+  document.querySelectorAll('.pt-kind button').forEach(b => b.classList.toggle('active', b.dataset.pt === t));
+  document.querySelectorAll('#pubForm [data-pt]').forEach(el => { if(el.tagName !== 'BUTTON') el.style.display = el.dataset.pt.split(' ').includes(t) ? '' : 'none'; });
+  const T = PUB_TYPES[t];
+  document.getElementById('p_title_lbl').textContent = T.title + ' *';
+  document.getElementById('p_title').placeholder = t === 'article' ? 'Title of the published paper' : t === 'chapter' ? 'Title of your chapter' : 'Title of the book';
+  document.getElementById('p_editors_lbl').textContent = t === 'edited' ? 'Editor(s) *' : 'Editor(s) of the book *';
+  document.getElementById('p_abstract_lbl').textContent = T.abstract + ' *';
+  document.getElementById('p_abstract').placeholder = t === 'article' || t === 'chapter' ? 'Paste or summarize the abstract...' : 'What the book is about, who it is for, its highlights...';
+  document.getElementById('p_photos_lbl').textContent = T.photos;
+}
 function submitPublication(){
   if(!firebaseReady){ showSubmitMsg('publication', false, 'Firebase is not configured yet.'); return; }
   const submittedBy = getSubmitter();
   if(!submittedBy) return;
+  const t = document.getElementById('p_type').value || 'article';
+  const v = id => (document.getElementById(id).value || '').trim();
+  const all = { title:v('p_title'), journal:v('p_journal'), indexing:v('p_indexing'), volume:v('p_volume'), issue:v('p_issue'),
+    bookTitle:v('p_bookTitle'), editors:v('p_editors'), publisher:v('p_publisher'), pages:v('p_pages'), edition:v('p_edition'),
+    isbn:v('p_isbn'), bookIndexing:v('p_bookIndexing'), authors:v('p_authors'), date:document.getElementById('p_date').value,
+    doi:v('p_doi'), abstract:v('p_abstract') };
+  const missing = PUB_TYPES[t].need.filter(([k]) => !all[k]).map(([, l]) => l);
+  if(missing.length){ showSubmitMsg('publication', false, 'Please fill in ' + missing.join(', ') + '.'); return; }
+  // keep only the fields that belong to this type
+  const keys = { article:['title','journal','indexing','volume','issue','authors','date','doi','abstract'],
+                 chapter:['title','bookTitle','editors','publisher','pages','isbn','authors','date','doi','abstract'],
+                 book:['title','publisher','edition','isbn','authors','date','doi','abstract'],
+                 edited:['title','editors','publisher','edition','isbn','date','doi','abstract'] }[t];
+  const pubData = { submittedBy, pubType:t };
+  keys.forEach(k => { if(all[k]) pubData[k] = all[k]; });
+  if(t === 'chapter' && all.bookIndexing) pubData.indexing = all.bookIndexing;
+  pubData.photos = photoState.publication.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null }));
+  pubData.submittedAt = Date.now();
 
-  const title = document.getElementById('p_title').value.trim();
-  const journal = document.getElementById('p_journal').value.trim();
-  const indexing = document.getElementById('p_indexing').value;
-  const volume = document.getElementById('p_volume').value.trim();
-  const issue = document.getElementById('p_issue').value.trim();
-  const authors = document.getElementById('p_authors').value.trim();
-  const date = document.getElementById('p_date').value;
-  const abstract = document.getElementById('p_abstract').value.trim();
-
-  if(!title || !journal || !authors || !date || !abstract){
-    showSubmitMsg('publication', false, 'Please fill in all required fields.');
-    return;
-  }
-
-  const monthKey = date.slice(0,7);
+  const monthKey = all.date.slice(0,7);
   const btn = document.getElementById('submitBtn-publication');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting...';
-
-  const pubData = {
-    submittedBy,
-    title, journal, indexing, volume, issue, authors, date, abstract,
-    photos: photoState.publication.map(p => ({ url: p.dataUrl, w: p.width || null, h: p.height || null })),
-    submittedAt: Date.now()
-  };
-
   submitRecord('publications', monthKey, pubData)
     .then(() => {
-      showSubmitMsg('publication', true, 'Publication submitted successfully. Thank you!');
+      showSubmitMsg('publication', true, PUB_TYPES[t].label + ' submitted successfully. Thank you!');
       document.getElementById('pubForm').reset();
+      setPubType(t);
       photoState.publication = [];
       renderThumbs('publication');
     })
@@ -2958,13 +2996,13 @@ function renderPublicationsForMonth(){
     <div class="event-card">
       <div class="top">
         <div>
-          <span class="badge academic">${escapeHtml(p.indexing||'')}</span>
+          <span class="badge research">${escapeHtml(PUB_TYPES[pubTypeOf(p)].label)}</span>${p.indexing ? ` <span class="badge academic">${escapeHtml(p.indexing)}</span>` : ''}
           <h3>${escapeHtml(p.title)}</h3>
           <div class="event-meta">
             <span>📅 ${formatDate(p.date)}</span>
-            <span>📖 ${escapeHtml(p.journal)}${p.volume?(' · Vol '+escapeHtml(p.volume)):''}${p.issue?(' · Issue '+escapeHtml(p.issue)):''}</span>
+            <span>📖 ${escapeHtml(pubMetaLines(p).filter(l => l[2] !== 'date' && l[0] !== 'Authors').map(l => (l[0] ? l[0] + ': ' : '') + l[1]).join(' · '))}</span>
           </div>
-          <div class="event-meta"><span>✍️ ${escapeHtml(p.authors)}</span></div>
+          <div class="event-meta"><span>✍️ ${escapeHtml(p.authors || (p.editors ? 'Edited by ' + p.editors : ''))}</span></div>
         </div>
         <div class="event-actions">${adminActions('publications', currentMonth, id)}<button class="danger" onclick="deletePublication('${currentMonth}','${id}')">Delete</button></div>
       </div>
@@ -4296,16 +4334,36 @@ function buildEventsSection(ids, data, firstBreak){
 function bodyParagraphs(text){
   return (text || '').split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => richParagraph(s));
 }
+/* The details printed under a publication's title, by type: [label or null, text, style] */
+function pubMetaLines(p){
+  const t = pubTypeOf(p), L = [];
+  const join = (...a) => a.filter(Boolean).join('  ·  ');
+  if(t === 'article'){
+    L.push([null, join(p.journal, p.volume && 'Vol ' + p.volume + (p.issue ? ', Issue ' + p.issue : ''), !p.volume && p.issue && 'Issue ' + p.issue), 'plain']);
+    L.push(['Authors', p.authors]);
+  } else if(t === 'chapter'){
+    L.push(['In', join(p.bookTitle, p.editors && 'ed. ' + p.editors)]);
+    L.push([null, join(p.publisher, p.pages && 'pp. ' + p.pages, p.isbn && 'ISBN ' + p.isbn), 'plain']);
+    L.push(['Authors', p.authors]);
+  } else if(t === 'book'){
+    L.push([null, join(p.publisher, p.edition, p.isbn && 'ISBN ' + p.isbn), 'plain']);
+    L.push(['Authors', p.authors]);
+  } else {
+    L.push([null, join(p.publisher, p.edition, p.isbn && 'ISBN ' + p.isbn), 'plain']);
+    L.push(['Edited by', p.editors]);
+  }
+  L.push([null, formatDate(p.date), 'date']);
+  if(p.doi) L.push(['DOI / link', p.doi, 'link']);
+  return L.filter(l => l[1]);
+}
+const pubKicker = p => PUB_TYPES[pubTypeOf(p)].kicker + (p.indexing ? '  ·  ' + p.indexing : '');
 function buildPublicationArticle(p, anchor, pageBreak, startY){
-  const journal = p.journal + (p.volume ? "  ·  Vol " + p.volume : "") + (p.issue ? ", Issue " + p.issue : "");
   return buildFlowArticle({
-    kicker:{ text:"PUBLICATION" + (p.indexing ? "  ·  " + p.indexing : ""), color:"6B4C9A" },
+    kicker:{ text: pubKicker(p), color:"6B4C9A" },
     title: p.title, anchor,
-    metaParas:[
-      metaLine(journal, { size:BODY_SIZE - 1 }),
-      { runs:[ textRun("Authors: ", { bold:true, color:"132340" }), textRun(p.authors) ], chars:9 + (p.authors || '').length },
-      metaLine(formatDate(p.date)),
-    ],
+    metaParas: pubMetaLines(p).map(([k, v, st]) => k
+      ? { runs:[ textRun(k + ": ", { bold:true, color:"132340" }), textRun(v, st === 'link' ? { color:"1155CC" } : {}) ], chars: k.length + 2 + v.length }
+      : (st === 'plain' ? metaLine(v, { size:BODY_SIZE - 1 }) : metaLine(v))),
     text: p.abstract, images: allPhotos(p.photos), pageBreak, startY
   });
 }
@@ -4669,7 +4727,7 @@ const EDIT_FIELDS = {
   events: [ ['title','Event Title','text',1], ['category','Category','select',1,CATS], ['organizer','Reported by','text',1],
             ['role','Role','select',1,['Organized','Attended']], ['date','Event Date','date',1], ['dateEnd','End Date','date'],
             ['desc','Description','rich',1], ['photos','Photos','photos'] ],
-  publications: [ ['title','Paper Title','text',1], ['journal','Journal / Publisher','text',1], ['indexing','Indexing','select',0,IDX_OPTS],
+  publications: [ ['title','Paper Title','text',1], ['journal','Journal','text',1], ['indexing','Indexing','select',0,IDX_OPTS],
             ['volume','Volume','text'], ['issue','Issue','text'], ['authors','Authors','text',1], ['date','Date of Publication','date',1],
             ['abstract','Abstract','rich',1], ['photos','Figures / Images','photos'] ],
   awards: [ ['title','Award / Achievement','text',1], ['type','Type','select',1,AWARD_TYPES], ['recipients','Recipient(s)','text',1],
@@ -4690,6 +4748,18 @@ const EDIT_FIELDS = {
   campusLife: [ ['photographer','Photos by','text'], ['_month','Newsletter Month','month',1], ['photos','Photos (caption under each)','photos'] ],
 };
 EDIT_FIELDS.editorials = EDIT_FIELDS.guestEditorials;
+/* publications: the fields depend on the type (article, chapter, book, edited book) */
+const PUB_EDIT_FIELDS = {
+  chapter: [ ['title','Chapter Title','text',1], ['bookTitle','Book Title','text',1], ['editors','Editor(s) of the book','text',1], ['publisher','Publisher','text',1],
+             ['pages','Pages','text'], ['isbn','ISBN','text'], ['indexing','Indexing of the book','select',0,['','Scopus','WoS','Other']], ['authors','Authors','text',1],
+             ['date','Date of Publication','date',1], ['doi','DOI / link','text'], ['abstract','Abstract','rich',1], ['photos','Figures / book cover','photos'] ],
+  book:    [ ['title','Book Title','text',1], ['publisher','Publisher','text',1], ['edition','Edition','text'], ['isbn','ISBN','text'], ['authors','Authors','text',1],
+             ['date','Date of Publication','date',1], ['doi','DOI / link','text'], ['abstract','About the book','rich',1], ['photos','Book cover / images','photos'] ],
+  edited:  [ ['title','Book Title','text',1], ['editors','Editor(s)','text',1], ['publisher','Publisher','text',1], ['edition','Edition','text'], ['isbn','ISBN','text'],
+             ['date','Date of Publication','date',1], ['doi','DOI / link','text'], ['abstract','About the book','rich',1], ['photos','Book cover / images','photos'] ],
+};
+const editFieldsFor = (col, e) => col === 'publications' && pubTypeOf(e) !== 'article' ? PUB_EDIT_FIELDS[pubTypeOf(e)]
+  : (col === 'publications' ? EDIT_FIELDS.publications.slice(0, -2).concat([ ['doi','DOI / link','text'] ], EDIT_FIELDS.publications.slice(-2)) : EDIT_FIELDS[col]);
 
 let editing = null;
 function openEditor(col, month, id){
@@ -4697,12 +4767,13 @@ function openEditor(col, month, id){
   if(!e) return;
   editing = { col, month, id, max: col === 'upcomingConferences' ? 1 : 6,
     photos: (col === 'upcomingConferences' ? (e.brochure ? [ { url:e.brochure, w:e.brochureW, h:e.brochureH } ] : []) : entryPhotos(e)).map(p => typeof p === 'string' ? { url:p } : Object.assign({ url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }, p.caption ? { caption:p.caption } : {})).filter(p => p.url), photosTouched:false };
-  const fields = EDIT_FIELDS[col];
+  const fields = editFieldsFor(col, e);
+  editing.fields = fields;
   const val = f => f[0] === '_month' ? month : e[f[0]];
   const box = document.createElement('div');
   box.className = 'secpick-backdrop'; box.id = 'editBackdrop';
   box.innerHTML = `<div class="secpick editbox" role="dialog" aria-modal="true">
-    <h3>Edit ${escapeHtml(COLS[col].label)}</h3>
+    <h3>Edit ${escapeHtml(col === 'publications' ? PUB_TYPES[pubTypeOf(e)].label.toLowerCase() : COLS[col].label)}</h3>
     <p>Changes are saved straight into the newsletter data. Changing the date (or newsletter month) moves the entry to that month's issue.</p>
     ${fields.map(f => {
       const [k, label, type, req, opts] = f, v = val(f);
@@ -4767,7 +4838,7 @@ function saveEditor(){
   const msg = t => { document.getElementById('editMsg').textContent = t; };
   const obj = JSON.parse(JSON.stringify(e));
   let newMonth = month;
-  for(const f of EDIT_FIELDS[col]){
+  for(const f of (editing.fields || EDIT_FIELDS[col])){
     const [k, label, type, req] = f;
     if(type === 'photos'){
       if(!editing.photosTouched) continue;           // photos left exactly as they were
@@ -5074,7 +5145,8 @@ function editionNumbers(months){
   const count = (byMonth, fn) => { let n = 0; months.forEach(m => { const d = byMonth[m] || {}; Object.keys(d).forEach(id => { if(d[id] && typeof d[id] === 'object') { n++; if(fn) fn(d[id]); } }); }); return n; };
   const cats = {}, idx = {}, types = {};
   const events = count(allEventsByMonth, e => { const c = catOf(e); cats[c] = (cats[c] || 0) + 1; });
-  const pubs = count(allPublicationsByMonth, p => { const k = p.indexing || 'Not stated'; idx[k] = (idx[k] || 0) + 1; });
+  const ptypes = {};
+  const pubs = count(allPublicationsByMonth, p => { const k = p.indexing || 'Not stated'; idx[k] = (idx[k] || 0) + 1; const tl = PUB_TYPES[pubTypeOf(p)].label; ptypes[tl] = (ptypes[tl] || 0) + 1; });
   const awards = count(allAwardsByMonth, a => { const k = a.type || 'Other'; types[k] = (types[k] || 0) + 1; });
   const confs = count(allConferencesByMonth);
   const blogs = count(allBlogsByMonth);
@@ -5086,6 +5158,7 @@ function editionNumbers(months){
   const join = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join('  ·  ');
   const lines = [];
   if(events) lines.push(['Events by category', join(cats)]);
+  if(pubs) lines.push(['Publications by type', join(ptypes)]);
   if(pubs) lines.push(['Publications by indexing', join(idx)]);
   if(awards) lines.push(['Awards & achievements by type', join(types)]);
   return { tiles, lines, total: events + pubs + awards + confs + blogs };
@@ -5248,7 +5321,13 @@ async function generateNaacExcelInner(){
     sheet('3.3.1 Journal papers', 'Research papers published in journals (NAAC 3.3.1 / NBA research publications)',
       [ ['Sl. No.',7], ['Title of paper',44], ['Name of the author/s',34], ['Department of the teacher',26], ['Name of journal',30], ['Year of publication',11],
         ['Indexing (SCI / Scopus / WoS / UGC-CARE)',16], ['Volume',9], ['Issue',9], ['Date of publication',14], ['ISSN number',14], ['DOI / link to UGC enlistment',26] ],
-      pubs.map(p => [ p.title, p.authors, dept, p.journal, yearOf(p.date), p.indexing || '', p.volume || '', p.issue || '', p.date || '', '', '' ]));
+      pubs.filter(p => pubTypeOf(p) === 'article').map(p => [ p.title, p.authors, dept, p.journal, yearOf(p.date), p.indexing || '', p.volume || '', p.issue || '', p.date || '', '', p.doi || '' ]));
+    sheet('3.3.2 Books & chapters', 'Books and chapters in edited volumes / books published (NAAC 3.3.2 / NBA books and book chapters)',
+      [ ['Sl. No.',7], ['Name of the teacher(s)',30], ['Title of the book / chapter published',40], ['Type',14], ['Title of the book (for chapters)',34], ['Editor(s)',26],
+        ['Name of the publisher',24], ['Year of publication',11], ['ISBN number',18], ['Pages / edition',14], ['Indexing',12], ['DOI / link',26] ],
+      pubs.filter(p => pubTypeOf(p) !== 'article').map(p => { const t = pubTypeOf(p); return [ t === 'edited' ? p.editors : p.authors, p.title,
+        { chapter:'Book chapter', book:'Book', edited:'Edited book' }[t], t === 'chapter' ? (p.bookTitle || '') : '', p.editors || '', p.publisher || '',
+        yearOf(p.date), p.isbn || '', t === 'chapter' ? (p.pages ? 'pp. ' + p.pages : '') : (p.edition || ''), p.indexing || '', p.doi || '' ]; }));
     sheet('3.3.2 Conference papers', 'Papers presented in national / international conferences (NAAC 3.3.2)',
       [ ['Sl. No.',7], ['Name of the teacher / presenter',26], ['Title of the paper',44], ['Authors & affiliations',44], ['Name of the conference',36],
         ['Conference details (venue, dates, organiser)',36], ['National / International',14], ['Year',8], ['Date of presentation',14] ],
@@ -5267,8 +5346,9 @@ async function generateNaacExcelInner(){
     ws.addRow([ ed.range(year) ]).font = { italic:true, color:{ argb:'FF736C5E' } };
     ws.addRow([]);
     const cnt = (list, f) => list.filter(f).length;
-    [ ['Journal papers (total)', pubs.length], ['  of which SCI', cnt(pubs, p => p.indexing === 'SCI')], ['  of which Scopus', cnt(pubs, p => p.indexing === 'Scopus')],
-      ['  of which Web of Science', cnt(pubs, p => p.indexing === 'Web of Science')], ['  of which UGC-CARE', cnt(pubs, p => p.indexing === 'UGC-CARE')],
+    [ ['Journal papers (total)', cnt(pubs, p => pubTypeOf(p) === 'article')], ['  of which SCI', cnt(pubs, p => pubTypeOf(p) === 'article' && p.indexing === 'SCI')], ['  of which Scopus', cnt(pubs, p => pubTypeOf(p) === 'article' && p.indexing === 'Scopus')],
+      ['  of which Web of Science', cnt(pubs, p => pubTypeOf(p) === 'article' && p.indexing === 'Web of Science')], ['  of which UGC-CARE', cnt(pubs, p => pubTypeOf(p) === 'article' && p.indexing === 'UGC-CARE')],
+      ['Book chapters', cnt(pubs, p => pubTypeOf(p) === 'chapter')], ['Books (authored)', cnt(pubs, p => pubTypeOf(p) === 'book')], ['Books (edited)', cnt(pubs, p => pubTypeOf(p) === 'edited')],
       ['Conference papers presented', confs.length], ['Awards, recognitions, grants & patents', awards.length],
       ['Events & activities (total)', events.length], ['  organised by the school', cnt(events, e => e.role === 'Organized')], ['  attended / participated', cnt(events, e => e.role !== 'Organized')] ]
       .forEach(r => { const row = ws.addRow(r); if(!r[0].startsWith('  ')) row.font = { bold:true }; });
@@ -6064,12 +6144,12 @@ function pdfItemHtml(it, anchor){
   switch(it.type){
     case 'event': return flowHtml({ kicker:{ text:(d.category || 'Other').toUpperCase(), color:categoryHex(d.category) }, title:d.title, anchor,
       meta:[ metaH(H(eventMetaText(d))) ], text:d.desc, images:allPhotos(d.photos) });
-    case 'pub': {
-      const journal = d.journal + (d.volume ? '  ·  Vol ' + d.volume : '') + (d.issue ? ', Issue ' + d.issue : '');
-      return flowHtml({ kicker:{ text:'PUBLICATION' + (d.indexing ? '  ·  ' + d.indexing : ''), color:'6B4C9A' }, title:d.title, anchor,
-        meta:[ metaH(H(journal)), metaH(`<b>Authors:</b>&nbsp;<span style="color:#1B1B18">${H(d.authors)}</span>`, true), metaH(H(formatDate(d.date))) ],
+    case 'pub':
+      return flowHtml({ kicker:{ text: pubKicker(d), color:'6B4C9A' }, title:d.title, anchor,
+        meta: pubMetaLines(d).map(([k, v, st]) => k
+          ? metaH(`<b>${H(k)}:</b>&nbsp;${st === 'link' ? `<a href="${H(/^https?:/i.test(v) ? v : 'https://doi.org/' + v)}">${H(v)}</a>` : `<span style="color:#1B1B18">${H(v)}</span>`}`, true)
+          : metaH(H(v))),
         text:d.abstract, images:allPhotos(d.photos) });
-    }
     case 'conf': return flowHtml({ kicker:{ text:'CONFERENCE PRESENTATION', color:'2C5F8A' }, title:d.paperTitle, anchor,
       meta:[ metaH(H(d.confName)) ].concat(d.confDetails ? [ metaH(H(d.confDetails), true) ] : []).concat(confAuthorsHtml(d))
         .concat([ metaH(`<b>Presented by</b>&nbsp;<span style="color:#1B1B18">${H(d.presenter)}   ·   ${H(formatDate(d.date))}</span>`, true) ]),
@@ -6397,12 +6477,20 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
   if(includeMonth) cols.push({ header:'Month', key:'month', width:16 });
   cols.push(
     { header:'Date', key:'date', width:14 },
+    { header:'Type', key:'type', width:16 },
     { header:'Title', key:'title', width:36 },
     { header:'Journal', key:'journal', width:26 },
     { header:'Volume', key:'volume', width:10 },
     { header:'Issue', key:'issue', width:10 },
+    { header:'Book Title (chapters)', key:'bookTitle', width:30 },
+    { header:'Editors', key:'editors', width:24 },
+    { header:'Publisher', key:'publisher', width:20 },
+    { header:'Pages', key:'pages', width:10 },
+    { header:'Edition', key:'edition', width:12 },
+    { header:'ISBN', key:'isbn', width:18 },
     { header:'Indexing', key:'indexing', width:12 },
     { header:'Authors', key:'authors', width:28 },
+    { header:'DOI / Link', key:'doi', width:28 },
     { header:'Abstract', key:'abstract', width:60 },
     { header:'Figures', key:'photos', width:10 },
     { header:'Submitted By', key:'submittedBy', width:44 },
@@ -6415,9 +6503,10 @@ function addPublicationsSheet(wb, sheetLabel, rows, includeMonth){
   ws.getRow(1).height = 22;
   rows.forEach(({ month, p }) => {
     const row = ws.addRow({
-      month, date: formatDate(p.date), title: p.title, journal: p.journal,
-      volume: p.volume || '', issue: p.issue || '', indexing: p.indexing || '',
-      authors: p.authors, abstract: stripRich(p.abstract), photos: (p.photos||[]).length, submittedBy: submitterText(p),
+      month, date: formatDate(p.date), type: PUB_TYPES[pubTypeOf(p)].label, title: p.title, journal: p.journal || '',
+      volume: p.volume || '', issue: p.issue || '', bookTitle: p.bookTitle || '', editors: p.editors || '', publisher: p.publisher || '',
+      pages: p.pages || '', edition: p.edition || '', isbn: p.isbn || '', indexing: p.indexing || '',
+      authors: p.authors || '', doi: p.doi || '', abstract: stripRich(p.abstract), photos: (p.photos||[]).length, submittedBy: submitterText(p),
     });
     row.getCell('abstract').alignment = { wrapText:true, vertical:'top' };
     row.alignment = { vertical:'top' };
@@ -6709,6 +6798,7 @@ resetConfAuthors();
 loadSubmitter();
 initRichEditors();
 renderDeadlineBanner();
+setPubType('article');
 initProfilePortal();
 initDrafts();
 loadEmailSettings();

@@ -3980,7 +3980,7 @@ function buildFlowArticle(opts){
   let y = opts.startY || 0;
   let floatBottom = -1, floatW = 0;
   let imgIdx = 0, side = 'right';
-  const fitsPage = (top, h) => (top % FLOW.PAGE_PX) + h <= FLOW.PAGE_PX - 8;
+  const fitsPage = (top, h) => (top % FLOW.PAGE_PX) + h <= FLOW.PAGE_PX - 48;
   const charsPerLine = top => Math.max(20, Math.floor(((top < floatBottom) ? (W - floatW - FLOW.IMG_GAP_PX) : W) / FLOW.CHAR_PX));
   const canPlace = () => imgIdx < imgs.length && y >= floatBottom && remaining >= FLOW.MIN_WRAP_CHARS && fitsPage(y, imgs[imgIdx].dh);
   const place = () => {
@@ -4596,7 +4596,7 @@ const EDIT_FIELDS = {
   puzzleSolutions: [ ['puzzleTitle','Puzzle','text',1], ['author','Solution by','text'], ['winners','Correct answers from','textarea'],
             ['_month','Newsletter Month','month',1], ['solution','Solution','rich'], ['photos','Solution Images','photos'] ],
   upcomingEvents: [ ['title','Event Title','text',1], ['date','Date','date',1], ['note','Details','rich'] ],
-  upcomingConferences: [ ['title','Title','text',1], ['date','Date','date',1], ['link','Link','text'] ],
+  upcomingConferences: [ ['title','Title','text',1], ['date','Date','date',1], ['link','Link','text'], ['brochure','Brochure (one image)','photos'] ],
 };
 EDIT_FIELDS.editorials = EDIT_FIELDS.guestEditorials;
 
@@ -4604,7 +4604,8 @@ let editing = null;
 function openEditor(col, month, id){
   const e = getEntry(col, month, id);
   if(!e) return;
-  editing = { col, month, id, photos: entryPhotos(e).map(p => typeof p === 'string' ? { url:p } : { url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }).filter(p => p.url), photosTouched:false };
+  editing = { col, month, id, max: col === 'upcomingConferences' ? 1 : 6,
+    photos: (col === 'upcomingConferences' ? (e.brochure ? [ { url:e.brochure, w:e.brochureW, h:e.brochureH } ] : []) : entryPhotos(e)).map(p => typeof p === 'string' ? { url:p } : { url:photoUrl(p), w:photoWH(p).w, h:photoWH(p).h }).filter(p => p.url), photosTouched:false };
   const fields = EDIT_FIELDS[col];
   const val = f => f[0] === '_month' ? month : e[f[0]];
   const box = document.createElement('div');
@@ -4644,11 +4645,11 @@ function renderEditPhotos(){
         <button type="button" title="Remove this photo" class="rm" onclick="removeEditPhoto(${i})">×</button>
         <button type="button" title="Move later" ${i === n - 1 ? 'disabled' : ''} onclick="moveEditPhoto(${i},1)">→</button>
       </div>${i === 0 && n > 1 ? '<span class="eph-first">First</span>' : ''}</div>`).join('') +
-    (n < 6 ? `<button type="button" class="eph-add" onclick="document.getElementById('editPhotoInput').click()">＋<span>Add photos</span></button>` : '');
+    (n < (editing.max || 6) ? `<button type="button" class="eph-add" onclick="document.getElementById('editPhotoInput').click()">＋<span>Add photos</span></button>` : '');
 }
 function addEditPhotos(evt){
   if(!editing) return;
-  const files = Array.from(evt.target.files).slice(0, 6 - editing.photos.length);
+  const files = Array.from(evt.target.files).slice(0, (editing.max || 6) - editing.photos.length);
   evt.target.value = '';
   Promise.all(files.map(f => compressImage(f, 900, 0.68).catch(() => null))).then(list => {
     list.filter(Boolean).forEach(r => editing.photos.push({ url:r.dataUrl, w:r.width, h:r.height }));
@@ -4679,6 +4680,12 @@ function saveEditor(){
     const [k, label, type, req] = f;
     if(type === 'photos'){
       if(!editing.photosTouched) continue;           // photos left exactly as they were
+      if(col === 'upcomingConferences'){
+        const b = editing.photos[0];
+        if(b){ obj.brochure = b.url; if(b.w) obj.brochureW = b.w; else delete obj.brochureW; if(b.h) obj.brochureH = b.h; else delete obj.brochureH; }
+        else { delete obj.brochure; delete obj.brochureW; delete obj.brochureH; }
+        continue;
+      }
       if(editing.photos.length) obj.photos = editing.photos.map(p => { const o = { url:p.url }; if(p.w) o.w = p.w; if(p.h) o.h = p.h; return o; });
       else delete obj.photos;
       delete obj.photo; delete obj.image;
@@ -5614,6 +5621,7 @@ function pdfCss(plan){
 .nlp .gap { height: 24px; }
 .nlp .sub { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin: -6px 0 14px; break-after: avoid; }
 .nlp .mon { color: #A8842F; font-weight: 700; font-size: 12pt; letter-spacing: .08em; border-bottom: 1.2pt solid #C6A34A; padding-bottom: 3px; margin: 14px 0 12px; break-after: avoid; clear: both; }
+.nlp .ahead { display: flow-root; break-inside: avoid; }
 .nlp .sep { border: 0; height: 10px; margin: 14px 0 18px; clear: both; background: url(${ornament('sep')}) center / 90px 10px no-repeat; }
 .nlp .art { break-inside: auto; }
 .nlp .art::after { content: ""; display: block; clear: both; }
@@ -5666,7 +5674,7 @@ function flowHtml(o){
   const total = paras.reduce((n, p) => n + stripRich(p).length, 0);
   const pHtml = t => { const li = listInfo(t);
     return li ? `<p class="li"><span class="mk">${H(li.marker)}</span><span>${richToHtml(li.rest, H)}</span></p>` : `<p>${richToHtml(t, H)}</p>`; };
-  let html = `<article class="art"${o.anchor ? ` id="${o.anchor}"` : ''}>`;
+  let html = '';
   if(imgs[0]) html += tag(imgs[0], 'fr');
   if(o.kicker) html += `<div class="kick" style="color:${hx(o.kicker.color || '132340')}">${H(o.kicker.text)}</div>`;
   if(o.title) html += `<h2 class="t">${H(o.title)}</h2>`;
@@ -5678,21 +5686,31 @@ function flowHtml(o){
   const marks = [];
   for(let k = 1; k <= slots; k++){ const at = Math.round(total * k / (slots + 1)); if(total - at >= 260) marks.push(at); }
   let next = 0, seen = 0, side = 'fl';
+  /* The opening of an article (its first photo, heading and first lines) is kept
+     in one block that can't be split across pages: if it doesn't fit at the
+     foot of a page it moves to the next page whole, so the photo is never lost. */
+  /* Every photo travels with the lines that wrap round it: the opening (first
+     photo, heading, first lines) and each later photo with the text after it
+     form blocks that can't be split, so a photo is never lost at a page foot. */
+  let blockAt = -1, blockFrom = 0, blockNeed = 0;
+  const openBlock = (need) => { closeBlock(); blockAt = html.length; blockFrom = seen; blockNeed = need; };
+  const closeBlock = () => { if(blockAt >= 0){ html = html.slice(0, blockAt) + `<div class="ahead">` + html.slice(blockAt) + `</div>`; blockAt = -1; } };
+  if(imgs[0]){ blockAt = 0; blockFrom = 0; blockNeed = Math.min(total, 600); }
+  const placeImg = (curText) => { html += para(curText); openBlock(Math.min(total - seen, 450)); html += tag(rest[next], side); side = side === 'fl' ? 'fr' : 'fl'; next++; };
+  let para;
   paras.forEach(p => {
     let cur = '', open = [];
-    const para = t => { const r = balanceRich(t, open); open = r.open; return pHtml(r.text); };
+    para = t => { const r = balanceRich(t, open); open = r.open; return pHtml(r.text); };
     (listInfo(p) ? [ p ] : splitSentences(p)).forEach(s => {
-      if(next < marks.length && seen >= marks[next] && cur){
-        html += para(cur.trim()) + tag(rest[next], side);
-        side = side === 'fl' ? 'fr' : 'fl'; next++; cur = '';
-      }
+      if(next < marks.length && seen >= marks[next] && cur){ placeImg(cur.trim()); cur = ''; }
       cur += s; seen += stripRich(s).length;
     });
-    if(next < marks.length && seen >= marks[next]){
-      html += para(cur.trim()) + tag(rest[next], side);
-      side = side === 'fl' ? 'fr' : 'fl'; next++;
-    } else if(cur.trim()) html += para(cur.trim());
+    if(next < marks.length && seen >= marks[next]) placeImg(cur.trim());
+    else if(cur.trim()) html += para(cur.trim());
+    if(blockAt >= 0 && seen - blockFrom >= blockNeed) closeBlock();
   });
+  closeBlock();
+  html = `<article class="art"${o.anchor ? ` id="${o.anchor}"` : ''}>` + html;
   const left = rest.slice(next);
   if(left.length){
     html += `<div class="gal">` + left.map(im => {

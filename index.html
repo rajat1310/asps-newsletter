@@ -214,6 +214,14 @@
   .sharebox input, .sharebox textarea{ width:100%; font-size:13.5px; }
   .share-btns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   a.btnlink{ text-decoration:none; display:inline-flex; align-items:center; border:1px solid #d8cfb8; border-radius:8px; color:var(--navy); font-size:12.5px; font-weight:600; padding:6px 11px; background:#fff; }
+  #ap_order{ width:100%; }
+  #ap_photoPrev .eph-btns button{ flex:1; margin:0; padding:4px 0; font-size:12.5px; border:1px solid #d8cfb8; background:#fff; color:#B3261E; border-radius:5px; cursor:pointer; font-weight:700; }
+  #ap_form > div[style*="flex-wrap:wrap; margin-top:14px"]{ align-items:center; }
+  #ap_form button.approve, #ap_form button.primary, #ap_form button.ghost, #ap_form button.danger{ margin:0; padding:10px 16px; }
+  .save-toast{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:#2E6B3A; color:#fff; padding:11px 18px; border-radius:10px; font-size:14px; font-weight:600; z-index:1200; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+  .seg{ display:inline-flex; border:1px solid #d8cfb8; border-radius:9px; overflow:hidden; margin:4px 0 8px; }
+  .seg button{ margin:0; border:none; border-radius:0; background:#fff; color:var(--navy); padding:8px 16px; font-weight:600; cursor:pointer; width:auto; }
+  .seg button.active{ background:var(--navy); color:#fff; }
   .secpick-backdrop{ position:fixed; inset:0; background:rgba(19,35,64,.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; }
   .secpick{ background:#fff; border-radius:12px; max-width:440px; width:100%; max-height:90vh; overflow:auto; padding:22px 24px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
   .secpick h3{ font-family:'Playfair Display',serif; color:var(--navy); margin:0 0 6px; font-size:19px; }
@@ -412,6 +420,7 @@
         <button class="subtab" onclick="switchSubtab('upcomingconf')">Upcoming Conference/Workshop</button>
         <button class="subtab" onclick="switchSubtab('editorial')">Guest Editorial</button>
         <button class="subtab" onclick="switchSubtab('puzzle')">Puzzle</button>
+        <button class="subtab" onclick="switchSubtab('profile')">My Profile</button>
       </div>
     </div>
 
@@ -842,6 +851,25 @@
       </form>
     </div>
 
+    <!-- ---- My Profile (faculty and research scholars) ---- -->
+    <div class="card subview" id="subview-profile">
+      <p class="section-desc" style="margin-top:0;">Faculty members and research scholars: send your profile once. It is printed in the "Our Faculty" or "Our Research Scholars" section of the bi-annual and annual newsletters (not in monthly issues). To update it later, simply send it again.</p>
+      <form id="profileForm" onsubmit="return false;">
+        <label class="first">I am a *</label>
+        <div class="pf-kind seg"><button type="button" data-kind="faculty" class="active" onclick="setProfileKind('faculty')">Faculty member</button><button type="button" data-kind="scholars" onclick="setProfileKind('scholars')">Research scholar</button></div>
+        <div id="pf_fields"></div>
+        <label>Photo</label>
+        <div class="photo-drop" onclick="document.getElementById('pf_photo').click()">
+          <input type="file" id="pf_photo" accept="image/*" onchange="photoState.profile = []; handlePhotoSelect('profile', event)" />
+          <div><strong>Click to add your photo</strong></div>
+          <div class="hint">One photo, JPG/PNG. A clear portrait (head and shoulders) looks best.</div>
+        </div>
+        <div class="thumbs" id="thumbs-profile"></div>
+        <button class="primary" id="submitBtn-profile" onclick="submitProfile()">Submit My Profile</button>
+        <div class="msg" id="submitMsg-profile"></div>
+      </form>
+    </div>
+
     <!-- ---- My submissions ---- -->
     <div class="card" id="mySubsCard">
       <h2 class="section-title" style="font-size:18px; margin-bottom:6px;">Check My Submissions</h2>
@@ -1083,33 +1111,35 @@
     </div>
 
     <div class="card" id="facultyCard">
-      <h2 class="section-title" style="font-size:19px;">Faculty Profiles (Bi-Annual &amp; Annual Editions)</h2>
-      <p class="section-desc">Printed as an "Our Faculty" section in the bi-annual and annual editions only (never in monthly issues), in the order you give. Untick the section in the edition window to leave it out.</p>
-      <div class="row2">
-        <div><label class="first">Name *</label><input type="text" id="fac_name" placeholder="e.g. Dr. Swati Tyagi" /></div>
-        <div><label class="first">Designation</label><input type="text" id="fac_desig" placeholder="e.g. Assistant Professor (Mathematics)" /></div>
+      <h2 class="section-title" style="font-size:19px;">Faculty &amp; Research Scholar Profiles</h2>
+      <p class="section-desc">Profiles sent from the portal's "My Profile" tab arrive here as Pending; you can also add one yourself. Approved profiles are printed as "Our Faculty" and "Our Research Scholars" in the bi-annual and annual editions only. They are kept from year to year.</p>
+      <div class="stat-pills" id="ap_count" style="margin-bottom:12px;"></div>
+      <div class="ap-kind seg"><button type="button" data-kind="faculty" class="active" onclick="setAdminProfileType('faculty')">Faculty</button><button type="button" data-kind="scholars" onclick="setAdminProfileType('scholars')">Research Scholars</button></div>
+      <label>Select a name to see or edit the profile</label>
+      <select id="ap_select" onchange="showAdminProfile(this.value)"></select>
+      <div id="ap_form" style="display:none; margin-top:16px; border-top:1px dashed #d8cfb8; padding-top:6px;">
+        <div id="ap_status" style="margin:8px 0 4px;"></div>
+        <div id="ap_fields"></div>
+        <div class="row2">
+          <div><label>Order in the newsletter (1 = first)</label><input type="number" id="ap_order" min="1" placeholder="optional" /></div>
+          <div></div>
+        </div>
+        <label>Photo</label>
+        <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          <div id="ap_photoPrev"></div>
+          <div class="photo-drop" style="flex:1; min-width:200px;" onclick="document.getElementById('ap_photo').click()">
+            <input type="file" id="ap_photo" accept="image/*" onchange="onAdminProfilePhoto(event)" />
+            <div><strong>Click to add or replace the photo</strong></div><div class="hint">A portrait photo works best.</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+          <button class="primary" id="ap_saveBtn" onclick="saveAdminProfile(false)">Save Changes</button>
+          <button class="approve" id="ap_approveBtn" style="padding:10px 16px;" onclick="setAdminProfileApproved(true)">Save &amp; Approve</button>
+          <button class="ghost" id="ap_unapproveBtn" onclick="setAdminProfileApproved(false)">Unapprove</button>
+          <button class="danger" id="ap_deleteBtn" onclick="deleteAdminProfile()">Delete</button>
+        </div>
+        <div class="msg" id="ap_msg"></div>
       </div>
-      <label>Research Areas</label>
-      <input type="text" id="fac_research" placeholder="e.g. Fractional calculus, mathematical modelling, machine learning" />
-      <div class="row3">
-        <div><label>Email</label><input type="email" id="fac_email" placeholder="name@pb.amity.edu" /></div>
-        <div><label>Profile link (optional)</label><input type="text" id="fac_link" placeholder="Google Scholar / ORCID / university page" /></div>
-        <div><label>Order (1 = first)</label><input type="number" id="fac_order" min="1" placeholder="e.g. 1" /></div>
-      </div>
-      <label>Short profile (optional)</label>
-      <textarea id="fac_bio" style="min-height:90px;" placeholder="Qualifications, experience, highlights..."></textarea>
-      <label>Photo</label>
-      <div class="photo-drop" onclick="document.getElementById('fac_photo').click()">
-        <input type="file" id="fac_photo" accept="image/*" onchange="onFacultyPhoto(event)" />
-        <div><strong>Click to add a photo</strong></div><div class="hint">A portrait photo works best.</div>
-      </div>
-      <div class="thumbs" id="fac_photoPrev"></div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="primary" id="facSaveBtn" onclick="saveFaculty()">Add Faculty Member</button>
-        <button class="ghost" onclick="clearFacultyForm()">Clear form</button>
-      </div>
-      <div class="msg" id="facultyMsg"></div>
-      <div id="facultyList" style="margin-top:16px;"></div>
     </div>
 
     <div class="card">
@@ -1284,7 +1314,7 @@ function switchTab(tab){
 }
 
 function switchSubtab(name){
-  ['event','publication','award','conference','blog','upcoming','upcomingconf','editorial','puzzle'].forEach(n => {
+  ['event','publication','award','conference','blog','upcoming','upcomingconf','editorial','puzzle','profile'].forEach(n => {
     document.querySelector(`.subtab[onclick="switchSubtab('${n}')"]`).classList.toggle('active', n===name);
     document.getElementById('subview-' + n).classList.toggle('active', n===name);
   });
@@ -1294,7 +1324,7 @@ function switchSubtab(name){
 
 /* ---------------- Photo handling (client-side compression) ----------------
    One photo array per form type, keyed by name: 'event' | 'publication' | 'conference' */
-let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], pzsol: [], desk: [] };
+let photoState = { event: [], publication: [], award: [], conference: [], blog: [], editorial: [], puzzle: [], pzsol: [], profile: [], desk: [] };
 
 function handlePhotoSelect(type, evt){
   const arr = photoState[type];
@@ -1592,7 +1622,7 @@ function submitBlog(){
      [b]bold[/b]   [i]italic[/i]   [u]underline[/u]
      a line starting "• " is a bullet point, "1. " a numbered point.
    Old plain-text entries need no change. */
-const RICH_FIELDS = ['fac_bio','f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','pzs_content','desk_content','s_mission','s_vision'];
+const RICH_FIELDS = ['f_desc','a_desc','p_abstract','c_abstract','b_content','u2_note','ed_content','pz_content','pzs_content','desk_content','s_mission','s_vision'];
 const RICH_TAG_RE = /\[(\/?)(b|i|u)\]/g;
 const LIST_RE = /^(?:([•\-*])|(\d{1,3})[.)])\s+/;
 function stripRich(t){ return String(t || '').replace(RICH_TAG_RE, ''); }
@@ -1937,11 +1967,11 @@ function submitPuzzleSolution(){
    ========================================================================= */
 const COL_LABELS = { events:'Event Report', publications:'Publication', awards:'Award / Achievement', conferences:'Conference Presentation',
   blogs:'Research Blog', guestEditorials:'Guest Editorial', puzzles:'Puzzle', puzzleSolutions:'Puzzle Solution',
-  upcomingEvents:'Upcoming Event', upcomingConferences:'Upcoming Conference / Workshop' };
+  upcomingEvents:'Upcoming Event', upcomingConferences:'Upcoming Conference / Workshop', faculty:'Faculty Profile', scholars:'Research Scholar Profile' };
 const COL_TEXT = { events:'desc', publications:'abstract', awards:'desc', conferences:'abstract', blogs:'content', guestEditorials:'content',
-  puzzles:'content', puzzleSolutions:'solution', upcomingEvents:'note', upcomingConferences:'link' };
+  puzzles:'content', puzzleSolutions:'solution', upcomingEvents:'note', upcomingConferences:'link', faculty:'research', scholars:'topic' };
 const COL_FORM = { events:'eventForm', publications:'pubForm', awards:'awardForm', conferences:'confForm', blogs:'blogForm', guestEditorials:'editorialForm',
-  puzzles:'puzzleForm', puzzleSolutions:'pzsolForm', upcomingEvents:'upcomingForm', upcomingConferences:'upcomingConfForm' };
+  puzzles:'puzzleForm', puzzleSolutions:'pzsolForm', upcomingEvents:'upcomingForm', upcomingConferences:'upcomingConfForm', faculty:'profileForm', scholars:'profileForm' };
 
 /* Every portal submission goes through here: save it, then write the
    receipt, send the confirmation email and forget the draft. */
@@ -1973,7 +2003,7 @@ function sendConfirmation(col, month, data){
   const params = {
     to_email: data.submittedBy.email, to_name: data.submittedBy.name || '',
     submission_type: COL_LABELS[col] || col, title: receiptTitle(col, data) || '(untitled)',
-    newsletter_month: month ? monthLabel(month) : 'the coming issues',
+    newsletter_month: month ? monthLabel(month) : (col === 'faculty' || col === 'scholars' ? 'the bi-annual and annual' : 'the coming issues'),
     submitted_on: new Date(data.submittedAt || Date.now()).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }),
     summary: text.length > 400 ? text.slice(0, 400) + '…' : text,
     photos: String((data.photos || []).length), school_name: SCHOOL_NAME,
@@ -1987,7 +2017,9 @@ function sendConfirmation(col, month, data){
 /* ---- "My submissions" ---- */
 function lookupMySubmissions(){
   const box = document.getElementById('mySubsResult');
-  const em = document.getElementById('my_email').value.trim();
+  const myEl = document.getElementById('my_email');
+  if(!myEl.value.trim() && document.getElementById('sb_email').value.trim()) myEl.value = document.getElementById('sb_email').value.trim();
+  const em = myEl.value.trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ box.innerHTML = '<div class="msg err" style="display:block">Please type the email address you used when submitting.</div>'; return; }
   if(!firebaseReady){ box.textContent = 'Firebase is not configured yet.'; return; }
   box.innerHTML = '<div class="field-hint">Looking…</div>';
@@ -2316,7 +2348,8 @@ function initDashboard(){
     document.getElementById('s_ejsServiceId').value = v.serviceId || '';
     document.getElementById('s_ejsTemplateId').value = v.templateId || '';
   });
-  db.ref('faculty').on('value', snap => { allFaculty = snap.val() || {}; renderFacultyAdmin(); });
+  db.ref('faculty').on('value', snap => { allFaculty = snap.val() || {}; renderProfileAdmin(); renderPendingBar(); });
+  db.ref('scholars').on('value', snap => { allScholars = snap.val() || {}; renderProfileAdmin(); renderPendingBar(); });
   db.ref('settings/approval').on('value', snap => {
     const v = snap.val() || {};
     if(!v.since){ db.ref('settings/approval/since').set(Date.now()); return; }
@@ -3227,10 +3260,83 @@ function tcEntryRuns(text, level){
 }
 
 /* Big centered section heading (e.g. "ACADEMIC", "PUBLICATIONS") with a bookmark */
+/* =========================================================================
+   PAGE DESIGN — framed inner pages (the cover stays unframed), corner rosettes,
+   ornamental dividers under section titles and between articles.
+   ========================================================================= */
+const PAGE_DESIGN = 'B';                 // 'A' gold double frame · 'B' navy & gold frame
+const FRAME = {
+  A: { word:{ style:'double', size:6, color:'C6A34A' }, outer:'#C6A34A', outerW:1.1, inner:'#C6A34A', innerW:0.45, gapMm:1.3, rosette:'#C6A34A', core:'#C6A34A', accent:'#C6A34A' },
+  B: { word:{ style:'thickThinSmallGap', size:18, color:'132340' }, outer:'#132340', outerW:2.2, inner:'#C6A34A', innerW:0.6, gapMm:1.2, rosette:'#132340', core:'#C6A34A', accent:'#132340' },
+}[PAGE_DESIGN];
+const FRAME_PT = 22;                                // frame line: 22 pt in from the paper edge
+const ornCache = {};
+function ornament(kind){
+  if(ornCache[kind]) return ornCache[kind];
+  const spec = { corner:[96, 96], divider:[880, 48], sep:[360, 40] }[kind];
+  const c = document.createElement('canvas'); c.width = spec[0]; c.height = spec[1];
+  const x = c.getContext('2d'), W = spec[0], Hh = spec[1], cx = W / 2, cy = Hh / 2;
+  const diamond = (px, py, r, fill, stroke, lw) => { x.beginPath(); x.moveTo(px, py - r); x.lineTo(px + r, py); x.lineTo(px, py + r); x.lineTo(px - r, py); x.closePath();
+    if(fill){ x.fillStyle = fill; x.fill(); } if(stroke){ x.strokeStyle = stroke; x.lineWidth = lw; x.stroke(); } };
+  if(kind === 'corner'){
+    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, W * 0.47, 0, Math.PI * 2); x.fill();
+    diamond(cx, cy, W * 0.43, null, FRAME.rosette, W * 0.045);
+    diamond(cx, cy, W * 0.30, null, FRAME.core, W * 0.025);
+    diamond(cx, cy, W * 0.17, FRAME.core, null);
+    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, W * 0.045, 0, Math.PI * 2); x.fill();
+  } else if(kind === 'divider'){
+    const line = (x0, x1) => { const g = x.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(x0 < cx ? 0 : 1, 'rgba(198,163,74,0)'); g.addColorStop(x0 < cx ? 1 : 0, 'rgba(198,163,74,1)');
+      x.strokeStyle = g; x.lineWidth = 3; x.beginPath(); x.moveTo(x0, cy); x.lineTo(x1, cy); x.stroke(); };
+    line(20, cx - 70); line(cx + 70, W - 20);
+    diamond(cx, cy, 17, '#C6A34A', null);
+    diamond(cx - 42, cy, 8, FRAME.accent, null); diamond(cx + 42, cy, 8, FRAME.accent, null);
+  } else {
+    diamond(cx, cy, 10, '#C6A34A', null);
+    diamond(cx - 46, cy, 6, 'rgba(198,163,74,.65)', null); diamond(cx + 46, cy, 6, 'rgba(198,163,74,.65)', null);
+  }
+  return (ornCache[kind] = c.toDataURL('image/png'));
+}
+const ornBytes = kind => dataUrlToUint8(ornament(kind));
+/* The whole frame (double rule, corner rosettes, side diamonds) as one transparent
+   full-page image: the same picture is laid on every inner page of the Word and PDF files. */
+function frameImage(){
+  if(ornCache.frame) return ornCache.frame;
+  const DPMM = 200 / 25.4, W = Math.round(210 * DPMM), Hh = Math.round(297 * DPMM);
+  const c = document.createElement('canvas'); c.width = W; c.height = Hh;
+  const x = c.getContext('2d');
+  const inset = FRAME_PT * 25.4 / 72 * DPMM, gap = FRAME.gapMm * DPMM, pt = DPMM * 25.4 / 72;
+  const rect = (d, color, lw) => { x.strokeStyle = color; x.lineWidth = lw * pt; x.strokeRect(d, d, W - 2 * d, Hh - 2 * d); };
+  rect(inset, FRAME.outer, FRAME.outerW);
+  rect(inset + gap, FRAME.inner, FRAME.innerW);
+  const mid = inset + gap / 2;
+  const diamond = (px, py, r, fill, stroke, lw) => { x.beginPath(); x.moveTo(px, py - r); x.lineTo(px + r, py); x.lineTo(px, py + r); x.lineTo(px - r, py); x.closePath();
+    if(fill){ x.fillStyle = fill; x.fill(); } if(stroke){ x.strokeStyle = stroke; x.lineWidth = lw; x.stroke(); } };
+  const rosette = (cx, cy) => { const R = 9.5 * pt;
+    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, R * 1.02, 0, Math.PI * 2); x.fill();
+    diamond(cx, cy, R * 0.92, null, FRAME.rosette, 1.0 * pt);
+    diamond(cx, cy, R * 0.62, null, FRAME.core, 0.6 * pt);
+    diamond(cx, cy, R * 0.36, FRAME.core, null);
+    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, R * 0.09, 0, Math.PI * 2); x.fill(); };
+  [[mid, mid], [W - mid, mid], [mid, Hh - mid], [W - mid, Hh - mid]].forEach(([a, b]) => rosette(a, b));
+  [[mid, Hh / 2], [W - mid, Hh / 2]].forEach(([a, b]) => { x.fillStyle = '#ffffff'; x.fillRect(a - 4 * pt, b - 7 * pt, 8 * pt, 14 * pt); diamond(a, b, 4.2 * pt, FRAME.core, null); });
+  return (ornCache.frame = c.toDataURL('image/png'));
+}
+/* Word: the frame floats behind the text, anchored to the page, in the inner-page header */
+function frameRun(){
+  const { ImageRun, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom, TextWrappingType } = docx;
+  return new ImageRun({ data: dataUrlToUint8(frameImage()), transformation:{ width:794, height:1123 },
+    floating:{ horizontalPosition:{ relative: HorizontalPositionRelativeFrom.PAGE, offset:0 }, verticalPosition:{ relative: VerticalPositionRelativeFrom.PAGE, offset:0 },
+               allowOverlap:true, behindDocument:true, lockAnchor:true, layoutInCell:false, wrap:{ type: TextWrappingType.NONE } } });
+}
+/* PDF: the same frame image on each inner page */
+function pdfFrameHtml(){ return `<img src="${frameImage()}" style="position:absolute; left:0; top:0; width:210mm; height:297mm;">`; }
+
 function sectionTitlePara(text, pageBreak, anchor, afterSpacing){
   const { Paragraph, TextRun, AlignmentType } = docx;
   return new Paragraph({ pageBreakBefore: !!pageBreak, keepNext:true, alignment:AlignmentType.CENTER, spacing:{ after: afterSpacing === undefined ? 280 : afterSpacing },
-    children: bookmarked(anchor, [ new TextRun({ text, color:"132340", bold:true, size:40, font:"Playfair Display" }) ]) });
+    children: [ ...bookmarked(anchor, [ new TextRun({ text, color:"132340", bold:true, size:40, font:"Playfair Display", characterSpacing:30 }) ]),
+      new TextRun({ break:1, text:'', size:10 }), new docx.ImageRun({ data: ornBytes('divider'), transformation:{ width:220, height:12 } }) ] });
 }
 
 /* Scales natW x natH to fit inside maxWidth x maxHeight, preserving aspect ratio */
@@ -3346,7 +3452,7 @@ function buildIndexSpec({ ids, data, pubIds, pubData, awIds, awData, confIds, co
      with a full linked Contents page after it.
    --------------------------------------------------------------------- */
 const PAGE_BODY_PX = Math.floor((16838 - 700 - 800) / 15);  // usable A4 height in px
-const COVER_SAFETY_PX = 24;
+const COVER_SAFETY_PX = 42;
 const COVER_FILL_SAFETY_PX = 36;
 const COVER_STRIP_TW = 420, COVER_MAST_TW = 1500;
 const IDX_DATE_TW = 620;
@@ -3713,7 +3819,7 @@ function buildRunningHeader(strapline, dateRangeLabel){
         width:{ size:61, type:WidthType.PERCENTAGE },
         verticalAlign: VerticalAlign.CENTER,
         margins:{ top:60, bottom:100, left:0, right:0 },
-        children:[ new Paragraph({ children:[ new TextRun({ text: strapline, color:"736C5E", size:18, font:"Inter", bold:true }) ] }) ]
+        children:[ new Paragraph({ children:[ new TextRun({ text: strapline, color:"736C5E", size:17, font:"Inter", bold:true }) ] }) ]
       }),
       new TableCell({
         width:{ size:30, type:WidthType.PERCENTAGE },
@@ -3723,7 +3829,8 @@ function buildRunningHeader(strapline, dateRangeLabel){
       }),
     ]})]
   });
-  return new Header({ children:[table] });
+  // the page frame sits in its own hairline paragraph, anchored to the page (not to the table)
+  return new Header({ children:[ new Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[ frameRun() ] }), table ] });
 }
 function blankHeader(){
   return new docx.Header({ children:[ new docx.Paragraph({ spacing:{ before:0, after:0, line:20, lineRule:docx.LineRuleType.EXACT }, children:[ new docx.TextRun({ text:'', size:2 }) ] }) ] });
@@ -3782,12 +3889,14 @@ function buildRunningFooter(withContacts){
     children:[ ...(people ? [ people, new Paragraph({ spacing:{ before:0, after:80, line:20, lineRule:docx.LineRuleType.EXACT }, children:[] }) ] : []),
       ...(contacts ? [ contacts ] : []), new Paragraph({
       alignment: AlignmentType.CENTER,
-      border:{ top:{ style:BorderStyle.SINGLE, size:2, color:"E4DAC3", space:6 } },
+      border: withContacts ? { top:{ style:BorderStyle.SINGLE, size:2, color:"E4DAC3", space:6 } } : undefined,
       children:[
+        ...(withContacts ? [] : [ new TextRun({ text:"◆   ", color:"C6A34A", size:13, font:"Segoe UI Symbol" }) ]),
         new TextRun({ text:"Page ", color:"736C5E", size:15, font:"Inter" }),
         new TextRun({ children:[PageNumber.CURRENT], color:"736C5E", size:15, font:"Inter" }),
         new TextRun({ text:" of ", color:"736C5E", size:15, font:"Inter" }),
         new TextRun({ children:[PageNumber.TOTAL_PAGES], color:"736C5E", size:15, font:"Inter" }),
+        ...(withContacts ? [] : [ new TextRun({ text:"   ◆", color:"C6A34A", size:13, font:"Segoe UI Symbol" }) ]),
       ]
     })]
   });
@@ -3809,7 +3918,7 @@ const FLOW = {
   IMG_GAP_PX: 14,     // white space between photo and wrapped text
   FLOAT_MAX_W: 300,
   FLOAT_MAX_H: 235,
-  PAGE_PX: 900,       // usable body height per page (below the running header)
+  PAGE_PX: 900,       // usable body height per page (below the running header, inside the frame)
   MIN_WRAP_CHARS: 260,// don't float a photo unless at least this much text is left to wrap round it
   MIN_SPLIT_CHARS: 140// don't split a paragraph if less than this would be left over
 };
@@ -4000,8 +4109,8 @@ function buildFlowArticle(opts){
    ========================================================================= */
 const STACK = { HEAD_PX:62, SUB_PX:30, SEP_PX:42, MIN_ROOM_PX:300 };
 function separatorPara(){
-  return new docx.Paragraph({ spacing:{ before:240, after:260 },
-    border:{ top:{ style:docx.BorderStyle.SINGLE, size:6, color:"E4DAC3", space:1 } }, children:[] });
+  return new docx.Paragraph({ alignment: docx.AlignmentType.CENTER, spacing:{ before:200, after:220 },
+    children:[ new docx.ImageRun({ data: ornBytes('sep'), transformation:{ width:90, height:10 } }) ] });
 }
 /* Gold month sub-heading used inside a section of the annual edition */
 function monthMarkerPara(label, pageBreak, extraSpace, tc, anchor){
@@ -4330,6 +4439,7 @@ function itemTocInfo(it){
     case 'puzzle':  return { title:d.title || 'Puzzle' };
     case 'pzsol':   return { title:'Solution: ' + (d.puzzleTitle || 'Puzzle') };
     case 'faculty': return { title:d.name };
+    case 'scholar': return { title:d.name };
     case 'numbers': return { title:'Key figures' };
     case 'message': return { title: d.heading + (d.name ? ' — ' + d.name : '') };
     case 'upevent': return { title:d.title, date:d.date };
@@ -4359,6 +4469,8 @@ const COLS = {
   puzzleSolutions:     { label:'puzzle solution', get:() => allPuzzleSolutionsByMonth, monthBy:'month' },
   upcomingEvents:      { label:'upcoming event', get:() => allUpcomingEvents, monthBy:null },
   upcomingConferences: { label:'upcoming conference / workshop', get:() => allUpcomingConferences, monthBy:null },
+  faculty:             { label:'faculty profile', get:() => allFaculty, monthBy:null },
+  scholars:            { label:'research scholar profile', get:() => allScholars, monthBy:null },
 };
 const entryPath = (col, month, id) => COLS[col].monthBy ? `${col}/${month}/${id}` : `${col}/${id}`;
 function getEntry(col, month, id){
@@ -4403,7 +4515,7 @@ function renderPendingBar(){
   const list = pendingList([currentMonth]);
   if(!list.length){ el.innerHTML = ''; el.style.display = 'none'; return; }
   el.style.display = '';
-  el.innerHTML = `<span>⏳ <b>${list.length}</b> submission${list.length > 1 ? 's' : ''} for ${monthLabel(currentMonth)} (and upcoming items) ${list.length > 1 ? 'are' : 'is'} waiting for approval. Pending entries are not printed.</span>
+  el.innerHTML = `<span>⏳ <b>${list.length}</b> submission${list.length > 1 ? 's' : ''} for ${monthLabel(currentMonth)} (and upcoming items or profiles) ${list.length > 1 ? 'are' : 'is'} waiting for approval. Pending entries are not printed.</span>
     <button class="approve small" onclick="approveAllPending()">Approve all</button>`;
 }
 function approveAllPending(){
@@ -4416,11 +4528,11 @@ function approveAllPending(){
 /* Generation uses approved entries only: the data maps are swapped for
    filtered copies while a newsletter or report is being built. */
 const APPROVAL_GLOBALS = ['allEventsByMonth','allPublicationsByMonth','allAwardsByMonth','allConferencesByMonth','allBlogsByMonth',
-  'allGuestEditorialsByMonth','allEditorialsByMonth','allPuzzlesByMonth','allPuzzleSolutionsByMonth','allUpcomingEvents','allUpcomingConferences'];
+  'allGuestEditorialsByMonth','allEditorialsByMonth','allPuzzlesByMonth','allPuzzleSolutionsByMonth','allUpcomingEvents','allUpcomingConferences','allFaculty','allScholars'];
 function approvedCopy(name, v){
   v = v || {};
   const keep = e => !(e && typeof e === 'object' && !Array.isArray(e) && 'submittedAt' in e) || isApproved(e);
-  if(name === 'allUpcomingEvents' || name === 'allUpcomingConferences'){
+  if(name === 'allUpcomingEvents' || name === 'allUpcomingConferences' || name === 'allFaculty' || name === 'allScholars'){
     const o = {}; Object.keys(v).forEach(id => { if(keep(v[id])) o[id] = v[id]; }); return o;
   }
   const o = {};
@@ -4439,6 +4551,7 @@ const GLOBAL_ACCESS = {
   allEditorialsByMonth:[() => allEditorialsByMonth, v => allEditorialsByMonth = v], allPuzzlesByMonth:[() => allPuzzlesByMonth, v => allPuzzlesByMonth = v],
   allPuzzleSolutionsByMonth:[() => allPuzzleSolutionsByMonth, v => allPuzzleSolutionsByMonth = v],
   allUpcomingEvents:[() => allUpcomingEvents, v => allUpcomingEvents = v], allUpcomingConferences:[() => allUpcomingConferences, v => allUpcomingConferences = v],
+  allFaculty:[() => allFaculty, v => allFaculty = v], allScholars:[() => allScholars, v => allScholars = v],
 };
 const readGlobal = name => GLOBAL_ACCESS[name][0]();
 const writeGlobal = (name, v) => GLOBAL_ACCESS[name][1](v);
@@ -4549,6 +4662,10 @@ function moveEditPhoto(i, d){
   const a = editing.photos; [a[i], a[j]] = [a[j], a[i]];
   editing.photosTouched = true; renderEditPhotos();
 }
+function flashSaved(text){
+  const t = document.createElement('div'); t.className = 'save-toast'; t.textContent = '✓ ' + text;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+}
 function closeEditor(){ const b = document.getElementById('editBackdrop'); if(b) b.remove(); editing = null; }
 function saveEditor(){
   if(!editing) return;
@@ -4588,7 +4705,11 @@ function saveEditor(){
     updateReceipt(obj, id, { month: newMonth || '', title: receiptTitle(col, obj) });
     closeEditor();
     if(newMonth && newMonth !== month) alert(`Saved. The ${COLS[col].label} now belongs to ${monthLabel(newMonth)}.`);
-  }).catch(err => msg('Could not save: ' + err.message));
+    else flashSaved('Changes saved — they will appear in the next newsletter you generate.');
+  }).catch(err => {
+    msg('Could not save: ' + err.message);
+    alert('The changes were NOT saved.\n\n' + err.message + '\n\nIf it says "permission denied", publish the latest database.rules.json in Firebase (Realtime Database → Rules → Publish) and try again.');
+  });
 }
 
 /* ---------------- "My submissions" receipts ----------------
@@ -4608,6 +4729,7 @@ function emailCode(email){
 function receiptTitle(col, d){
   if(col === 'conferences') return d.paperTitle || d.confName || '';
   if(col === 'puzzleSolutions') return 'Solution: ' + (d.puzzleTitle || 'Puzzle');
+  if(col === 'faculty' || col === 'scholars') return d.name || '';
   return d.title || '';
 }
 function updateReceipt(entry, id, patch){
@@ -4617,69 +4739,34 @@ function updateReceipt(entry, id, patch){
 }
 
 /* =========================================================================
-   FACULTY PROFILES (admin; printed in the bi-annual and annual editions)
-   faculty/<id> = { name, designation, research, email, link, bio, photo:{url,w,h}, order }
+   FACULTY AND RESEARCH SCHOLAR PROFILES
+   Sent by the people themselves from the portal ("My Profile" tab) or added
+   by the admin. Like every submission they start as Pending; approved ones
+   are printed in the bi-annual and annual editions (Our Faculty, Our
+   Research Scholars). Kept from year to year.
+     faculty/<id>  = { name, designation, research, email, link, bio, photo, order, ... }
+     scholars/<id> = { name, programme, enrolment, year, supervisor, coSupervisor, topic, research, email, link, bio, photo, order, ... }
    ========================================================================= */
-let allFaculty = {};
-let facultyEditId = null, facultyPhoto = null;
-const facultyList = () => Object.entries(allFaculty || {}).map(([id, f]) => Object.assign({ _id:id }, f))
-  .sort((a, b) => ((a.order || 999) - (b.order || 999)) || (a.name || '').localeCompare(b.name || ''));
-function renderFacultyAdmin(){
-  const el = document.getElementById('facultyList');
-  if(!el) return;
-  const list = facultyList();
-  el.innerHTML = list.length ? list.map(f => `<div class="event-card fac-card">
-      ${f.photo && f.photo.url ? `<img class="fac-ph" src="${f.photo.url}">` : '<div class="fac-ph none">No photo</div>'}
-      <div style="flex:1; min-width:0;"><h3 style="margin:0;">${escapeHtml(f.name)}</h3>
-        <div class="event-meta"><span>${escapeHtml(f.designation || '')}</span>${f.email ? `<span>✉ ${escapeHtml(f.email)}</span>` : ''}<span>Order: ${escapeHtml(String(f.order || '—'))}</span></div>
-        ${f.research ? `<div class="event-desc" style="margin-top:4px;"><b>Research areas:</b> ${escapeHtml(f.research)}</div>` : ''}</div>
-      <div class="event-actions"><button class="ghost small" onclick="editFaculty('${f._id}')">Edit</button><button class="danger small" onclick="deleteFaculty('${f._id}')">Delete</button></div>
-    </div>`).join('') : '<div class="empty-state">No faculty profiles yet. Add the first one above.</div>';
-}
-function facultyMsg(ok, t){ const m = document.getElementById('facultyMsg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t; if(ok) setTimeout(() => { m.style.display = 'none'; }, 3500); }
-function clearFacultyForm(){
-  facultyEditId = null; facultyPhoto = null;
-  ['fac_name','fac_desig','fac_research','fac_email','fac_link','fac_order'].forEach(id => document.getElementById(id).value = '');
-  setRich('fac_bio', '');
-  document.getElementById('fac_photoPrev').innerHTML = '';
-  document.getElementById('facSaveBtn').textContent = 'Add Faculty Member';
-}
-function editFaculty(id){
-  const f = allFaculty[id]; if(!f) return;
-  facultyEditId = id; facultyPhoto = f.photo || null;
-  document.getElementById('fac_name').value = f.name || '';
-  document.getElementById('fac_desig').value = f.designation || '';
-  document.getElementById('fac_research').value = f.research || '';
-  document.getElementById('fac_email').value = f.email || '';
-  document.getElementById('fac_link').value = f.link || '';
-  document.getElementById('fac_order').value = f.order || '';
-  setRich('fac_bio', f.bio || '');
-  document.getElementById('fac_photoPrev').innerHTML = facultyPhoto ? `<img src="${facultyPhoto.url}">` : '';
-  document.getElementById('facSaveBtn').textContent = 'Save Changes';
-  document.getElementById('facultyCard').scrollIntoView({ behavior:'smooth', block:'start' });
-}
-function onFacultyPhoto(evt){
-  const file = evt.target.files[0]; if(!file) return;
-  compressImage(file, 600, 0.8).then(r => { facultyPhoto = { url:r.dataUrl, w:r.width, h:r.height }; document.getElementById('fac_photoPrev').innerHTML = `<img src="${r.dataUrl}">`; });
-  evt.target.value = '';
-}
-function saveFaculty(){
-  if(!firebaseReady) return;
-  const v = id => document.getElementById(id).value.trim();
-  const f = { name:v('fac_name'), designation:v('fac_desig'), research:v('fac_research'), email:v('fac_email'), link:v('fac_link'),
-    bio: v('fac_bio'), order: parseInt(v('fac_order'), 10) || null, photo: facultyPhoto || null, updatedAt: Date.now() };
-  if(!f.name){ facultyMsg(false, 'Please enter the name.'); return; }
-  if(f.email && !isEmail(f.email)){ facultyMsg(false, 'Please check the email address.'); return; }
-  const ref = facultyEditId ? db.ref('faculty/' + facultyEditId) : db.ref('faculty').push();
-  ref.set(f).then(() => { facultyMsg(true, (facultyEditId ? 'Saved: ' : 'Added: ') + f.name); clearFacultyForm(); })
-    .catch(err => facultyMsg(false, 'Could not save: ' + err.message));
-}
-function deleteFaculty(id){
-  const f = allFaculty[id];
-  if(!f || !confirm('Delete the profile of ' + f.name + '?')) return;
-  db.ref('faculty/' + id).remove();
-}
-/* Word item: photo floated beside name, designation, email and research areas */
+let allFaculty = {}, allScholars = {};
+const PROGRAMMES = ['Ph.D.', 'Post-Doctoral Fellow', 'JRF', 'SRF', 'M.Phil.', 'Other'];
+const PROFILE_TYPES = {
+  faculty:  { col:'faculty',  label:'Faculty', one:'faculty member', get:() => allFaculty },
+  scholars: { col:'scholars', label:'Research Scholars', one:'research scholar', get:() => allScholars },
+};
+/* [key, label, input type, required, options] — shared by the portal form and the admin form */
+const PROFILE_FIELDS = {
+  faculty: [ ['name','Full Name','text',1], ['designation','Designation','text',1], ['research','Research Areas','text',1],
+             ['email','Email','email'], ['link','Profile link (Google Scholar / ORCID / university page)','text'], ['bio','Short profile','rich'] ],
+  scholars:[ ['name','Full Name','text',1], ['programme','Programme','select',1,PROGRAMMES], ['enrolment','Enrolment No.','text'], ['year','Year of registration','text'],
+             ['supervisor','Supervisor','text',1], ['coSupervisor','Co-supervisor','text'], ['topic','Research topic / thesis title','text',1],
+             ['research','Research Areas','text'], ['email','Email','email'], ['link','Profile link (Google Scholar / ORCID)','text'], ['bio','Short profile','rich'] ],
+};
+const byOrderName = (a, b) => ((a.order || 999) - (b.order || 999)) || (a.name || '').localeCompare(b.name || '');
+const profileList = type => Object.entries(PROFILE_TYPES[type].get() || {}).filter(([, p]) => p && typeof p === 'object').map(([id, p]) => Object.assign({ _id:id }, p)).sort(byOrderName);
+const facultyList = () => profileList('faculty');
+const scholarList = () => profileList('scholars');
+
+/* ---------------- printing ---------------- */
 function facultyText(f){
   const parts = [];
   if(f.research) parts.push('[b]Research areas:[/b] ' + f.research);
@@ -4687,14 +4774,197 @@ function facultyText(f){
   if(f.link) parts.push('[b]Profile:[/b] ' + f.link);
   return parts.join('\n');
 }
-function facultyItem(f, anchor){
+function scholarText(s){
+  const parts = [];
+  if(s.topic) parts.push('[b]Research topic:[/b] [i]' + s.topic + '[/i]');
+  const sup = [ s.supervisor && '[b]Supervisor:[/b] ' + s.supervisor, s.coSupervisor && '[b]Co-supervisor:[/b] ' + s.coSupervisor ].filter(Boolean).join('   ');
+  if(sup) parts.push(sup);
+  if(s.research) parts.push('[b]Research areas:[/b] ' + s.research);
+  if(s.bio) parts.push(s.bio);
+  if(s.link) parts.push('[b]Profile:[/b] ' + s.link);
+  return parts.join('\n');
+}
+const scholarMeta = s => [ s.programme, s.year && ('since ' + s.year), s.enrolment && ('Enrolment ' + s.enrolment) ].filter(Boolean).join('  ·  ');
+function profileItem(p, anchor, kind){
+  const metaText = kind === 'scholar' ? scholarMeta(p) : (p.designation || '');
   return (pb, sy) => buildFlowArticle({
-    kicker:null, title: f.name, anchor,
-    metaParas: [ ...(f.designation ? [ metaLine(f.designation, { italics:false, color:"736C5E", size:BODY_SIZE - 1 }) ] : []),
-                 ...(f.email ? [ metaLine(f.email, { italics:false, color:"1155CC", size:META_SIZE }) ] : []) ],
-    text: facultyText(f), images: f.photo && f.photo.url ? [ { url:f.photo.url, w:f.photo.w, h:f.photo.h } ] : [],
+    kicker:null, title: p.name, anchor,
+    metaParas: [ ...(metaText ? [ metaLine(metaText, { italics:false, color:"736C5E", size:BODY_SIZE - 1 }) ] : []),
+                 ...(p.email ? [ metaLine(p.email, { italics:false, color:"1155CC", size:META_SIZE }) ] : []) ],
+    text: kind === 'scholar' ? scholarText(p) : facultyText(p),
+    images: p.photo && p.photo.url ? [ { url:p.photo.url, w:p.photo.w, h:p.photo.h } ] : [],
     floatMax:{ w:120, h:150 }, pageBreak:pb, startY:sy
   });
+}
+const facultyItem = (f, anchor) => profileItem(f, anchor, 'faculty');
+const scholarItem = (s, anchor) => profileItem(s, anchor, 'scholar');
+function profileHtml(p, anchor, kind){
+  const metaText = kind === 'scholar' ? scholarMeta(p) : (p.designation || '');
+  return flowHtml({ title:p.name, anchor,
+    meta:[ ...(metaText ? [ metaH(H(metaText), true) ] : []), ...(p.email ? [ metaH(`<a href="mailto:${H(p.email)}">${H(p.email)}</a>`) ] : []) ],
+    text: kind === 'scholar' ? scholarText(p) : facultyText(p), images: p.photo && p.photo.url ? [ p.photo ] : [], floatMax:{ w:120, h:150 } });
+}
+
+/* ---------------- portal: "My Profile" tab ---------------- */
+let profileKind = 'faculty';
+function profileFieldHtml(type, prefix){
+  return PROFILE_FIELDS[type].map(([k, label, t, req, opts]) => {
+    const id = prefix + type + '_' + k, lab = `<label>${escapeHtml(label)}${req ? ' *' : ''}</label>`;
+    if(t === 'select') return lab + `<select id="${id}"><option value="">Select…</option>${opts.map(o => `<option>${escapeHtml(o)}</option>`).join('')}</select>`;
+    if(t === 'rich') return lab + `<textarea id="${id}" style="min-height:100px;" placeholder="Qualifications, experience, achievements…"></textarea>`;
+    return lab + `<input type="${t}" id="${id}" />`;
+  }).join('');
+}
+function initProfilePortal(){
+  const box = document.getElementById('pf_fields'); if(!box) return;
+  box.innerHTML = `<div id="pf_box_faculty">${profileFieldHtml('faculty', 'pf_')}</div><div id="pf_box_scholars" style="display:none">${profileFieldHtml('scholars', 'pf_')}</div>`;
+  ['faculty','scholars'].forEach(t => makeRich(document.getElementById('pf_' + t + '_bio')));
+  setProfileKind('faculty');
+}
+function setProfileKind(kind){
+  profileKind = kind;
+  document.getElementById('pf_box_faculty').style.display = kind === 'faculty' ? '' : 'none';
+  document.getElementById('pf_box_scholars').style.display = kind === 'scholars' ? '' : 'none';
+  document.querySelectorAll('.pf-kind button').forEach(b => b.classList.toggle('active', b.dataset.kind === kind));
+  const em = document.getElementById('pf_' + kind + '_email'), sb = document.getElementById('sb_email');
+  if(em && !em.value && sb && sb.value) em.value = sb.value;
+}
+function submitProfile(){
+  if(!firebaseReady){ showSubmitMsg('profile', false, 'Firebase is not configured yet.'); return; }
+  const submittedBy = getSubmitter(); if(!submittedBy) return;
+  const type = profileKind, data = {};
+  for(const [k, label, t, req] of PROFILE_FIELDS[type]){
+    const v = (document.getElementById('pf_' + type + '_' + k).value || '').trim();
+    if(req && !v){ showSubmitMsg('profile', false, 'Please fill in: ' + label.replace(/ \(.*/, '')); return; }
+    if(t === 'email' && v && !isEmail(v)){ showSubmitMsg('profile', false, 'Please check the email address.'); return; }
+    if(v) data[k] = v;
+  }
+  const ph = photoState.profile[0];
+  if(ph) data.photo = { url: ph.dataUrl, w: ph.width || null, h: ph.height || null };
+  data.submittedBy = submittedBy; data.submittedAt = Date.now();
+  const btn = document.getElementById('submitBtn-profile');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  submitRecord(type, null, data).then(() => {
+    showSubmitMsg('profile', true, 'Thank you! Your profile has been sent to the newsletter team.');
+    document.getElementById('profileForm').reset();
+    ['faculty','scholars'].forEach(t => setRich('pf_' + t + '_bio', ''));
+    photoState.profile = []; renderThumbs('profile');
+    setProfileKind(type);
+  }).catch(err => showSubmitMsg('profile', false, 'Could not submit: ' + err.message))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Submit My Profile'; });
+}
+
+/* ---------------- admin: choose a name, then view / edit / approve ---------------- */
+let adminProfileType = 'faculty', adminProfileId = null, adminProfilePhoto = null;
+function initProfileAdmin(){
+  const box = document.getElementById('ap_fields'); if(!box || box.dataset.ready) return;
+  box.dataset.ready = '1';
+  box.innerHTML = `<div id="ap_box_faculty">${profileFieldHtml('faculty', 'ap_')}</div><div id="ap_box_scholars" style="display:none">${profileFieldHtml('scholars', 'ap_')}</div>`;
+  ['faculty','scholars'].forEach(t => makeRich(document.getElementById('ap_' + t + '_bio')));
+}
+function setAdminProfileType(type){
+  adminProfileType = type; adminProfileId = null;
+  document.querySelectorAll('.ap-kind button').forEach(b => b.classList.toggle('active', b.dataset.kind === type));
+  renderProfileAdmin(); showAdminProfile('');
+}
+function renderProfileAdmin(){
+  initProfileAdmin();
+  const sel = document.getElementById('ap_select'); if(!sel) return;
+  const list = profileList(adminProfileType);
+  const pending = list.filter(p => !isApproved(p)).length;
+  const keep = adminProfileId;
+  sel.innerHTML = `<option value="">— Choose a name (${list.length}) —</option><option value="__new">＋ Add a new ${PROFILE_TYPES[adminProfileType].one}</option>` +
+    list.map(p => `<option value="${p._id}">${escapeHtml(p.name || '(no name)')}${isApproved(p) ? '' : '  · ⏳ Pending'}${p.submittedAt ? '  · sent ' + new Date(p.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : ''}</option>`).join('');
+  sel.value = keep && (keep === '__new' || list.some(p => p._id === keep)) ? keep : '';
+  document.getElementById('ap_count').innerHTML = ['faculty','scholars'].map(t => { const l = profileList(t), n = l.filter(p => !isApproved(p)).length;
+    return `<span class="pill"><b>${l.length}</b>${PROFILE_TYPES[t].label}${n ? ` · ${n} pending` : ''}</span>`; }).join('');
+  if(keep && keep !== '__new' && !list.some(p => p._id === keep)) showAdminProfile('');
+  else if(keep && keep !== '__new') updateAdminProfileStatus();
+}
+function showAdminProfile(id){
+  adminProfileId = id || null;
+  const type = adminProfileType, form = document.getElementById('ap_form');
+  if(!id){ form.style.display = 'none'; return; }
+  form.style.display = '';
+  document.getElementById('ap_box_faculty').style.display = type === 'faculty' ? '' : 'none';
+  document.getElementById('ap_box_scholars').style.display = type === 'scholars' ? '' : 'none';
+  const p = id === '__new' ? {} : (PROFILE_TYPES[type].get()[id] || {});
+  PROFILE_FIELDS[type].forEach(([k, , t]) => { const elId = 'ap_' + type + '_' + k; if(t === 'rich') setRich(elId, p[k] || ''); else document.getElementById(elId).value = p[k] || ''; });
+  document.getElementById('ap_order').value = p.order || '';
+  adminProfilePhoto = p.photo || null; renderAdminProfilePhoto();
+  updateAdminProfileStatus();
+}
+function updateAdminProfileStatus(){
+  const id = adminProfileId, type = adminProfileType;
+  const p = id && id !== '__new' ? PROFILE_TYPES[type].get()[id] : null;
+  const ok = p ? isApproved(p) : true;
+  document.getElementById('ap_status').innerHTML = !p ? '<span class="status-badge ok">New profile</span>' :
+    `<span class="status-badge ${ok ? 'ok' : 'pending'}">${ok ? '✓ Approved' : '⏳ Pending'}</span>` + (p.submittedBy ? submitterHtml(p) : '');
+  document.getElementById('ap_approveBtn').style.display = p && !ok ? '' : 'none';
+  document.getElementById('ap_unapproveBtn').style.display = p && ok && p.submittedAt ? '' : 'none';
+  document.getElementById('ap_deleteBtn').style.display = p ? '' : 'none';
+  document.getElementById('ap_saveBtn').textContent = p ? 'Save Changes' : 'Add Profile';
+}
+function renderAdminProfilePhoto(){
+  document.getElementById('ap_photoPrev').innerHTML = adminProfilePhoto
+    ? `<div class="eph"><img src="${adminProfilePhoto.url}"><div class="eph-btns"><button type="button" class="rm" onclick="adminProfilePhoto=null; renderAdminProfilePhoto()">× Remove</button></div></div>` : '';
+}
+function onAdminProfilePhoto(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  compressImage(file, 600, 0.8).then(r => { adminProfilePhoto = { url:r.dataUrl, w:r.width, h:r.height }; renderAdminProfilePhoto(); });
+  evt.target.value = '';
+}
+function profileMsg(ok, t){ const m = document.getElementById('ap_msg'); m.className = 'msg ' + (ok ? 'ok' : 'err'); m.textContent = t; if(ok) setTimeout(() => { m.style.display = 'none'; }, 3500); }
+function saveAdminProfile(approve){
+  if(!firebaseReady || !adminProfileId) return;
+  const type = adminProfileType, col = PROFILE_TYPES[type].col, isNew = adminProfileId === '__new';
+  const old = isNew ? {} : (PROFILE_TYPES[type].get()[adminProfileId] || {});
+  const p = JSON.parse(JSON.stringify(old));
+  for(const [k, label, t, req] of PROFILE_FIELDS[type]){
+    const v = (document.getElementById('ap_' + type + '_' + k).value || '').trim();
+    if(req && !v){ profileMsg(false, 'Please fill in: ' + label.replace(/ \(.*/, '')); return; }
+    if(t === 'email' && v && !isEmail(v)){ profileMsg(false, 'Please check the email address.'); return; }
+    if(v) p[k] = v; else delete p[k];
+  }
+  const ord = parseInt(document.getElementById('ap_order').value, 10);
+  if(ord > 0) p.order = ord; else delete p.order;
+  if(adminProfilePhoto) p.photo = { url:adminProfilePhoto.url, ...(adminProfilePhoto.w ? { w:adminProfilePhoto.w } : {}), ...(adminProfilePhoto.h ? { h:adminProfilePhoto.h } : {}) }; else delete p.photo;
+  const user = auth && auth.currentUser;
+  if(!p.submittedBy) p.submittedBy = { name:'Newsletter admin', email:(user && user.email) || 'admin@newsletter.local', role:'Staff' };
+  if(!p.submittedAt) p.submittedAt = Date.now();
+  if(isNew || approve) p.approved = true;
+  p.editedAt = Date.now();
+  delete p.updatedAt;
+  const ref = isNew ? db.ref(col).push() : db.ref(col + '/' + adminProfileId);
+  ref.set(p).then(() => {
+    adminProfileId = isNew ? ref.key : adminProfileId;
+    profileMsg(true, (isNew ? 'Added: ' : approve ? 'Approved: ' : 'Saved: ') + p.name);
+    if(approve) { updateReceipt(p, adminProfileId, { status:'approved' }); offerRemoveOlder(type, adminProfileId); }
+    renderProfileAdmin(); document.getElementById('ap_select').value = adminProfileId; showAdminProfile(adminProfileId);
+  }).catch(err => profileMsg(false, 'Could not save: ' + err.message));
+}
+/* when someone sends their profile again, approving the new one offers to delete the old one */
+function offerRemoveOlder(type, id){
+  const all = PROFILE_TYPES[type].get(), me = all[id]; if(!me) return;
+  const norm = t => (t || '').trim().toLowerCase();
+  const older = Object.keys(all).filter(k => k !== id && all[k] && ((me.email && norm(all[k].email) === norm(me.email)) || norm(all[k].name) === norm(me.name)));
+  if(!older.length) return;
+  if(confirm(`There ${older.length > 1 ? 'are ' + older.length + ' other profiles' : 'is another profile'} for ${me.name}. Delete the older version${older.length > 1 ? 's' : ''} so only this one is printed?`)){
+    const upd = {}; older.forEach(k => upd[PROFILE_TYPES[type].col + '/' + k] = null); db.ref('/').update(upd);
+  }
+}
+function setAdminProfileApproved(val){
+  const type = adminProfileType, id = adminProfileId; if(!id || id === '__new') return;
+  if(val) return saveAdminProfile(true);
+  const p = PROFILE_TYPES[type].get()[id];
+  db.ref(PROFILE_TYPES[type].col + '/' + id + '/approved').set(false).then(() => updateReceipt(p, id, { status:'received' }));
+}
+function deleteAdminProfile(){
+  const type = adminProfileType, id = adminProfileId; if(!id || id === '__new') return;
+  const p = PROFILE_TYPES[type].get()[id];
+  if(!confirm('Delete the profile of ' + (p && p.name) + '? This cannot be undone.')) return;
+  updateReceipt(p, id, { status:'removed' });
+  db.ref(PROFILE_TYPES[type].col + '/' + id).remove().then(() => { showAdminProfile(''); renderProfileAdmin(); });
 }
 
 /* =========================================================================
@@ -4711,7 +4981,7 @@ function editionNumbers(months){
   let guests = 0, puzzles = 0;
   months.forEach(m => { guests += guestEditorialEntries(m).filter(hasText).length; puzzles += monthEntries(allPuzzlesByMonth, m).filter(hasPuzzle).length; });
   const tiles = [ [events,'Events'], [pubs,'Publications'], [confs,'Conference Presentations'], [awards,'Awards & Achievements'],
-                  [blogs,'Research Blogs'], [guests,'Guest Editorials'], [puzzles,'Puzzles'], [facultyList().length,'Faculty Members'] ]
+                  [blogs,'Research Blogs'], [guests,'Guest Editorials'], [puzzles,'Puzzles'], [facultyList().length,'Faculty Members'], [scholarList().length,'Research Scholars'] ]
     .filter(t => t[0] > 0).map(([n, label]) => ({ n, label }));
   const join = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join('  ·  ');
   const lines = [];
@@ -4982,6 +5252,8 @@ function periodPlan(year, edKey){
 
   add([{ heading:'OUR FACULTY', key:'FACULTY', tocTitle:'Our Faculty',
     items: facultyList().map(f => ({ type:'faculty', data:f, key:'fac:' + f._id })) }]);
+  add([{ heading:'OUR RESEARCH SCHOLARS', key:'SCHOLARS', tocTitle:'Our Research Scholars',
+    items: scholarList().map(x => ({ type:'scholar', data:x, key:'sch:' + x._id })) }]);
   add([{ heading:"FROM THE EDITOR’S DESK", key:'EDITORS DESK', tocTitle:'From the Editor’s Desk',
     items: byMonth(m => { const d = editorsDeskEntry(m); return hasText(d) ? [ { type:'desk', data:d, key:'desk:' + m } ] : []; }) }]);
   add([{ heading:'GUEST EDITORIALS', key:'GUEST EDITORIALS', tocTitle:'Guest Editorials',
@@ -5006,7 +5278,7 @@ function periodPlan(year, edKey){
   let heroIds = [], heroData = {};
   months.forEach(m => sortedIds(allEventsByMonth[m] || {}).forEach(id => { heroIds.push(id); heroData[id] = allEventsByMonth[m][id]; }));
   const range = ed.range(year);
-  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && g.key !== 'NUMBERS' && g.key !== 'FACULTY'));
+  const hasContent = stacks.some(st => st.some(g => g.key.indexOf('MSG ') !== 0 && !['NUMBERS','FACULTY','SCHOLARS'].includes(g.key)));
   return {
     kind:'period', hasContent, stacks, withToc:true,
     issuePeriod: `${ed.name} · ${range}`, dateRange: range,
@@ -5093,6 +5365,7 @@ function wordItemBuilder(it, anchor){
     case 'puzzle':  return puzzleItem(d, anchor);
     case 'pzsol':   return puzzleItem(solutionView(d), anchor);
     case 'faculty': return facultyItem(d, anchor);
+    case 'scholar': return scholarItem(d, anchor);
     case 'numbers': return numbersItem(d, anchor);
     case 'message': return messageItem(d, anchor);
     case 'upevent': return upcomingEventItem(d, anchor);
@@ -5126,7 +5399,7 @@ async function renderWordIssue(plan){
   const doc = new Document({
     styles: { default: { document: { run: { font:"Inter", size:BODY_SIZE } } }, paragraphStyles: tocStyles() },
     sections: [{
-      properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:300, footer:300 } }, titlePage:true },
+      properties: { page: { size:{ width:11906, height:16838 }, margin: { top:700, bottom:800, left:800, right:800, header:600, footer:560 } }, titlePage:true },
       headers: { default: buildRunningHeader(plan.strapline, plan.dateRange), first: blankHeader() },
       footers: { default: buildRunningFooter(), first: buildRunningFooter(true) },
       children: [ ...cover, ...body, ...buildTeamBox() ]
@@ -5259,14 +5532,15 @@ const H = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&l
 const hx = c => '#' + c;
 
 /* ---- print stylesheet (everything scoped under .nlp) ---- */
-const PDF_PAGE = { firstTop:10, top:19, bottom:16, side:14 }; // mm
+const PDF_PAGE = { firstTop:10, top:24, bottom:18, side:15 }; // mm
 function pdfCss(plan){
   return `
 @page { size: A4; margin: ${PDF_PAGE.top}mm ${PDF_PAGE.side}mm ${PDF_PAGE.bottom}mm ${PDF_PAGE.side}mm;
-  @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: Inter, sans-serif; font-size: 7.5pt; color: #736C5E;
-    border-top: 0.6pt solid #E4DAC3; vertical-align: top; padding-top: 2mm; }
+  @bottom-center { content: "◆   Page " counter(page) " of " counter(pages) "   ◆"; font-family: Inter, sans-serif; font-size: 7.5pt; color: #736C5E;
+    vertical-align: top; padding-top: 2.2mm; }
 }
-@page :first { margin-top: ${PDF_PAGE.firstTop}mm; }
+@page :first { margin-top: ${PDF_PAGE.firstTop}mm;
+  @bottom-center { content: "Page " counter(page) " of " counter(pages); border-top: 0.6pt solid #E4DAC3; } }
 .nlp { font-family: Inter, Arial, sans-serif; font-size: 11pt; line-height: 1.42; color: #1B1B18; }
 .nlp * { box-sizing: border-box; }
 .nlp .rh { display: flex; align-items: center; gap: 12px; font-family: Inter, sans-serif;
@@ -5335,11 +5609,12 @@ function pdfCss(plan){
 .nlp .toc .l3 .dd { color: #736C5E; font-weight: 700; margin-right: 6px; }
 /* body */
 .nlp .stack { break-before: page; }
-.nlp .sh { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 20pt; font-weight: 700; text-align: center; margin: 0 0 12px; break-after: avoid; }
+.nlp .sh { font-family: 'Playfair Display', Georgia, serif; color: #132340; font-size: 20pt; font-weight: 700; text-align: center; margin: 0 0 14px; break-after: avoid; letter-spacing: .03em; }
+.nlp .sh::after { content: ''; display: block; width: 220px; height: 12px; margin: 6px auto 0; background: url(${ornament('divider')}) center / 220px 12px no-repeat; }
 .nlp .gap { height: 24px; }
 .nlp .sub { text-align: center; font-style: italic; color: #736C5E; font-size: 9pt; margin: -6px 0 14px; break-after: avoid; }
 .nlp .mon { color: #A8842F; font-weight: 700; font-size: 12pt; letter-spacing: .08em; border-bottom: 1.2pt solid #C6A34A; padding-bottom: 3px; margin: 14px 0 12px; break-after: avoid; clear: both; }
-.nlp .sep { border: 0; border-top: 0.8pt solid #E4DAC3; margin: 14px 0 18px; clear: both; }
+.nlp .sep { border: 0; height: 10px; margin: 14px 0 18px; clear: both; background: url(${ornament('sep')}) center / 90px 10px no-repeat; }
 .nlp .art { break-inside: auto; }
 .nlp .art::after { content: ""; display: block; clear: both; }
 .nlp .kick { font-weight: 700; font-size: 9pt; letter-spacing: .03em; margin-bottom: 2px; break-after: avoid; }
@@ -5470,9 +5745,8 @@ function pdfItemHtml(it, anchor){
     case 'desk': return flowHtml({ title:d.title || '', anchor, meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)) });
     case 'guest': return flowHtml({ kicker:{ text:'GUEST EDITORIAL', color:'A8842F' }, title:d.title || 'Guest Editorial', anchor,
       meta: d.author ? [ metaH(H('— ' + d.author)) ] : [], text:d.content, images:allPhotos(entryPhotos(d)), refs:d.refs });
-    case 'faculty': return flowHtml({ title:d.name, anchor,
-      meta:[ ...(d.designation ? [ metaH(H(d.designation), true) ] : []), ...(d.email ? [ metaH(`<a href="mailto:${H(d.email)}">${H(d.email)}</a>`) ] : []) ],
-      text: facultyText(d), images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:120, h:150 } });
+    case 'faculty': return profileHtml(d, anchor, 'faculty');
+    case 'scholar': return profileHtml(d, anchor, 'scholar');
     case 'numbers': return numbersHtml(d, anchor);
     case 'message': return flowHtml({ title:d.name || '', anchor, meta: d.designation ? [ metaH(H(d.designation), true) ] : [],
       text:d.message, images: d.photo && d.photo.url ? [ d.photo ] : [], floatMax:{ w:200, h:250 } });
@@ -5674,7 +5948,11 @@ async function renderPdfIssue(plan, progress, previewOnly){
       page.style.position = 'relative';
       const hd = document.createElement('div');
       hd.className = 'rh';
-      hd.style.cssText = `position:absolute; left:${PDF_PAGE.side}mm; right:${PDF_PAGE.side}mm; top:${PDF_PAGE.top - 12.5}mm; height:10mm;`;
+      hd.style.cssText = `position:absolute; left:${PDF_PAGE.side}mm; right:${PDF_PAGE.side}mm; top:${PDF_PAGE.top - 13}mm; height:10mm;`;
+      const fr = document.createElement('div');
+      fr.style.cssText = 'position:absolute; inset:0; pointer-events:none;';
+      fr.innerHTML = pdfFrameHtml();
+      page.appendChild(fr);
       hd.innerHTML = `<img src="${logoDataUrl()}"><span class="st">${H(plan.strapline)}</span><span class="dt">${H(plan.dateRange)}</span>`;
       page.appendChild(hd);
     });
@@ -6087,6 +6365,7 @@ resetConfAuthors();
 loadSubmitter();
 initRichEditors();
 renderDeadlineBanner();
+initProfilePortal();
 initDrafts();
 loadEmailSettings();
 (function(){ try{ const d = JSON.parse(localStorage.getItem(SUBMITTER_KEY) || 'null'); if(d && d.email) document.getElementById('my_email').value = d.email; }catch(e){} })();

@@ -3514,7 +3514,7 @@ function planCover(indexSpec, fullH){
       if(fullH + body(size, split) <= avail) return { idxSize:size, heroH:fullH, split };
     }
   }
-  // 2) still no room: trim the photo (top/bottom) as little as possible
+  // 2) still no room: show the whole photo a little smaller (never cropped)
   let best = null;
   for(const size of [16, 15, 14]){
     for(const split of SPLITS){
@@ -3538,17 +3538,14 @@ async function loadHeroInfo(src){
     return null;
   }
 }
-/* Full-width photo bytes at height h — untouched when h is its natural height,
-   otherwise the centre band is kept */
+/* The cover photo at height h: always the WHOLE photo, never cropped. At its
+   natural height it spans the full width; when the cover is short of room it
+   is shown a little smaller, centred. */
 function heroAtHeight(info, h){
   const W = PAGE_CONTENT_PX;
   try{
-    if(h >= info.fullH || !info.img) return { bytes: dataUrlToUint8(info.src.url), w:W, h:info.fullH };
-    const sh = Math.round(info.nw * h / W), sy = Math.round((info.nh - sh) / 2);
-    const c = document.createElement('canvas');
-    c.width = info.nw; c.height = sh;
-    c.getContext('2d').drawImage(info.img, 0, sy, info.nw, sh, 0, 0, info.nw, sh);
-    return { bytes: dataUrlToUint8(c.toDataURL('image/jpeg', 0.92)), w:W, h };
+    const hh = Math.min(h, info.fullH);
+    return { bytes: dataUrlToUint8(info.src.url), w: Math.round(W * hh / info.fullH), h: hh };
   }catch(e){ return null; }
 }
 
@@ -3725,9 +3722,10 @@ function buildCoverPage({ issuePeriod, hero, indexSpec, idxSize, bodyMinPx }){
   ] });
 
   /* ---- 3. full-width cover photo, whole image ---- */
+  const narrow = hero && hero.w < PAGE_CONTENT_PX - 2;
   const heroRow = (hero && hero.bytes) ? new TableRow({ children:[ full(
-    [ new Paragraph({ spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ],
-    { margins:zero }) ] }) : null;
+    [ new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ before:0, after:0 }, children:[ new ImageRun({ data:hero.bytes, transformation:{ width:hero.w, height:hero.h } }) ] }) ],
+    Object.assign({ margins:zero }, narrow ? { shading:{ fill:"F3EDDE", type:ShadingType.CLEAR, color:"auto" } } : {})) ] }) : null;
 
   /* ---- 4. quote (grows to as many lines as it needs) ---- */
   const quoteRow = new TableRow({ children:[ full(
@@ -5566,6 +5564,8 @@ function pdfCss(plan){
 .nlp .mast .eb { color: #C6A34A; font-weight: 700; font-size: 8pt; margin-bottom: 3px; }
 .nlp .mast .nw { color: #fff; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 28pt; letter-spacing: 2px; line-height: 1.1; }
 .nlp .hero { display: block; width: 100%; height: auto; }
+.nlp .herobox { background: #F3EDDE; text-align: center; }
+.nlp .herobox .hero { margin: 0 auto; }
 .nlp .quote { text-align: center; padding: 11px 14px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 12.5pt; color: #132340; line-height: 1.3; }
 .nlp .quote .qa { font-family: Inter, sans-serif; font-style: normal; font-size: 8.5pt; color: #736C5E; }
 .nlp .cbody { display: flex; align-items: flex-start; }
@@ -5809,6 +5809,8 @@ function coverIndexHtml(spec, ptSize){
   return h;
 }
 function coverHtml(plan, spec, ptSize, heroUrl, split){
+  const heroH = heroUrl && typeof heroUrl === 'object' ? heroUrl.h : 0;
+  if(heroUrl && typeof heroUrl === 'object') heroUrl = heroUrl.url;
   const linkOrText = (text, url, bold) => url ? `<a href="${H(url)}"${bold ? ' style="font-weight:700"' : ''}>${H(text)}</a>` : `<span${bold ? ' style="font-weight:700"' : ''}>${H(text)}</span>`;
   const maybeUrl = str => !str ? null : /^https?:\/\//i.test(str) ? str : (/\./.test(str) && !/\s/.test(str) && !/^\[/.test(str)) ? 'https://' + str.replace(/^\/+/, '') : null;
   const emailUrl = CONTACT_EMAIL && !/^\[/.test(CONTACT_EMAIL) ? 'mailto:' + CONTACT_EMAIL : null;
@@ -5817,7 +5819,7 @@ function coverHtml(plan, spec, ptSize, heroUrl, split){
     <div class="strip">${H(plan.issuePeriod.toUpperCase())}</div>
     <div class="mast"><div class="lg"><img src="${logoDataUrl()}"></div>
       <div class="rib"><div class="eb">AMITY UNIVERSITY PUNJAB · ${H(SCHOOL_NAME.toUpperCase())}</div><div class="nw">NEWSLETTER</div></div></div>
-    ${heroUrl ? `<img class="hero" src="${heroUrl}">` : ''}
+    ${heroUrl ? (heroH ? `<div class="herobox"><img class="hero" src="${heroUrl}" style="width:auto; height:${heroH}px;"></div>` : `<img class="hero" src="${heroUrl}">`) : ''}
     <div class="quote">“${H(cleanQuote(QUOTE_TEXT))}” <span class="qa">&nbsp;—&nbsp; ${H(QUOTE_ATTRIBUTION)}</span></div>
     <div class="cbody"><div class="mv" style="flex:0 0 ${mvPct}%"><h3>Our Mission</h3>${coverTextHtml(MISSION_TEXT)}<div style="height:10px"></div><h3>Our Vision</h3>${coverTextHtml(VISION_TEXT, true)}</div>
       <div class="idx" style="flex:1">${coverIndexHtml(spec, ptSize)}</div></div>
@@ -5844,9 +5846,8 @@ async function fitCoverHtml(plan, spec, measureBox){
       const noHero = heights(pt, null, 0.5);
       const h = Math.floor(limit - noHero - 2);
       if(h >= 200){
-        const cropped = heroAtHeight(info, Math.min(h, info.fullH));
-        const url = cropped ? 'data:image/jpeg;base64,' + uint8ToBase64(cropped.bytes) : fullUrl;
-        heights(pt, url, 0.5); await waitImgs();
+        // not enough room for the full-width photo: show the whole photo a little smaller (never cropped)
+        heights(pt, { url: fullUrl, h: Math.min(h, info.fullH) }, 0.5); await waitImgs();
         if(measureBox.firstElementChild.getBoundingClientRect().height <= limit) return { html: fillCover(measureBox.innerHTML, limit), fits:true };
       }
     }
